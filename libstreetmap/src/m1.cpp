@@ -30,7 +30,6 @@ bool load_map(std::string /*map_path*/) {
     //
 
     
-
     load_successful = true; //Make sure this is updated to reflect whether
                             //loading the map succeeded or failed
 
@@ -40,8 +39,5 @@ bool load_map(std::string /*map_path*/) {
 
 void close_map() {
     //Clean-up your map related data structures here
-    bool yummy = true;
-    if (yummy){
-        yummy = false;
-    }
+    
 }
