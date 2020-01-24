@@ -37,7 +37,11 @@ bool load_map(std::string /*map_path*/) {
     return load_successful;
 }
 
+
 void close_map() {
     //Clean-up your map related data structures here
-    
+    bool yummy = true;
+    if (yummy){
+        yummy = false;
+    }
 }
