@@ -69,6 +69,10 @@ int find_closest_intersection(LatLon my_position){
 //Returns the street segments for the given intersection 
 std::vector<int> find_street_segments_of_intersection(int intersection_id){
     std::vector<int> ssOfIntersection;
+    
+    for (int i = 0; i < getIntersectionStreetSegmentCount(intersection_id); i++){
+        ssOfIntersection.push_back(getIntersectionStreetSegment(intersection_id, i));
+    } 
     return ssOfIntersection;
 }
 
