@@ -21,6 +21,8 @@
 #include "m1.h"
 #include "StreetsDatabaseAPI.h"
 
+#include <cmath>
+
 bool load_map(std::string /*map_path*/) {
     bool load_successful = false; //Indicates whether the map has loaded 
                                   //successfully
@@ -44,6 +46,7 @@ void close_map() {
 
 double find_distance_between_two_points(std::pair<LatLon, LatLon> points){
     double distanceBetweenTwoPoints;
+    
     return distanceBetweenTwoPoints;
 }
 
