@@ -45,7 +45,15 @@ void close_map() {
 }
 
 double find_distance_between_two_points(std::pair<LatLon, LatLon> points){
-    double distanceBetweenTwoPoints;
+    double latAvg, p1_y, p1_x, p2_y, p2_x, distanceBetweenTwoPoints;
+    
+    latAvg = (points.first.lat()*DEGREE_TO_RADIAN + points.second.lat()*DEGREE_TO_RADIAN ) * 0.5;
+    p1_y = points.first.lat()*DEGREE_TO_RADIAN ;
+    p1_x = points.first.lon()*DEGREE_TO_RADIAN *cos(latAvg);
+    p2_y = points.second.lat()*DEGREE_TO_RADIAN ;
+    p2_x = points.second.lon()*DEGREE_TO_RADIAN *cos(latAvg);
+    
+    distanceBetweenTwoPoints = EARTH_RADIUS_METERS * sqrt(pow(p2_y - p1_y , 2)+ pow(p2_x - p1_x , 2));
     
     return distanceBetweenTwoPoints;
 }
