@@ -54,13 +54,20 @@ double find_distance_between_two_points(std::pair<LatLon, LatLon> points){
     p2_x = points.second.lon()*DEGREE_TO_RADIAN *cos(latAvg);
     
     distanceBetweenTwoPoints = EARTH_RADIUS_METERS * sqrt(pow(p2_y - p1_y , 2)+ pow(p2_x - p1_x , 2));
-    
+  
     return distanceBetweenTwoPoints;
 }
 
 //Returns the length of the given street segment in meters
 double find_street_segment_length(int street_segment_id){
     double streetSegmentLength;
+    InfoStreetSegment segment = getInfoStreetSegment(street_segment_id);
+    LatLon from = getIntersectionPosition (segment.from);
+    LatLon to = getIntersectionPosition (segment.to);
+    
+    std::pair<LatLon, LatLon> length(from, to);
+    
+    streetSegmentLength = find_distance_between_two_points (length);
     return streetSegmentLength;
 }
 
