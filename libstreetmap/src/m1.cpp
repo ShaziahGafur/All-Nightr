@@ -43,10 +43,10 @@ bool load_map(std::string map_streets_database_filename) {
     //
     //Load your map related data structures here
     //
-
+    load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
     
 
-    load_successful = true; //Make sure this is updated to reflect whether
+    //load_successful = true; //Make sure this is updated to reflect whether
                             //loading the map succeeded or failed
 
     return load_successful;
@@ -191,8 +191,9 @@ std::vector<int> find_adjacent_intersections(int intersection_id){
 std::vector<int> find_street_segments_of_street(int street_id){
     std::vector<int> streetSegmentsOfStreet;
     return streetSegmentsOfStreet;
+    
+    
 }
-
 //Returns all intersections along the a given street
 std::vector<int> find_intersections_of_street(int street_id){   
     std::vector<int> intersectionsOfStreet;
