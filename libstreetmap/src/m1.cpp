@@ -182,6 +182,11 @@ std::vector<int> find_street_ids_from_partial_street_name(std::string street_pre
 //Return 0 if this feature is not a closed polygon.
 double find_feature_area(int feature_id){
     double featureArea;
+    
+    int numOfFeaturePoints = getFeaturePointCount(feature_id);
+    if (getFeaturePoint(0, feature_id)!=getFeaturePoint(numOfFeaturePoints-1, feature_id)) //if not closed polygon
+        return 0;
+    
     return featureArea;
 }
 
