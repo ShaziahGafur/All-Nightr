@@ -20,7 +20,7 @@
  */
 #include "m1.h"
 #include "StreetsDatabaseAPI.h"
-
+#include "OSMDatabaseAPI.h"
 #include <cmath>
 
 // load_map will be called with the name of the file that stores the "layer-2"
@@ -44,11 +44,27 @@ bool load_map(std::string map_streets_database_filename) {
     //Load your map related data structures here
     //
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
-    
-
     //load_successful = true; //Make sure this is updated to reflect whether
                             //loading the map succeeded or failed
-
+    
+    //Defining an object to hold both segment IDs and Intersection IDs for each street
+    struct streetInfo {
+        std::vector<std::int> streetSegmentsList; //list of segment IDs
+        std::vector<std::int> streetIntersectionsList; //list of intersection IDs
+    };
+    
+    //Creating map 
+    //key is of type: int
+    //value is of type: object containing segment IDs & intersection IDs
+    unordered_map<int, struct streetInfo> streetsMap; 
+    //get all streetment Ids
+    for (unsigned i = 0; i < getNumStreetSegments(); i++){
+        //take the street id from segment, check if it exists in map,
+        //if NO, initialize map element : streetsMap[streetId] = streetId; push_back segment id.
+        //if YES, retrieve element's vector and push_back segment id. 
+        
+    }
+    
     return load_successful;
 }
 
