@@ -95,7 +95,9 @@ int find_closest_intersection(LatLon my_position){
 std::vector<int> find_street_segments_of_intersection(int intersection_id){
     std::vector<int> ssOfIntersection;
     
-    for (int i = 0; i < getIntersectionStreetSegmentCount(intersection_id); i++){
+    int street_segment_count = getIntersectionStreetSegmentCount(intersection_id);
+    
+    for (int i = 0; i < street_segment_count; i++){
         ssOfIntersection.push_back(getIntersectionStreetSegment(intersection_id, i));
     } 
     return ssOfIntersection;
@@ -104,7 +106,22 @@ std::vector<int> find_street_segments_of_intersection(int intersection_id){
 //Returns the street names at the given intersection (includes duplicate street 
 //names in returned vector)
 std::vector<std::string> find_street_names_of_intersection(int intersection_id){
+    
+    //container for intersection street names
     std::vector<std::string> streetNamesOfIntersection;
+    
+    //container for the intersection street segments
+    std::vector<int> ssOfIntersection = find_street_segments_of_intersection(intersection_id);
+    
+    //go through all connecting street segments to find street names
+    for(std::vector<int>::iterator it = ssOfIntersection.begin(); it != ssOfIntersection.end(); ++it){
+        //retrieve struct with street segment info 
+        InfoStreetSegment ssInfoStruct = getInfoStreetSegment(*it);
+        
+        //get street name from street ID
+        streetNamesOfIntersection.push_back(getStreetName(ssInfoStruct.streetID));
+    }
+    
     return streetNamesOfIntersection;
 }
 
