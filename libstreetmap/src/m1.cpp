@@ -74,7 +74,14 @@ double find_street_segment_length(int street_segment_id){
 //Returns the travel time to drive a street segment in seconds 
 //(time = distance/speed_limit)
 double find_street_segment_travel_time(int street_segment_id){
-    double streetSegmentTravelTime;
+    
+    //Retrieve speed limit info in m/sec
+    InfoStreetSegment segmentInfo = getInfoStreetSegment(street_segment_id);
+    double speedLimit_metersPerSec = 1000.0*(segmentInfo.speedLimit)/ 3600.0;
+    
+    //calculate travel time (time = distance/velocity)
+    double streetSegmentTravelTime = (speedLimit_metersPerSec / find_street_segment_length(street_segment_id));
+    
     return streetSegmentTravelTime;
 }
 
