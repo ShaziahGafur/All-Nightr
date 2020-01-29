@@ -146,9 +146,16 @@ std::vector<int> find_intersections_of_street(int street_id){
 
 //Return all intersection ids for two intersecting streets
 //This function will typically return one intersection id.
-std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_ids){
-    std::vector<int> intersectionsOfTwoStreets;
-    return intersectionsOfTwoStreets;
+std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_ids){ 
+    std::vector<int> intersectionsOfTwoStreets; 
+    
+    std::vector<int> intersectionsOfStreet1 = find_intersections_of_street(street_ids.first); //extract intersections of first street
+    std::vector<int> intersectionsOfStreet2 = find_intersections_of_street(street_ids.second);//extract intersections of second street 
+    for (unsigned i = 0; i < intersectionsOfStreet2.size(); i++){ //for each intersection of Street 2
+        if (std::find(intersectionsOfStreet1.begin(), intersectionsOfStreet1.end(), intersectionsOfStreet2[i])) //check if Street 2's intersection exists in the entire vector of intersectionsOfStreet1
+            intersectionsOfTwoStreets.push_back(intersectionsOfStreet2[i]); //add the common intersection to the vector
+    }
+    return intersectionsOfTwoStreets; 
 }
 
 //Returns all street ids corresponding to street names that start with the given prefix
