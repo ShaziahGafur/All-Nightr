@@ -180,16 +180,38 @@ std::vector<int> find_street_segments_of_street(int street_id){
 }
 
 //Returns all intersections along the a given street
-std::vector<int> find_intersections_of_street(int street_id){
+std::vector<int> find_intersections_of_street(int street_id){   
     std::vector<int> intersectionsOfStreet;
+    
+    std::vector<int> streetSegmentsofStreet = find_street_segments_of_street(street_id);
+    if (streetSegmentsofStreet.size()==0) //if no street segments exist for the street
+        return intersectionsOfStreet; //return empty vector
+        
+    intersectionsOfStreet.push_back(
+        getInfoStreetSegment(streetSegmentsofStreet[0]).to //retrieve first street segment of street, get the "to" intersection id, add it to the intersectionsOfStreet vector
+    );
+    
+    for (unsigned i = 0; i < streetSegmentsofStreet.size(); i++){ //for each street segment of the street found
+        intersectionsOfStreet.push_back(
+        getInfoStreetSegment(streetSegmentsofStreet[i]).from //retrieve street segment's "from" intersection id, add it to the intersectionsOfStreet vector
+    );
+    }
+    
     return intersectionsOfStreet;
 }
 
 //Return all intersection ids for two intersecting streets
 //This function will typically return one intersection id.
-std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_ids){
-    std::vector<int> intersectionsOfTwoStreets;
-    return intersectionsOfTwoStreets;
+std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_ids){ 
+    std::vector<int> intersectionsOfTwoStreets; 
+    
+    std::vector<int> intersectionsOfStreet1 = find_intersections_of_street(street_ids.first); //extract intersections of first street
+    std::vector<int> intersectionsOfStreet2 = find_intersections_of_street(street_ids.second);//extract intersections of second street 
+//    for (unsigned i = 0; i < intersectionsOfStreet2.size(); i++){ //for each intersection of Street 2
+//        if (std::find(intersectionsOfStreet1.begin(), intersectionsOfStreet1.end(), intersectionsOfStreet2[i])!=intersectionsOfStreet1.end()) //check if Street 2's intersection exists in the entire vector of intersectionsOfStreet1
+//            intersectionsOfTwoStreets.push_back(intersectionsOfStreet2[i]); //add the common intersection to the vector
+//    }
+    return intersectionsOfTwoStreets; 
 }
 
 //Returns all street ids corresponding to street names that start with the given prefix
@@ -209,6 +231,11 @@ std::vector<int> find_street_ids_from_partial_street_name(std::string street_pre
 //Return 0 if this feature is not a closed polygon.
 double find_feature_area(int feature_id){
     double featureArea;
+    
+//    int numOfFeaturePoints = getFeaturePointCount(feature_id);
+//    if (getFeaturePoint(0, feature_id)!=getFeaturePoint(numOfFeaturePoints-1, feature_id)) //if not closed polygon
+//        return 0;
+//    
     return featureArea;
 }
 
@@ -216,6 +243,24 @@ double find_feature_area(int feature_id){
 //To implement this function you will have to  access the OSMDatabaseAPI.h 
 //functions.
 double find_way_length(OSMID way_id){
-    double wayLength;
+    
+//    OSMWay* wayPtr = getWayByIndex(way_id);
+//    std::vector<OSMID> OSMNodeIDs = getWayMembers(wayPtr);
+//    
+    double wayLength = 0;
+
+//    if (OSMNodeIDs.size()==0)
+//        return wayLength;
+//        
+//    LatLon OSMNodeLatLon1 = getNodeCoords(getNodeByIndex(OSMNodeIDs[0])); //extracts first OSM Node ID and retrieves corresponding LatLon (this is the "left-edge" of the way segment)
+//    
+//    for (unsigned i = 1; i < OSMNodeIDs.size(); i++){ //for the "right-edge" of each way segment
+//        
+//        LatLon OSMNodeLatLon2 = getNodeCoords(getNodeByIndex(OSMNodeIDs[i])); //calculate LatLon for right-edge of way segment
+//        
+//        std::pair<LatLon, LatLon> waySegment(OSMNodeLatLon1, OSMNodeLatLon2); //pair left-edge LatLon and right-edge LatLon
+//        wayLength += find_distance_between_two_points(waySegment); //calculate distance and add it to the total length (wayLength)
+//        OSMNodeLatLon1 = OSMNodeLatLon2; //shift right-edge of way segment to become the left-edge of the next way segment
+//    }
     return wayLength;
 }
