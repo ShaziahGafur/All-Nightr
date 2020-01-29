@@ -124,8 +124,23 @@ std::vector<int> find_street_segments_of_street(int street_id){
 }
 
 //Returns all intersections along the a given street
-std::vector<int> find_intersections_of_street(int street_id){
+std::vector<int> find_intersections_of_street(int street_id){   
     std::vector<int> intersectionsOfStreet;
+    
+    std::vector<int> streetSegmentsofStreet = find_street_segments_of_street(int street_id);
+    if (streetSegmentsofStreet.size()==0) //if no street segments exist for the street
+        return intersectionsOfStreet; //return empty vector
+        
+    intersectionsOfStreet.push_back(
+        getInfoStreetSegment(streetSegmentsofStreet[0]).to //retrieve first street segment of street, get the "to" intersection id, add it to the intersectionsOfStreet vector
+    );
+    
+    for (unsigned i = 0; i < streetSegmentsofStreet.size(); i++){ //for each street segment of the street found
+        intersectionsOfStreet.push_back(
+        getInfoStreetSegment(streetSegmentsofStreet[i]).from //retrieve street segment's "from" intersection id, add it to the intersectionsOfStreet vector
+    );
+    }
+    
     return intersectionsOfStreet;
 }
 
