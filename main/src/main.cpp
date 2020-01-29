@@ -57,8 +57,6 @@ int main(int argc, char** argv) {
     std::cout << "Successfully loaded map '" << map_path << "'\n";
 
     //You can now do something with the map data
-
-
     //Clean-up the map data and related data structures
     std::cout << "Closing map\n";
     close_map(); 
