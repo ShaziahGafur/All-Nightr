@@ -22,6 +22,7 @@
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include <cmath>
+#include <string>
 #include "streetStruct.h"
 
 // load_map will be called with the name of the file that stores the "layer-2"
@@ -44,8 +45,16 @@ bool load_map(std::string map_streets_database_filename) {
     //Load your map related data structures here
     //
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
-    //load_successful = true; //Make sure this is updated to reflect whether
-                            //loading the map succeeded or failed
+    //Make sure this load_successful is updated to reflect whetherloading the map succeeded or failed
+    
+    std:: string map_streets_database_filename_OSM = map_streets_database_filename;
+    //remove.street.bin from string to add .osm.bin
+    if (!(map_streets_database_filename_OSM.empty())){
+        map_streets_database_filename_OSM.resize(map_streets_database_filename.size()-10);
+        map_streets_database_filename_OSM = map_streets_database_filename_OSM + "osm.bin";
+    }
+    //load corresponding OSM database
+    loadOSMDatabaseBIN(map_streets_database_filename_OSM);
     
     streetStruct stubStreetStruct;
     
