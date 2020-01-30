@@ -199,7 +199,21 @@ std::vector<std::string> find_street_names_of_intersection(int intersection_id){
 //street segment (hint: check for 1-way streets too)
 //corner case: an intersection is considered to be connected to itself
 bool are_directly_connected(std::pair<int, int> intersection_ids){
-    bool directlyConnected = true;
+    bool directlyConnected;
+    InfoStreetSegment streetSegmentStruct;
+    //iterate through segments connected to first intersection
+    for (int i = 0; i < getIntersectionStreetSegmentCount(intersection_ids.first); i++){
+        //create street segment struct for segments connected to intersection
+        streetSegmentStruct = getInfoStreetSegment(getIntersectionStreetSegment(intersection_ids.first, i));
+        //check if the street segment is connected to second intersection
+        if ((streetSegmentStruct.from == intersection_ids.second) || (streetSegmentStruct.to == intersection_ids.second)){
+            directlyConnected = true;
+        }
+        else{
+            directlyConnected = false;
+        }
+    }
+    
     return directlyConnected;
 }
 
