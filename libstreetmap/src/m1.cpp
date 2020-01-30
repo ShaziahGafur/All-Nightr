@@ -246,10 +246,10 @@ std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_id
     
     std::vector<int> intersectionsOfStreet1 = find_intersections_of_street(street_ids.first); //extract intersections of first street
     std::vector<int> intersectionsOfStreet2 = find_intersections_of_street(street_ids.second);//extract intersections of second street 
-//    for (unsigned i = 0; i < intersectionsOfStreet2.size(); i++){ //for each intersection of Street 2
-//        if (std::find(intersectionsOfStreet1.begin(), intersectionsOfStreet1.end(), intersectionsOfStreet2[i])!=intersectionsOfStreet1.end()) //check if Street 2's intersection exists in the entire vector of intersectionsOfStreet1
-//            intersectionsOfTwoStreets.push_back(intersectionsOfStreet2[i]); //add the common intersection to the vector
-//    }
+    for (unsigned i = 0; i < intersectionsOfStreet2.size(); i++){ //for each intersection of Street 2
+        if (std::find(intersectionsOfStreet1.begin(), intersectionsOfStreet1.end(), intersectionsOfStreet2[i])!=intersectionsOfStreet1.end()) //check if Street 2's intersection exists in the entire vector of intersectionsOfStreet1
+            intersectionsOfTwoStreets.push_back(intersectionsOfStreet2[i]); //add the common intersection to the vector
+    }
     return intersectionsOfTwoStreets; 
 }
 
@@ -271,10 +271,15 @@ std::vector<int> find_street_ids_from_partial_street_name(std::string street_pre
 double find_feature_area(int feature_id){
     double featureArea;
     
-//    int numOfFeaturePoints = getFeaturePointCount(feature_id);
-//    if (getFeaturePoint(0, feature_id)!=getFeaturePoint(numOfFeaturePoints-1, feature_id)) //if not closed polygon
-//        return 0;
-//    
+    int numOfFeaturePoints = getFeaturePointCount(feature_id);
+    LatLon firstPoint = getFeaturePoint(0, feature_id);
+    LatLon secondPoint = getFeaturePoint(numOfFeaturePoints-1, feature_id);
+    
+    if (!(firstPoint.lat()==secondPoint.lat()&&firstPoint.lon()==secondPoint.lon())) //if not closed polygon
+        return 0;
+    
+    
+    
     return featureArea;
 }
 
@@ -282,12 +287,12 @@ double find_feature_area(int feature_id){
 //To implement this function you will have to  access the OSMDatabaseAPI.h 
 //functions.
 double find_way_length(OSMID way_id){
-    
-//    OSMWay* wayPtr = getWayByIndex(way_id);
-//    std::vector<OSMID> OSMNodeIDs = getWayMembers(wayPtr);
 //    
+//    OSMWay* wayPtr = getWayByIndex(5); //dummy id. Must pass in index using way_id
+//    std::vector<OSMID> OSMNodeIDs = getWayMembers(wayPtr);
+////    
     double wayLength = 0;
-
+//
 //    if (OSMNodeIDs.size()==0)
 //        return wayLength;
 //        
