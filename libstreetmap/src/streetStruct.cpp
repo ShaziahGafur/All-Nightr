@@ -19,4 +19,15 @@ streetStruct::streetStruct() {
 
 streetStruct::~streetStruct() {
 }
-
+    
+void streetStruct::addStreetSegment(int segmentId){
+    streetSegments.push_back(segmentId);
+}
+    
+void streetStruct::addIntersection(int intersectionId){
+    intersections.push_back(intersectionId);
+}
+    
+void streetStruct::setStreetName(std::string name){
+    streetName = name;
+}

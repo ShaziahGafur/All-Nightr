@@ -22,6 +22,7 @@
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include <cmath>
+#include "streetStruct.h"
 
 // load_map will be called with the name of the file that stores the "layer-2"
 // map data (the street and intersection data that is higher-level than the
@@ -39,31 +40,38 @@ bool load_map(std::string map_streets_database_filename) {
                                   //successfully
 
     std::cout << "load_map: " << map_streets_database_filename << std::endl;
-
     //
     //Load your map related data structures here
     //
-    load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
+//    load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
     //load_successful = true; //Make sure this is updated to reflect whether
                             //loading the map succeeded or failed
     
-    //Defining an object to hold both segment IDs and Intersection IDs for each street
-    struct streetInfo {
-        std::vector<std::int> streetSegmentsList; //list of segment IDs
-        std::vector<std::int> streetIntersectionsList; //list of intersection IDs
-    };
+    streetStruct stubStreetStruct;
     
-    //Creating map 
-    //key is of type: int
-    //value is of type: object containing segment IDs & intersection IDs
-    unordered_map<int, struct streetInfo> streetsMap; 
-    //get all streetment Ids
+    InfoStreetSegment segmentInfo; 
+    
+    //creating "vector of Street Vectors" - S.G
+    std::vector<streetStruct> streetVector(getNumStreets(), stubStreetStruct);
+    
+    //assigning street segments to their respective street
     for (unsigned i = 0; i < getNumStreetSegments(); i++){
-        //take the street id from segment, check if it exists in map,
-        //if NO, initialize map element : streetsMap[streetId] = streetId; push_back segment id.
-        //if YES, retrieve element's vector and push_back segment id. 
+        //creating street segment info struct
+        segmentInfo = getInfoStreetSegment(i);
+        //accessing streetID in order to assign to proper streetStruct vector element
+        streetVector[segmentInfo.streetID].addStreetSegment(i);
+        //assigning intersections to their respective street  -> duplicates will be dealt with...
+        streetVector[segmentInfo.streetID].addIntersection(segmentInfo.to);
+        streetVector[segmentInfo.streetID].addIntersection(segmentInfo.from);
+         
         
     }
+   
+    //assigning street names
+    for (unsigned i = 0; i < getNumStreets(); i++){
+        streetVector[i].setStreetName(getStreetName(i));
+    }
+    
     
     return load_successful;
 }

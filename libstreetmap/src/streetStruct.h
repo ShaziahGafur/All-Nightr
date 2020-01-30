@@ -24,6 +24,12 @@ public:
     
     virtual ~streetStruct();
     
+    void addStreetSegment(int segmentId);
+    
+    void addIntersection(int intersectionId);
+    
+    void setStreetName(std::string name);
+    
     
 private:
     std::vector<int> streetSegments;
@@ -31,8 +37,6 @@ private:
     std::vector<int> intersections;
     
     std::string streetName;
-    
-    double streetId;
 };
 
 #endif /* STREETSTRUCT_H */
