@@ -198,6 +198,8 @@ std::vector<std::string> find_street_names_of_intersection(int intersection_id){
 //Returns true if you can get from intersection_ids.first to intersection_ids.second using a single 
 //street segment (hint: check for 1-way streets too)
 //corner case: an intersection is considered to be connected to itself
+
+//NOTE: not sure why 1-way streets are relevant or how intersection would be connected to itself
 bool are_directly_connected(std::pair<int, int> intersection_ids){
     bool directlyConnected;
     InfoStreetSegment streetSegmentStruct;
@@ -205,7 +207,7 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
     for (int i = 0; i < getIntersectionStreetSegmentCount(intersection_ids.first); i++){
         //create street segment struct for segments connected to intersection
         streetSegmentStruct = getInfoStreetSegment(getIntersectionStreetSegment(intersection_ids.first, i));
-        //check if the street segment is connected to second intersection
+        //check if the street segment is connected to second intersection- if it is, set directlyConnected to true
         if ((streetSegmentStruct.from == intersection_ids.second) || (streetSegmentStruct.to == intersection_ids.second)){
             directlyConnected = true;
         }
@@ -222,6 +224,31 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
 //the returned vector should NOT contain duplicate intersections
 std::vector<int> find_adjacent_intersections(int intersection_id){
     std::vector<int> adjacentIntersections;
+    InfoStreetSegment streetSegmentStruct;
+    //iterate through street segments for given intersection
+    for (int i = 0; i < getIntersectionStreetSegmentCount(intersection_id); i++){
+        //get street segment info struct
+        streetSegmentStruct = getInfoStreetSegment(getIntersectionStreetSegment(intersection_id, i));
+        //check if street is one way
+        if (streetSegmentStruct.oneWay){
+            //check if its 'from' intersection is the intersection_id (it is going to the adjacent intersection)
+            if (streetSegmentStruct.from == intersection_id){
+                //add to intersection its going 'to' to adjacentIntersection vector
+                adjacentIntersections.push_back(streetSegmentStruct.to);
+            }
+        }
+        else{   //not one-way
+            //check if 'from' or 'to' intersection of street segment is intersection_id and push back the other one into adjacentIntersections
+            if (streetSegmentStruct.from == intersection_id){
+                adjacentIntersections.push_back(streetSegmentStruct.to);
+            }
+            else{
+                adjacentIntersections.push_back(streetSegmentStruct.from);
+            }
+        }
+        
+    }
+    
     return adjacentIntersections;
 }
 
