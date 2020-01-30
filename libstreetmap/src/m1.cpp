@@ -79,7 +79,7 @@ bool load_map(std::string map_streets_database_filename) {
 
 void close_map() {
     //Clean-up your map related data structures here
-    
+    closeStreetDatabase(); 
 }
 
 double find_distance_between_two_points(std::pair<LatLon, LatLon> points){
