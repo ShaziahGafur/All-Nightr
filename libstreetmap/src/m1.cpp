@@ -75,37 +75,7 @@ bool load_map(std::string map_streets_database_filename) {
     }
     //load corresponding OSM database
     loadOSMDatabaseBIN(map_streets_database_filename_OSM);
-<<<<<<< HEAD
-=======
-    
-    streetStruct stubStreetStruct;
-    
-    InfoStreetSegment segmentInfo; 
-    
-    /**
-     * Loading Map with StreetInfo
-     * 
-     * Creating Vector by Street containing street segments, intersections, and street name
-     */
-    //creating "vector of Street Vectors" - S.G
-    std::vector<streetStruct> streetVector(getNumStreets(), stubStreetStruct);
-    
-    //assigning street segments to their respective street
-    for (unsigned i = 0; i < getNumStreetSegments(); i++){
-        //creating street segment info struct
-        segmentInfo = getInfoStreetSegment(i);
-        //accessing streetID in order to assign to proper streetStruct vector element
-        streetVector[segmentInfo.streetID].addStreetSegment(i);
-        //assigning intersections to their respective street  -> duplicates will be dealt with...
-        streetVector[segmentInfo.streetID].addIntersection(segmentInfo.to);
-        streetVector[segmentInfo.streetID].addIntersection(segmentInfo.from); 
-    }
-   
-    //assigning street names
-    for (unsigned i = 0; i < getNumStreets(); i++){
-        streetVector[i].setStreetName(getStreetName(i));
-    }
-    
+
     /* 
      * Creating nested vector. Outer: intersections. Inner: Each intersection has a vector of its street segment indices.
      */
@@ -126,7 +96,7 @@ bool load_map(std::string map_streets_database_filename) {
         //push whole vector of street segments for this intersection into outer vector of intersections
         intersectionStreetSegments.push_back(streetSegmentsOfAnIntersection);
     }
->>>>>>> 94919228a767115e3a39cf41535f95ef751b0b88
+
     /**
      * Loading Map with OSMIDs & OSMEntitys
      * 
