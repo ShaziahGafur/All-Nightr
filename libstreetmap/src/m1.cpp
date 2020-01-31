@@ -23,6 +23,7 @@
 #include "OSMDatabaseAPI.h"
 #include <cmath>
 #include <string>
+#include <unordered_map> 
 #include "streetStruct.h"
 
 // load_map will be called with the name of the file that stores the "layer-2"
@@ -60,6 +61,11 @@ bool load_map(std::string map_streets_database_filename) {
     
     InfoStreetSegment segmentInfo; 
     
+    /**
+     * Loading Map with StreetInfo
+     * 
+     * Creating Vector by Street containing street segments, intersections, and street name
+     */
     //creating "vector of Street Vectors" - S.G
     std::vector<streetStruct> streetVector(getNumStreets(), stubStreetStruct);
     
@@ -71,14 +77,57 @@ bool load_map(std::string map_streets_database_filename) {
         streetVector[segmentInfo.streetID].addStreetSegment(i);
         //assigning intersections to their respective street  -> duplicates will be dealt with...
         streetVector[segmentInfo.streetID].addIntersection(segmentInfo.to);
-        streetVector[segmentInfo.streetID].addIntersection(segmentInfo.from);
-         
-        
+        streetVector[segmentInfo.streetID].addIntersection(segmentInfo.from); 
     }
    
     //assigning street names
     for (unsigned i = 0; i < getNumStreets(); i++){
         streetVector[i].setStreetName(getStreetName(i));
+    }
+    
+    /**
+     * Loading Map with OSMIDs & OSMEntitys
+     * 
+     * Creating Unordered Map by OSMID containing OSMNode ID
+     * Creating Vector by OSMWay ID containing length
+     */
+    
+    //--Creating Unordered Map--
+    std::unordered_map<OSMID, int> OSMID_to_node;  //Could possibly either store OSMNode* or int (node ID) as the value (shouldn't really matter)
+    //Note: this map only contains OSMIDs that link to an OSM Node 
+    for (int i = 0; i < getNumberOfNodes(); i++){
+        const OSMNode* nodePtr = getNodeByIndex(i);
+        OSMID_to_node[nodePtr->id()] = i; //stores to map: key as OSMID and value as the OSMNode ID
+    }
+    //--Creating Vector--
+    std::vector<double> OSMWay_lengths;  
+    int wayLength;
+    
+    //For all Ways, retrieve OSMNodes and calculate total distance
+    for (unsigned i = 0; i < getNumberOfWays(); i++){
+        wayLength = 0; //initialize length of way to 0 
+        const OSMWay* wayPtr = getWayByIndex(i);
+        std::vector <OSMID> nodesInWay = getWayMembers(wayPtr); //could possibly bring vector instantiation outside of loop and "recycle" it, per way
+        if (nodesInWay.size() < 2) { //if way is just a point
+            OSMWay_lengths.push_back(0); //length must be 0
+            continue; //skips to the next way
+        }
+
+        //extracts first Node and retrieves corresponding LatLon (this is the "left-edge" of the way segment)        
+        //retrieves first OSMID -> OSM Node index -> Node pointer -> Lat Lon Coordinates
+        LatLon LatLon_left = getNodeCoords(getNodeByIndex(OSMID_to_node[nodesInWay[0]])); 
+        
+        
+        for (unsigned i = 1; i < nodesInWay.size(); i++){
+             //calculate LatLon for right-edge of way segment
+             //retrieves the next OSMID -> OSM Node index -> Node pointer -> Lat Lon Coordinates
+            LatLon LatLon_right = getNodeCoords(getNodeByIndex(OSMID_to_node[nodesInWay[i]]));
+            std::pair<LatLon, LatLon> waySegment(LatLon_left, LatLon_right); //pair left-edge LatLon and right-edge LatLon
+            wayLength += find_distance_between_two_points(waySegment); //calculate distance and add it to the total length (wayLength)
+            LatLon_left = LatLon_right; //shift right-edge of current way segment to become the left-edge of the next way segment
+        }
+        
+       OSMWay_lengths.push_back(wayLength);
     }
     
     
@@ -366,35 +415,32 @@ double find_way_length(OSMID way_id){
         if (wayPtr->id() == way_id){
             //if it matches, get vector of nodes which make up the way
             nodesInWay = getWayMembers(wayPtr);
+            break; //nodesInWay should be assigned once
         }
     }
     
-    //get pointers to first and last node in nodesInWay vector and use them to find LatLon coordinates and find distance between them
-    for (int i = 0; i < getNumberOfNodes(); i++){
-        //check if pointer to node shares id with first element in nodesInWay vector
-        const OSMNode* firstNode = getNodeByIndex(i);
-        if (firstNode->id() == nodesInWay.front()){
-            for (int j = 0; j < getNumberOfNodes(); j++){
-                //check if pointer to node shares id with first element in nodesInWay vector
-                const OSMNode* secondNode = getNodeByIndex(j);
-                if (secondNode->id() == nodesInWay.back()){
-                    std::pair<LatLon, LatLon> Coordinates (getNodeCoords(firstNode), getNodeCoords(secondNode));
-                    wayLength = find_distance_between_two_points(Coordinates);
-                }
-            }
-        }
-    }
-    
-    
+    if (nodesInWay.size()==0)
+        return wayLength;
 
     
     
     
-    
-    
-    
-    
-    
+//    //get pointers to first and last node in nodesInWay vector and use them to find LatLon coordinates and find distance between them
+//    for (int i = 0; i < getNumberOfNodes(); i++){
+//        //check if pointer to node shares id with first element in nodesInWay vector
+//        const OSMNode* firstNode = getNodeByIndex(i);
+//        
+//        if (firstNode->id() == nodesInWay.front()){
+//            for (int j = 0; j < getNumberOfNodes(); j++){
+//                //check if pointer to node shares id with first element in nodesInWay vector
+//                const OSMNode* secondNode = getNodeByIndex(j);
+//                if (secondNode->id() == nodesInWay.back()){
+//                    std::pair<LatLon, LatLon> Coordinates (getNodeCoords(firstNode), getNodeCoords(secondNode));
+//                    wayLength = find_distance_between_two_points(Coordinates);
+//                }
+//            }
+//        }
+//    }
     
 //    OSMWay* wayPtr = getWayByIndex(5); //dummy id. Must pass in index using way_id
 //    std::vector<OSMID> OSMNodeIDs = getWayMembers(wayPtr);
