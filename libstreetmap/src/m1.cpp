@@ -84,6 +84,26 @@ bool load_map(std::string map_streets_database_filename) {
         streetVector[i].setStreetName(getStreetName(i));
     }
     
+    /* 
+     * Creating nested vector. Outer: intersections. Inner: Each intersection has a vector of its street segment indices.
+     */
+    std::vector<std::vector<int>> intersectionStreetSegments;
+    //set size of outer vector to number of intersections
+    intersectionStreetSegments.resize(getNumIntersections());
+    
+    //iterate through number of intersections
+    for(unsigned i = 0; i < getNumIntersections(); i++){
+        //create a vector containing street segments of this specific intersection
+        std::vector<int> streetSegmentsOfAnIntersection;
+        //iterate through number of street segments for this intersection
+        for(unsigned j = 0; j < getIntersectionStreetSegmentCount(i); j++){
+            //add the StreetSegment id to vector of street segments
+            streetSegmentsOfAnIntersection.push_back(getIntersectionStreetSegment(i, j));
+            
+        }
+        //push whole vector of street segments for this intersection into outer vector of intersections
+        intersectionStreetSegments.push_back(streetSegmentsOfAnIntersection);
+    }
     /**
      * Loading Map with OSMIDs & OSMEntitys
      * 
