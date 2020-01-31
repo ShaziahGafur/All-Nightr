@@ -383,30 +383,13 @@ std::vector<int> find_adjacent_intersections(int intersection_id){
 
 //Returns all street segments for the given street
 std::vector<int> find_street_segments_of_street(int street_id){
-    std::vector<int> streetSegmentsOfStreet;
-    return streetSegmentsOfStreet;
     
-    
+    return streetVector[street_id].streetSegments;
 }
 //Returns all intersections along the a given street
-std::vector<int> find_intersections_of_street(int street_id){   
-    std::vector<int> intersectionsOfStreet;
+std::vector<int> find_intersections_of_street(int street_id){ 
     
-    std::vector<int> streetSegmentsofStreet = find_street_segments_of_street(street_id);
-    if (streetSegmentsofStreet.size()==0) //if no street segments exist for the street
-        return intersectionsOfStreet; //return empty vector
-        
-    intersectionsOfStreet.push_back(
-        getInfoStreetSegment(streetSegmentsofStreet[0]).to //retrieve first street segment of street, get the "to" intersection id, add it to the intersectionsOfStreet vector
-    );
-    
-    for (unsigned i = 0; i < streetSegmentsofStreet.size(); i++){ //for each street segment of the street found
-        intersectionsOfStreet.push_back(
-        getInfoStreetSegment(streetSegmentsofStreet[i]).from //retrieve street segment's "from" intersection id, add it to the intersectionsOfStreet vector
-    );
-    }
-    
-    return intersectionsOfStreet;
+    return streetVector[street_id].intersections;
 }
 
 //Return all intersection ids for two intersecting streets
@@ -414,11 +397,14 @@ std::vector<int> find_intersections_of_street(int street_id){
 std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_ids){ 
     std::vector<int> intersectionsOfTwoStreets; 
     
-    std::vector<int> intersectionsOfStreet1 = find_intersections_of_street(street_ids.first); //extract intersections of first street
-    std::vector<int> intersectionsOfStreet2 = find_intersections_of_street(street_ids.second);//extract intersections of second street 
-    for (unsigned i = 0; i < intersectionsOfStreet2.size(); i++){ //for each intersection of Street 2
-        if (std::find(intersectionsOfStreet1.begin(), intersectionsOfStreet1.end(), intersectionsOfStreet2[i])!=intersectionsOfStreet1.end()) //check if Street 2's intersection exists in the entire vector of intersectionsOfStreet1
-            intersectionsOfTwoStreets.push_back(intersectionsOfStreet2[i]); //add the common intersection to the vector
+    int streetId1 = street_ids.first;
+    int streetId2 = street_ids.second;
+    std::vector<int> streetIntersections1 = streetVector[streetId1].intersections;
+    std::vector<int> streetIntersections2 = streetVector[streetId2].intersections;
+    
+    for (unsigned i = 0; i < streetIntersections2.size(); i++){ //for each intersection of Street 2
+        if (std::find(streetIntersections1.begin(), streetIntersections1.end(), streetIntersections2[i])!=streetIntersections1.end()) //check if Street 2's intersection exists in the entire vector of intersectionsOfStreet1
+            intersectionsOfTwoStreets.push_back(streetIntersections2[i]); //add the common intersection to the vector
     }
     return intersectionsOfTwoStreets; 
 }
@@ -449,9 +435,9 @@ double find_feature_area(int feature_id){
 //To implement this function you will have to  access the OSMDatabaseAPI.h 
 //functions.
 double find_way_length(OSMID way_id){
-    double wayLength = 0; //placeholder, remove 
-//    return OSMWay_lengths[way_id]; //This is the correct return statement. But map needs to be a global variable
-    return wayLength;
+//    double wayLength = 0; //placeholder, remove 
+    return OSMWay_lengths[way_id]; //This is the correct return statement. But map needs to be a global variable
+//    return wayLength;
 }
 
 

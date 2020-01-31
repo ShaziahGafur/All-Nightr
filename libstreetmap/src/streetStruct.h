@@ -29,9 +29,7 @@ public:
     void addIntersection(int intersectionId);
     
     void setStreetName(std::string name);
-    
-    
-private:
+
     std::vector<int> streetSegments;
     
     std::vector<int> intersections;
