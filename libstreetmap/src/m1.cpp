@@ -27,6 +27,8 @@
 #include "streetStruct.h"
 #include <iostream>
 
+
+
 // load_map will be called with the name of the file that stores the "layer-2"
 // map data (the street and intersection data that is higher-level than the
 // raw OSM data). This file name will always end in ".streets.bin" and you 
@@ -38,6 +40,24 @@
 // name of the ".osm.bin" file that matches your map -- just change 
 // ".streets" to ".osm" in the map_streets_database_filename to get the proper
 // name.
+
+
+//-----Global Variables-----
+//StreetStruct --> Members: [street name, street segments, intersections]
+streetStruct stubStreetStruct;
+//Vector --> key: [streedID] value: [StreetStruct]
+std::vector<streetStruct> streetVector(getNumStreets(), stubStreetStruct);
+//Hashtable --> key: [Node_Id] value: [OSMID]
+std::unordered_map<OSMID, int> OSMID_to_node; //Could possibly either store OSMNode* or int (node ID) as the value (shouldn't really matter)
+//Hashtable --> key: [OSMway] value: [length of way]
+std::unordered_map<OSMID, double> OSMWay_lengths;
+
+
+//---Function Declarations-----
+//Creating Vector by Street containing street segments, intersections, and street name
+void populateStreetVector();
+
+
 bool load_map(std::string map_streets_database_filename) {
     bool load_successful = false; //Indicates whether the map has loaded 
                                   //successfully
@@ -55,35 +75,6 @@ bool load_map(std::string map_streets_database_filename) {
     }
     //load corresponding OSM database
     loadOSMDatabaseBIN(map_streets_database_filename_OSM);
-    
-    streetStruct stubStreetStruct;
-    
-    InfoStreetSegment segmentInfo; 
-    
-    /**
-     * Loading Map with StreetInfo
-     * 
-     * Creating Vector by Street containing street segments, intersections, and street name
-     */
-    //creating "vector of Street Vectors" - S.G
-    std::vector<streetStruct> streetVector(getNumStreets(), stubStreetStruct);
-    
-    //assigning street segments to their respective street
-    for (unsigned i = 0; i < getNumStreetSegments(); i++){
-        //creating street segment info struct
-        segmentInfo = getInfoStreetSegment(i);
-        //accessing streetID in order to assign to proper streetStruct vector element
-        streetVector[segmentInfo.streetID].addStreetSegment(i);
-        //assigning intersections to their respective street  -> duplicates will be dealt with...
-        streetVector[segmentInfo.streetID].addIntersection(segmentInfo.to);
-        streetVector[segmentInfo.streetID].addIntersection(segmentInfo.from); 
-    }
-   
-    //assigning street names
-    for (unsigned i = 0; i < getNumStreets(); i++){
-        streetVector[i].setStreetName(getStreetName(i));
-    }
-    
     /**
      * Loading Map with OSMIDs & OSMEntitys
      * 
@@ -95,7 +86,7 @@ bool load_map(std::string map_streets_database_filename) {
     //Goes through each node, returns corresponding OSMid, creates a table with OSMid as key and node as value
     
     //stores OSMid
-    std::unordered_map<OSMID, int> OSMID_to_node;  //Could possibly either store OSMNode* or int (node ID) as the value (shouldn't really matter)
+
     //Note: this map only contains OSMIDs that link to an OSM Node 
     for (int i = 0; i < getNumberOfNodes(); i++){
         //creates a pointer that enables accessing the node's OSMID
@@ -107,7 +98,7 @@ bool load_map(std::string map_streets_database_filename) {
     
     //--Creating Unordered Map. Each element is a way, each way element has a value of length of the way--
     //Returns vector of all OSM ID's relating to a way, for each way
-    std::unordered_map<OSMID, double> OSMWay_lengths;
+   // std::unordered_map<OSMID, double> OSMWay_lengths;
 
     int wayLength;
     
@@ -439,4 +430,28 @@ double find_way_length(OSMID way_id){
     double wayLength = 0; //placeholder, remove 
 //    return OSMWay_lengths[way_id]; //This is the correct return statement. But map needs to be a global variable
     return wayLength;
+}
+
+
+//Creating Vector by Street containing street segments, intersections, and street name
+void populateStreetVector(){
+    
+    //assigning street segments to their respective street
+    for (unsigned i = 0; i < getNumStreetSegments(); i++){
+        InfoStreetSegment segmentInfo; 
+        
+        //creating street segment info struct
+        segmentInfo = getInfoStreetSegment(i);
+        //accessing streetID in order to assign to proper streetStruct vector element
+        streetVector[segmentInfo.streetID].addStreetSegment(i);
+        //assigning intersections to their respective street  -> duplicates will be dealt with...
+        streetVector[segmentInfo.streetID].addIntersection(segmentInfo.to);
+        streetVector[segmentInfo.streetID].addIntersection(segmentInfo.from); 
+    }
+   
+    //assigning street names
+    for (unsigned i = 0; i < getNumStreets(); i++){
+        streetVector[i].setStreetName(getStreetName(i));
+    }
+    
 }
