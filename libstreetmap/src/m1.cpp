@@ -22,6 +22,7 @@
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include <cmath>
+#include <string>
 #include "streetStruct.h"
 
 // load_map will be called with the name of the file that stores the "layer-2"
@@ -43,9 +44,17 @@ bool load_map(std::string map_streets_database_filename) {
     //
     //Load your map related data structures here
     //
-//    load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
-    //load_successful = true; //Make sure this is updated to reflect whether
-                            //loading the map succeeded or failed
+    load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
+    //Make sure this load_successful is updated to reflect whetherloading the map succeeded or failed
+    
+    std:: string map_streets_database_filename_OSM = map_streets_database_filename;
+    //remove.street.bin from string to add .osm.bin
+    if (!(map_streets_database_filename_OSM.empty())){
+        map_streets_database_filename_OSM.resize(map_streets_database_filename.size()-11);
+        map_streets_database_filename_OSM = map_streets_database_filename_OSM + "osm.bin";
+    }
+    //load corresponding OSM database
+    loadOSMDatabaseBIN(map_streets_database_filename_OSM);
     
     streetStruct stubStreetStruct;
     
@@ -79,7 +88,7 @@ bool load_map(std::string map_streets_database_filename) {
 
 void close_map() {
     //Clean-up your map related data structures here
-    
+    closeStreetDatabase(); 
 }
 
 double find_distance_between_two_points(std::pair<LatLon, LatLon> points){
@@ -198,8 +207,24 @@ std::vector<std::string> find_street_names_of_intersection(int intersection_id){
 //Returns true if you can get from intersection_ids.first to intersection_ids.second using a single 
 //street segment (hint: check for 1-way streets too)
 //corner case: an intersection is considered to be connected to itself
+
+//NOTE: not sure why 1-way streets are relevant or how intersection would be connected to itself
 bool are_directly_connected(std::pair<int, int> intersection_ids){
-    bool directlyConnected = true;
+    bool directlyConnected;
+    InfoStreetSegment streetSegmentStruct;
+    //iterate through segments connected to first intersection
+    for (int i = 0; i < getIntersectionStreetSegmentCount(intersection_ids.first); i++){
+        //create street segment struct for segments connected to intersection
+        streetSegmentStruct = getInfoStreetSegment(getIntersectionStreetSegment(intersection_ids.first, i));
+        //check if the street segment is connected to second intersection- if it is, set directlyConnected to true
+        if ((streetSegmentStruct.from == intersection_ids.second) || (streetSegmentStruct.to == intersection_ids.second)){
+            directlyConnected = true;
+        }
+        else{
+            directlyConnected = false;
+        }
+    }
+    
     return directlyConnected;
 }
 
@@ -208,6 +233,31 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
 //the returned vector should NOT contain duplicate intersections
 std::vector<int> find_adjacent_intersections(int intersection_id){
     std::vector<int> adjacentIntersections;
+    InfoStreetSegment streetSegmentStruct;
+    //iterate through street segments for given intersection
+    for (int i = 0; i < getIntersectionStreetSegmentCount(intersection_id); i++){
+        //get street segment info struct
+        streetSegmentStruct = getInfoStreetSegment(getIntersectionStreetSegment(intersection_id, i));
+        //check if street is one way
+        if (streetSegmentStruct.oneWay){
+            //check if its 'from' intersection is the intersection_id (it is going to the adjacent intersection)
+            if (streetSegmentStruct.from == intersection_id){
+                //add to intersection its going 'to' to adjacentIntersection vector
+                adjacentIntersections.push_back(streetSegmentStruct.to);
+            }
+        }
+        else{   //not one-way
+            //check if 'from' or 'to' intersection of street segment is intersection_id and push back the other one into adjacentIntersections
+            if (streetSegmentStruct.from == intersection_id){
+                adjacentIntersections.push_back(streetSegmentStruct.to);
+            }
+            else{
+                adjacentIntersections.push_back(streetSegmentStruct.from);
+            }
+        }
+        
+    }
+    
     return adjacentIntersections;
 }
 
@@ -302,11 +352,54 @@ double find_feature_area(int feature_id){
 //To implement this function you will have to  access the OSMDatabaseAPI.h 
 //functions.
 double find_way_length(OSMID way_id){
-//    
+
+    double wayLength = 0;
+    
+
+    //vector of nodes which make up a way
+    std::vector <OSMID> nodesInWay;
+    //get number of ways and increment through them till way_id is found. When it is, get array of nodes which are part of the way
+    for (int i = 0; i < getNumberOfWays(); i++){
+        //make OSM way pointer to each way
+        const OSMWay* wayPtr = getWayByIndex(i);
+        //check if the wayPtr id matches the argument id
+        if (wayPtr->id() == way_id){
+            //if it matches, get vector of nodes which make up the way
+            nodesInWay = getWayMembers(wayPtr);
+        }
+    }
+    
+    //get pointers to first and last node in nodesInWay vector and use them to find LatLon coordinates and find distance between them
+    for (int i = 0; i < getNumberOfNodes(); i++){
+        //check if pointer to node shares id with first element in nodesInWay vector
+        const OSMNode* firstNode = getNodeByIndex(i);
+        if (firstNode->id() == nodesInWay.front()){
+            for (int j = 0; j < getNumberOfNodes(); j++){
+                //check if pointer to node shares id with first element in nodesInWay vector
+                const OSMNode* secondNode = getNodeByIndex(j);
+                if (secondNode->id() == nodesInWay.back()){
+                    std::pair<LatLon, LatLon> Coordinates (getNodeCoords(firstNode), getNodeCoords(secondNode));
+                    wayLength = find_distance_between_two_points(Coordinates);
+                }
+            }
+        }
+    }
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
 //    OSMWay* wayPtr = getWayByIndex(5); //dummy id. Must pass in index using way_id
 //    std::vector<OSMID> OSMNodeIDs = getWayMembers(wayPtr);
 ////    
-    double wayLength = 0;
+    
 //
 //    if (OSMNodeIDs.size()==0)
 //        return wayLength;
