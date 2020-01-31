@@ -89,7 +89,7 @@ bool load_map(std::string map_streets_database_filename) {
      * Loading Map with OSMIDs & OSMEntitys
      * 
      * Creating Unordered Map by OSMID(only those that represent Node) containing OSMNode ID
-     * Creating Unorderd Map by OSMID (only those that represent Way) containing length
+     * Creating Unordered Map by OSMID (only those that represent Way) containing length
      */
     
     //--Creating 1st Unordered Map--
@@ -130,6 +130,45 @@ bool load_map(std::string map_streets_database_filename) {
        OSMWay_lengths[wayPtr->id()] = wayLength;
     }
     
+     /**
+     * Loading Map with Feature Area
+     * 
+     * Creating vector by feature ID containing area
+     */
+    
+    //--Creating Vector--
+    std::vector<double> featureAreaVector;
+    for (unsigned featureIdx = 0; featureIdx < getNumFeatures(); featureIdx++){
+        
+        double featureArea;
+    
+        int numOfFeaturePoints = getFeaturePointCount(featureIdx);
+        LatLon firstPoint = getFeaturePoint(0, featureIdx);
+        LatLon nextPoint = getFeaturePoint(numOfFeaturePoints-1, featureIdx); //in this case, this is the last point of the polygon
+
+        int sum1 = 0, sum2 = 0;
+
+        if (!(firstPoint.lat()==nextPoint.lat()&&firstPoint.lon()==nextPoint.lon())) //if not closed polygon
+            return 0;
+        else if (numOfFeaturePoints < 4) //area of line = 0
+            return 0;
+        for (unsigned featurePointIdx =0; featurePointIdx < numOfFeaturePoints - 1; featurePointIdx++){
+            nextPoint = getFeaturePoint(featurePointIdx+1, featureIdx);
+            //perform crosshatch, add to sum1 
+            sum1+= (firstPoint.lon()*nextPoint.lat());
+            //perform crosshatch, add to sum2         
+            sum2+= (firstPoint.lat()*nextPoint.lon());
+            firstPoint = nextPoint; //shift second point of current line segment as first point of next line segment
+        }   
+        //subtract: sum1 - sum2
+        //divide by two
+        featureArea = (sum1-sum2)/2;
+        if (featureArea < 0)
+            featureArea *= (-1);
+        //take positive value;
+        featureAreaVector.push_back(featureArea);
+    }
+   
     return load_successful;
 }
 
@@ -367,33 +406,10 @@ std::vector<int> find_street_ids_from_partial_street_name(std::string street_pre
 //Assume a non self-intersecting polygon (i.e. no holes)
 //Return 0 if this feature is not a closed polygon.
 double find_feature_area(int feature_id){
-    double featureArea;
+    double featureArea;//remove after creating global variable
+//    return featureAreaVector[feature_id];// this is the correct return statement. But vector must be global
     
-    int numOfFeaturePoints = getFeaturePointCount(feature_id);
-    LatLon firstPoint = getFeaturePoint(0, feature_id);
-    LatLon nextPoint = getFeaturePoint(numOfFeaturePoints-1, feature_id); //in this case, this is the last point of the polygon
-    
-    int sum1 = 0, sum2 = 0;
-    
-    if (!(firstPoint.lat()==nextPoint.lat()&&firstPoint.lon()==nextPoint.lon())) //if not closed polygon
-        return 0;
-    else if (numOfFeaturePoints < 4) //area of line = 0
-        return 0;
-    for (unsigned i =0; i < numOfFeaturePoints - 1; i++){
-        nextPoint = getFeaturePoint(i+1, feature_id);
-        //perform crosshatch, add to sum1 
-        sum1+= (firstPoint.lon()*nextPoint.lat());
-        //perform crosshatch, add to sum2         
-        sum2+= (firstPoint.lat()*nextPoint.lon());
-        firstPoint = nextPoint; //shift second point as first point
-    }   
-    //subtract: sum1 - sum2
-    //divide by two
-    featureArea = (sum1-sum2)/2;
-    if (featureArea < 0)
-        featureArea *= (-1);
-    //take positive value;
-    return featureArea;
+    return featureArea;//remove after creating global variable
 }
 
 //Returns the length of the OSMWay that has the given OSMID, in meters.
@@ -401,25 +417,29 @@ double find_feature_area(int feature_id){
 //functions.
 double find_way_length(OSMID way_id){
 
-    double wayLength = 0;
     
-
-    //vector of nodes which make up a way
-    std::vector <OSMID> nodesInWay;
-    //get number of ways and increment through them till way_id is found. When it is, get array of nodes which are part of the way
-    for (int i = 0; i < getNumberOfWays(); i++){
-        //make OSM way pointer to each way
-        const OSMWay* wayPtr = getWayByIndex(i);
-        //check if the wayPtr id matches the argument id
-        if (wayPtr->id() == way_id){
-            //if it matches, get vector of nodes which make up the way
-            nodesInWay = getWayMembers(wayPtr);
-            break; //nodesInWay should be assigned once
-        }
-    }
+    double wayLength = 0; //placeholder, remove 
+//    return OSMWay_lengths[way_id]; //This is the correct return statement. But map needs to be a global variable
     
-    if (nodesInWay.size()==0)
-        return wayLength;
+    
+//    
+//
+//    //vector of nodes which make up a way
+//    std::vector <OSMID> nodesInWay;
+//    //get number of ways and increment through them till way_id is found. When it is, get array of nodes which are part of the way
+//    for (int i = 0; i < getNumberOfWays(); i++){
+//        //make OSM way pointer to each way
+//        const OSMWay* wayPtr = getWayByIndex(i);
+//        //check if the wayPtr id matches the argument id
+//        if (wayPtr->id() == way_id){
+//            //if it matches, get vector of nodes which make up the way
+//            nodesInWay = getWayMembers(wayPtr);
+//            break; //nodesInWay should be assigned once
+//        }
+//    }
+//    
+//    if (nodesInWay.size()==0)
+//        return wayLength;
 
     
     
