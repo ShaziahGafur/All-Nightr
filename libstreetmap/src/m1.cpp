@@ -54,20 +54,23 @@ std::unordered_map<OSMID, double> OSMWay_lengths;
 
 
 //---Function Declarations-----
-//Creating Vector by Street containing street segments, intersections, and street name
+//Populating Street Vector Nodes with streetsdatabaseAPI data
 void populateStreetVector();
+//Populating Hashtable with OSMdatabaseAPI data
+void populateOSMID_to_node();
+//Populating OSMWay_lengths
+void populateOSMWay_lengths();
 
 
 bool load_map(std::string map_streets_database_filename) {
     bool load_successful = false; //Indicates whether the map has loaded 
                                   //successfully
 
-    //Load your map related data structures here
-    //
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
     //Make sure this load_successful is updated to reflect whetherloading the map succeeded or failed
     
     std:: string map_streets_database_filename_OSM = map_streets_database_filename;
+    
     //remove.street.bin from string to add .osm.bin
     if (!(map_streets_database_filename_OSM.empty())){
         map_streets_database_filename_OSM.resize(map_streets_database_filename.size()-11);
@@ -96,72 +99,11 @@ bool load_map(std::string map_streets_database_filename) {
         //push whole vector of street segments for this intersection into outer vector of intersections
         intersectionStreetSegments.push_back(streetSegmentsOfAnIntersection);
     }
-
-    /**
-     * Loading Map with OSMIDs & OSMEntitys
-     * 
-     * Creating Unordered Map by OSMID(only those that represent Node) containing OSMNode ID
-     * Creating Unordered Map by OSMID (only those that represent Way) containing length
-     */
-    
-    //--Creating Map of Nodes (helper function for Way Unordered Map)
-    //Goes through each node, returns corresponding OSMid, creates a table with OSMid as key and node as value
-    
-    //stores OSMid
-
-    //Note: this map only contains OSMIDs that link to an OSM Node 
-    for (int i = 0; i < getNumberOfNodes(); i++){
-        //creates a pointer that enables accessing the node's OSMID
-        const OSMNode* nodePtr = getNodeByIndex(i);
-        //stores to map: key as OSMID and value as the Node ID
-        OSMID_to_node[nodePtr->id()] = i; 
-    }
-    
-    
-    //--Creating Unordered Map. Each element is a way, each way element has a value of length of the way--
-    //Returns vector of all OSM ID's relating to a way, for each way
-   // std::unordered_map<OSMID, double> OSMWay_lengths;
-
-    int wayLength;
-    
-    //For all Ways, retrieve OSMNodes and calculate total distance of each way
-    for (unsigned i = 0; i < getNumberOfWays(); i++){
-        
-        wayLength = 0; //initialize length of way to 0 
-        //creates a pointer that enables accessing the node's OSMID
-        const OSMWay* wayPtr = getWayByIndex(i);
-        
-        std::vector <OSMID> nodesInWay = getWayMembers(wayPtr); //could possibly bring vector instantiation outside of loop and "recycle" it, per way
-        
-        if (nodesInWay.size() < 2) { //if way is just a point
-            OSMWay_lengths[wayPtr->id()] = 0; //length must be 0
-            continue; //skips to the next way
-        }
-
-        
-        //extracts first Node and retrieves corresponding LatLon (this is the "left-edge" of the way segment)        
-        //retrieves first OSMID -> OSM Node index -> Node pointer -> Lat Lon Coordinates
-        LatLon LatLon_left = getNodeCoords(getNodeByIndex(OSMID_to_node[nodesInWay[0]])); 
-        
-        for (unsigned j = 1; j < nodesInWay.size(); j++){
-             //calculate LatLon for right-edge of way segment
-             //retrieves the next OSMID -> OSM Node index -> Node pointer -> Lat Lon Coordinates
-            LatLon LatLon_right = getNodeCoords(getNodeByIndex(OSMID_to_node[nodesInWay[j]]));
-            
-            std::pair<LatLon, LatLon> waySegment(LatLon_left, LatLon_right); //pair left-edge LatLon and right-edge LatLon
-            wayLength += find_distance_between_two_points(waySegment); //calculate distance and add it to the total length (wayLength)
-            LatLon_left = LatLon_right; //shift right-edge of current way segment to become the left-edge of the next way segment
-        }
-       OSMWay_lengths[wayPtr->id()] = wayLength;
-       
-    }
-    
      /**
      * Loading Map with Feature Area
      * 
      * Creating vector by feature ID containing area
      */
-    
     //--Creating Vector--
     std::vector<double> featureAreaVector;
     for (unsigned featureIdx = 0; featureIdx < getNumFeatures(); featureIdx++){
@@ -446,6 +388,7 @@ void populateStreetVector(){
     
     //assigning street segments to their respective street
     for (unsigned i = 0; i < getNumStreetSegments(); i++){
+        
         InfoStreetSegment segmentInfo; 
         
         //creating street segment info struct
@@ -460,6 +403,61 @@ void populateStreetVector(){
     //assigning street names
     for (unsigned i = 0; i < getNumStreets(); i++){
         streetVector[i].setStreetName(getStreetName(i));
+    }
+    
+}
+
+
+ //Creating Unordered Map by OSMID(only those that represent Node) containing OSMNode ID
+void populateOSMID_to_node(){
+    //--Creating Map of Nodes (helper function for Way Unordered Map)
+    //Goes through each node, returns corresponding OSMid, creates a table with OSMid as key and node as value
+
+    //Note: this map only contains OSMIDs that link to an OSM Node 
+    for (int i = 0; i < getNumberOfNodes(); i++){
+        //creates a pointer that enables accessing the node's OSMID
+        const OSMNode* nodePtr = getNodeByIndex(i);
+        //stores to map: key as OSMID and value as the Node ID
+        OSMID_to_node[nodePtr->id()] = i; 
+    }
+}
+// Creating Unordered Map by OSMID (only those that represent Way) containing length
+void populateOSMWay_lengths(){
+   //Returns vector of all OSM ID's relating to a way, for each way
+   // std::unordered_map<OSMID, double> OSMWay_lengths;
+
+    int wayLength;
+    
+    //For all Ways, retrieve OSMNodes and calculate total distance of each way
+    for (unsigned i = 0; i < getNumberOfWays(); i++){
+        
+        wayLength = 0; //initialize length of way to 0 
+        //creates a pointer that enables accessing the node's OSMID
+        const OSMWay* wayPtr = getWayByIndex(i);
+        
+        std::vector <OSMID> nodesInWay = getWayMembers(wayPtr); //could possibly bring vector instantiation outside of loop and "recycle" it, per way
+        
+        if (nodesInWay.size() < 2) { //if way is just a point
+            OSMWay_lengths[wayPtr->id()] = 0; //length must be 0
+            continue; //skips to the next way
+        }
+
+        
+        //extracts first Node and retrieves corresponding LatLon (this is the "left-edge" of the way segment)        
+        //retrieves first OSMID -> OSM Node index -> Node pointer -> Lat Lon Coordinates
+        LatLon LatLon_left = getNodeCoords(getNodeByIndex(OSMID_to_node[nodesInWay[0]])); 
+        
+        for (unsigned j = 1; j < nodesInWay.size(); j++){
+             //calculate LatLon for right-edge of way segment
+             //retrieves the next OSMID -> OSM Node index -> Node pointer -> Lat Lon Coordinates
+            LatLon LatLon_right = getNodeCoords(getNodeByIndex(OSMID_to_node[nodesInWay[j]]));
+            
+            std::pair<LatLon, LatLon> waySegment(LatLon_left, LatLon_right); //pair left-edge LatLon and right-edge LatLon
+            wayLength += find_distance_between_two_points(waySegment); //calculate distance and add it to the total length (wayLength)
+            LatLon_left = LatLon_right; //shift right-edge of current way segment to become the left-edge of the next way segment
+        }
+       OSMWay_lengths[wayPtr->id()] = wayLength;
+       
     }
     
 }
