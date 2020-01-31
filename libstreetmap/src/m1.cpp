@@ -25,6 +25,7 @@
 #include <string>
 #include <unordered_map> 
 #include "streetStruct.h"
+#include <iostream>
 
 // load_map will be called with the name of the file that stores the "layer-2"
 // map data (the street and intersection data that is higher-level than the
@@ -41,8 +42,6 @@ bool load_map(std::string map_streets_database_filename) {
     bool load_successful = false; //Indicates whether the map has loaded 
                                   //successfully
 
-    std::cout << "load_map: " << map_streets_database_filename << std::endl;
-    //
     //Load your map related data structures here
     //
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
@@ -92,28 +91,41 @@ bool load_map(std::string map_streets_database_filename) {
      * Creating Unordered Map by OSMID (only those that represent Way) containing length
      */
     
-    //--Creating 1st Unordered Map--
+    //--Creating Map of Nodes (helper function for Way Unordered Map)
+    //Goes through each node, returns corresponding OSMid, creates a table with OSMid as key and node as value
+    
+    //stores OSMid
     std::unordered_map<OSMID, int> OSMID_to_node;  //Could possibly either store OSMNode* or int (node ID) as the value (shouldn't really matter)
     //Note: this map only contains OSMIDs that link to an OSM Node 
     for (int i = 0; i < getNumberOfNodes(); i++){
+        //creates a pointer that enables accessing the node's OSMID
         const OSMNode* nodePtr = getNodeByIndex(i);
-        OSMID_to_node[nodePtr->id()] = i; //stores to map: key as OSMID and value as the OSMNode ID
+        //stores to map: key as OSMID and value as the Node ID
+        OSMID_to_node[nodePtr->id()] = i; 
     }
-    //--Creating 2nd Unordered Map--
+    
+    
+    //--Creating Unordered Map. Each element is a way, each way element has a value of length of the way--
+    //Returns vector of all OSM ID's relating to a way, for each way
     std::unordered_map<OSMID, double> OSMWay_lengths;
 
     int wayLength;
     
-    //For all Ways, retrieve OSMNodes and calculate total distance
+    //For all Ways, retrieve OSMNodes and calculate total distance of each way
     for (unsigned i = 0; i < getNumberOfWays(); i++){
+        
         wayLength = 0; //initialize length of way to 0 
+        //creates a pointer that enables accessing the node's OSMID
         const OSMWay* wayPtr = getWayByIndex(i);
+        
         std::vector <OSMID> nodesInWay = getWayMembers(wayPtr); //could possibly bring vector instantiation outside of loop and "recycle" it, per way
+        
         if (nodesInWay.size() < 2) { //if way is just a point
             OSMWay_lengths[wayPtr->id()] = 0; //length must be 0
             continue; //skips to the next way
         }
 
+        
         //extracts first Node and retrieves corresponding LatLon (this is the "left-edge" of the way segment)        
         //retrieves first OSMID -> OSM Node index -> Node pointer -> Lat Lon Coordinates
         LatLon LatLon_left = getNodeCoords(getNodeByIndex(OSMID_to_node[nodesInWay[0]])); 
@@ -128,6 +140,7 @@ bool load_map(std::string map_streets_database_filename) {
             LatLon_left = LatLon_right; //shift right-edge of current way segment to become the left-edge of the next way segment
         }
        OSMWay_lengths[wayPtr->id()] = wayLength;
+       
     }
     
      /**
@@ -147,11 +160,17 @@ bool load_map(std::string map_streets_database_filename) {
         LatLon nextPoint = getFeaturePoint(numOfFeaturePoints-1, featureIdx); //in this case, this is the last point of the polygon
 
         int sum1 = 0, sum2 = 0;
-
-        if (!(firstPoint.lat()==nextPoint.lat()&&firstPoint.lon()==nextPoint.lon())) //if not closed polygon
-            return 0;
-        else if (numOfFeaturePoints < 4) //area of line = 0
-            return 0;
+        
+        //if not closed polygon
+        if (!(firstPoint.lat()==nextPoint.lat()&&firstPoint.lon()==nextPoint.lon())) {
+            featureAreaVector.push_back(0);
+            continue;
+        }
+        //area of line = 0
+        else if (numOfFeaturePoints < 4) {
+            featureAreaVector.push_back(0);
+            continue;
+        }
         for (unsigned featurePointIdx =0; featurePointIdx < numOfFeaturePoints - 1; featurePointIdx++){
             nextPoint = getFeaturePoint(featurePointIdx+1, featureIdx);
             //perform crosshatch, add to sum1 
@@ -176,6 +195,7 @@ bool load_map(std::string map_streets_database_filename) {
 void close_map() {
     //Clean-up your map related data structures here
     closeStreetDatabase(); 
+    closeOSMDatabase();
 }
 
 double find_distance_between_two_points(std::pair<LatLon, LatLon> points){
