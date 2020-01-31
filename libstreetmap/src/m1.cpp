@@ -273,13 +273,28 @@ double find_feature_area(int feature_id){
     
     int numOfFeaturePoints = getFeaturePointCount(feature_id);
     LatLon firstPoint = getFeaturePoint(0, feature_id);
-    LatLon secondPoint = getFeaturePoint(numOfFeaturePoints-1, feature_id);
+    LatLon nextPoint = getFeaturePoint(numOfFeaturePoints-1, feature_id); //in this case, this is the last point of the polygon
     
-    if (!(firstPoint.lat()==secondPoint.lat()&&firstPoint.lon()==secondPoint.lon())) //if not closed polygon
+    int sum1 = 0, sum2 = 0;
+    
+    if (!(firstPoint.lat()==nextPoint.lat()&&firstPoint.lon()==nextPoint.lon())) //if not closed polygon
         return 0;
-    
-    
-    
+    else if (numOfFeaturePoints < 4) //area of line = 0
+        return 0;
+    for (unsigned i =0; i < numOfFeaturePoints - 1; i++){
+        nextPoint = getFeaturePoint(i+1, feature_id);
+        //perform crosshatch, add to sum1 
+        sum1+= (firstPoint.lon()*nextPoint.lat());
+        //perform crosshatch, add to sum2         
+        sum2+= (firstPoint.lat()*nextPoint.lon());
+        firstPoint = nextPoint; //shift second point as first point
+    }   
+    //subtract: sum1 - sum2
+    //divide by two
+    featureArea = (sum1-sum2)/2;
+    if (featureArea < 0)
+        featureArea *= (-1);
+    //take positive value;
     return featureArea;
 }
 
