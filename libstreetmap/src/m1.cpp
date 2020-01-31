@@ -416,68 +416,7 @@ double find_feature_area(int feature_id){
 //To implement this function you will have to  access the OSMDatabaseAPI.h 
 //functions.
 double find_way_length(OSMID way_id){
-
-    
     double wayLength = 0; //placeholder, remove 
 //    return OSMWay_lengths[way_id]; //This is the correct return statement. But map needs to be a global variable
-    
-    
-//    
-//
-//    //vector of nodes which make up a way
-//    std::vector <OSMID> nodesInWay;
-//    //get number of ways and increment through them till way_id is found. When it is, get array of nodes which are part of the way
-//    for (int i = 0; i < getNumberOfWays(); i++){
-//        //make OSM way pointer to each way
-//        const OSMWay* wayPtr = getWayByIndex(i);
-//        //check if the wayPtr id matches the argument id
-//        if (wayPtr->id() == way_id){
-//            //if it matches, get vector of nodes which make up the way
-//            nodesInWay = getWayMembers(wayPtr);
-//            break; //nodesInWay should be assigned once
-//        }
-//    }
-//    
-//    if (nodesInWay.size()==0)
-//        return wayLength;
-
-    
-    
-    
-//    //get pointers to first and last node in nodesInWay vector and use them to find LatLon coordinates and find distance between them
-//    for (int i = 0; i < getNumberOfNodes(); i++){
-//        //check if pointer to node shares id with first element in nodesInWay vector
-//        const OSMNode* firstNode = getNodeByIndex(i);
-//        
-//        if (firstNode->id() == nodesInWay.front()){
-//            for (int j = 0; j < getNumberOfNodes(); j++){
-//                //check if pointer to node shares id with first element in nodesInWay vector
-//                const OSMNode* secondNode = getNodeByIndex(j);
-//                if (secondNode->id() == nodesInWay.back()){
-//                    std::pair<LatLon, LatLon> Coordinates (getNodeCoords(firstNode), getNodeCoords(secondNode));
-//                    wayLength = find_distance_between_two_points(Coordinates);
-//                }
-//            }
-//        }
-//    }
-    
-//    OSMWay* wayPtr = getWayByIndex(5); //dummy id. Must pass in index using way_id
-//    std::vector<OSMID> OSMNodeIDs = getWayMembers(wayPtr);
-////    
-    
-//
-//    if (OSMNodeIDs.size()==0)
-//        return wayLength;
-//        
-//    LatLon OSMNodeLatLon1 = getNodeCoords(getNodeByIndex(OSMNodeIDs[0])); //extracts first OSM Node ID and retrieves corresponding LatLon (this is the "left-edge" of the way segment)
-//    
-//    for (unsigned i = 1; i < OSMNodeIDs.size(); i++){ //for the "right-edge" of each way segment
-//        
-//        LatLon OSMNodeLatLon2 = getNodeCoords(getNodeByIndex(OSMNodeIDs[i])); //calculate LatLon for right-edge of way segment
-//        
-//        std::pair<LatLon, LatLon> waySegment(OSMNodeLatLon1, OSMNodeLatLon2); //pair left-edge LatLon and right-edge LatLon
-//        wayLength += find_distance_between_two_points(waySegment); //calculate distance and add it to the total length (wayLength)
-//        OSMNodeLatLon1 = OSMNodeLatLon2; //shift right-edge of way segment to become the left-edge of the next way segment
-//    }
     return wayLength;
 }
