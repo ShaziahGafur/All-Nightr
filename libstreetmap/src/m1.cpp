@@ -60,6 +60,8 @@ std::vector<double> featureAreaVector;
 std::vector<double> segment_lengths;
 //Vector --> key: [intersection ID] value: [pair of LatLon Coordinates]
 std::vector<LatLon> intersectionCoordinates;
+//Hashtable --> key: [Street Name] value: [Street Index]
+std::unordered_map<std::string, int> streetNames;
 
 
 //---Function Declarations-----
@@ -77,6 +79,8 @@ void populateIntersectionStreetSegments();
 void populate_segement_lengths();
 //Populating intersection Coordinates
 void populateIntersectionCoordinates();
+//Populating names of street with street index
+void populateStreetNames();
 
 
 
@@ -113,6 +117,8 @@ bool load_map(std::string map_streets_database_filename) {
     populateIntersectionStreetSegments();
     
     populateIntersectionCoordinates();
+    
+    populateStreetNames();
 
    
     return load_successful;
@@ -169,7 +175,7 @@ int find_closest_intersection(LatLon my_position){
     int closestIntersection;
     
     for (unsigned i = 1; i < intersectionCoordinates.size(); i++){
-        std::pair<LatLon, LatLon> path(my_position, intersectionCoordinates[i]);     
+        path = std::pair<LatLon, LatLon> (my_position, intersectionCoordinates[i]);     
         int distance = find_distance_between_two_points(path);
         if (distance < shortestDistance){
             shortestDistance = distance;
@@ -308,6 +314,9 @@ std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_id
 //string, but your program must not crash if street_prefix is a length 0 string.
 std::vector<int> find_street_ids_from_partial_street_name(std::string street_prefix){
     std::vector<int> streetIdsFromPartialStreetName;
+    
+    if (streetNames.count(street_prefix)!=0) //takes full (regular) name
+        streetIdsFromPartialStreetName.push_back(streetNames[street_prefix]);
     return streetIdsFromPartialStreetName;
 }
 
@@ -528,5 +537,12 @@ void populateIntersectionCoordinates() {
        LatLon intersectionLatLon = getIntersectionPosition(i);
        intersectionCoordinates.push_back(intersectionLatLon);  
        
+   }
+}
+
+void populateStreetNames() {
+    
+   for(unsigned streetIdx = 0; streetIdx < getNumStreets(); streetIdx++){
+       streetNames[getStreetName(streetIdx)] = streetIdx;
    }
 }
