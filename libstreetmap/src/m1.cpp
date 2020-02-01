@@ -397,11 +397,11 @@ void populateFeatureAreaVector(){
             featureAreaVector.push_back(0);
             continue;
         }
-        //area of line = 0
-        else if (numOfFeaturePoints < 4) {
-            featureAreaVector.push_back(0);
-            continue;
-        }
+//        //area of line = 0
+//        else if (numOfFeaturePoints < 4) {
+//            featureAreaVector.push_back(0);
+//            continue;
+//        }
         for (unsigned featurePointIdx = 0; featurePointIdx < numOfFeaturePoints - 1; featurePointIdx++){
             nextPoint = getFeaturePoint(featurePointIdx+1, featureIdx);
             //perform crosshatch, add to sum1 
