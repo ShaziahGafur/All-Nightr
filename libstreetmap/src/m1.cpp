@@ -58,6 +58,8 @@ std::unordered_map<OSMID, double> OSMWay_lengths;
 std::vector<double> featureAreaVector;
 //Vector --> key: [segment] value: [length]
 std::vector<double> segment_lengths;
+//Vector --> key: [intersection ID] value: [pair of LatLon Coordinates]
+std::vector<LatLon> intersectionCoordinates;
 
 
 //---Function Declarations-----
@@ -73,6 +75,8 @@ void populateOSMWay_lengths();
 void populateIntersectionStreetSegments();
 //Populating segment_lengths
 void populate_segement_lengths();
+//Populating intersection Coordinates
+void populateIntersectionCoordinates();
 
 
 
@@ -107,6 +111,8 @@ bool load_map(std::string map_streets_database_filename) {
     
     //Populating streetSegmentsOfAnIntersection
     populateIntersectionStreetSegments();
+    
+    populateIntersectionCoordinates();
 
    
     return load_successful;
@@ -155,7 +161,22 @@ double find_street_segment_travel_time(int street_segment_id){
 
 //Returns the nearest intersection to the given position
 int find_closest_intersection(LatLon my_position){
-    int closestIntersection = 0;
+
+    std::pair<LatLon, LatLon> path(my_position, intersectionCoordinates[0]);     
+    int shortestDistance = find_distance_between_two_points(path);
+    
+    int distance;
+    int closestIntersection;
+    
+    for (unsigned i = 1; i < intersectionCoordinates.size(); i++){
+        std::pair<LatLon, LatLon> path(my_position, intersectionCoordinates[i]);     
+        int distance = find_distance_between_two_points(path);
+        if (distance < shortestDistance){
+            shortestDistance = distance;
+            closestIntersection = i;
+        }
+    }
+    
     return closestIntersection;
 }
 
@@ -458,7 +479,7 @@ void populate_segement_lengths(){
     
      InfoStreetSegment segmentInfo;
     
-    for(double id = 0; id < getNumStreetSegments(); id++){
+    for(unsigned id = 0; id < getNumStreetSegments(); id++){
     
         segmentInfo = getInfoStreetSegment(id);
 
@@ -499,4 +520,13 @@ void populate_segement_lengths(){
         
         segment_lengths[id] =  streetSegmentLength;
     }   
+}
+
+void populateIntersectionCoordinates() {
+    
+   for(unsigned i = 0; i < getNumIntersections(); i++){
+       LatLon intersectionLatLon = getIntersectionPosition(i);
+       intersectionCoordinates.push_back(intersectionLatLon);  
+       
+   }
 }
