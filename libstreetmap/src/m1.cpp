@@ -26,6 +26,7 @@
 #include <unordered_map> 
 #include "streetStruct.h"
 #include <iostream>
+#include <vector>
 
 
 
@@ -92,19 +93,19 @@ bool load_map(std::string map_streets_database_filename) {
     loadOSMDatabaseBIN(map_streets_database_filename_OSM);
     
     //Populating Street Vector Nodes with streetsdatabaseAPI data
-    populateStreetVector;
+    populateStreetVector();
     
     //Populating Feature Area Vector with area
-    populateFeatureAreaVector;
+    populateFeatureAreaVector();
     
     //Populating Hashtable with OSMdatabaseAPI data
-    populateOSMID_to_node;
+    populateOSMID_to_node();
     
     //Populating OSMWay_lengths
-    populateOSMWay_lengths;
+    populateOSMWay_lengths();
     
     //Populating streetSegmentsOfAnIntersection
-    populateIntersectionStreetSegments;
+    populateIntersectionStreetSegments();
 
    
     return load_successful;
@@ -192,7 +193,7 @@ double find_street_segment_travel_time(int street_segment_id){
 
 //Returns the nearest intersection to the given position
 int find_closest_intersection(LatLon my_position){
-    int closestIntersection;
+    int closestIntersection = 0;
     return closestIntersection;
 }
 
@@ -430,7 +431,6 @@ void populateOSMID_to_node(){
 // Creating Unordered Map by OSMID (only those that represent Way) containing length
 void populateOSMWay_lengths(){
    //Returns vector of all OSM ID's relating to a way, for each way
-   // std::unordered_map<OSMID, double> OSMWay_lengths;
 
     int wayLength;
     
