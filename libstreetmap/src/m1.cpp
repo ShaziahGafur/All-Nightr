@@ -150,8 +150,12 @@ double find_distance_between_two_points(std::pair<LatLon, LatLon> points){
 
 //Returns the length of the given street segment in meters
 double find_street_segment_length(int street_segment_id){
-    
-    return segment_lengths[street_segment_id];
+    if (street_segment_id < getNumStreetSegments()){
+        return segment_lengths[street_segment_id];
+    }
+    else{
+        return 0;
+    }
 }
 
 //Returns the travel time to drive a street segment in seconds 
@@ -530,7 +534,7 @@ void populate_segment_lengths(){
                 std::pair<LatLon, LatLon> length(from, to);
 
                 //calculate distance
-                streetSegmentLength += find_distance_between_two_points (length);\
+                streetSegmentLength += find_distance_between_two_points (length);
 
                 //update "from" point
                 from = to;
