@@ -333,12 +333,8 @@ double find_feature_area(int feature_id){
 }
 
 //Returns the length of the OSMWay that has the given OSMID, in meters.
-//To implement this function you will have to  access the OSMDatabaseAPI.h 
-//functions.
 double find_way_length(OSMID way_id){
-    double wayLength = 0; //placeholder, remove 
-//    return OSMWay_lengths[way_id]; //This is the correct return statement. But map needs to be a global variable
-    return wayLength;
+    return OSMWay_lengths.at(way_id);
 }
 
 
@@ -433,12 +429,11 @@ void populateOSMWay_lengths(){
     
     //Retrieves OSMNodes and calculate total distance, for each way
     for (unsigned i = 0; i < getNumberOfWays(); i++){
-        
-        wayLength = 0; //initialize length of way to 0 
+        //initialize length of way to 0 
+        wayLength = 0; 
         //creates a pointer that enables accessing the node's OSMID
         const OSMWay* wayPtr = getWayByIndex(i);
-        
-        //copies over values from getWayMembers, and changes it's size accordingly
+        //copies over values from getWayMembers, and changes nodesInWay's size accordingly
         nodesInWay = getWayMembers(wayPtr);
         
         //if way is just a point, assigns length of zero and skips to the next for-loop iteration
@@ -447,10 +442,11 @@ void populateOSMWay_lengths(){
             continue;
         }
 
-        //otherwise, calculates length of the Way
-        //extracts first Node and retrieves corresponding LatLon (this is the "left-edge" of the way segment)        
+        //otherwise, calculates length of the Way       
         //retrieves coordinates of Way nodes:
         //OSMID -> OSM Node index -> Node pointer -> Lat Lon Coordinates
+        
+        //extracts first Node and retrieves corresponding LatLon (this is the "left-edge" of the way segment) 
         LatLon LatLon_left = getNodeCoords(getNodeByIndex(OSMID_to_node.at(nodesInWay[0]))); 
         
         for (unsigned j = 1; j < nodesInWay.size(); j++){
