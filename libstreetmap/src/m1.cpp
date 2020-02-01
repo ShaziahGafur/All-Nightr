@@ -43,7 +43,7 @@
 // name.
 
 
-//-----Global Variables-----
+//-----Global Variables------------------------------------------
 //StreetStruct --> Members: [street name, street segments, intersections]
 streetStruct stubStreetStruct;
 //Vector --> key: [streetID] value: [StreetStruct]
@@ -51,7 +51,7 @@ std::vector<streetStruct> streetVector;
 //Vector --> key: [intersection ID] value: [streetSegmentsVector]
 std::vector<std::vector<int>> intersectionStreetSegments;
 //Hashtable --> key: [Node_Id] value: [OSMID]
-std::unordered_map<OSMID, int> OSMID_to_node; //Could possibly either store OSMNode* or int (node ID) as the value (shouldn't really matter)
+std::unordered_map<OSMID, int> OSMID_to_node;
 //Hashtable --> key: [OSMway] value: [length of way]
 std::unordered_map<OSMID, double> OSMWay_lengths;
 //Vector --> key: [feature ID] value: [Area]
@@ -62,9 +62,9 @@ std::vector<double> segment_lengths;
 std::vector<LatLon> intersectionCoordinates;
 //Hashtable --> key: [Street Name] value: [Street Index]
 std::unordered_map<std::string, int> streetNames;
+//----------------------------------------------------------------
 
-
-//---Function Declarations-----
+//---Function Declarations----------------------------------------
 //Populating Street Vector Nodes with streetsdatabaseAPI data
 void populateStreetVector();
 //Populating Feature Area Vector with area
@@ -81,7 +81,7 @@ void populate_segment_lengths();
 void populateIntersectionCoordinates();
 //Populating names of street with street index
 void populateStreetNames();
-
+//------------------------------------------------------------------
 
 
 bool load_map(std::string map_streets_database_filename) {
@@ -409,17 +409,17 @@ void populateFeatureAreaVector(){
 }
 
 
- //Creating Unordered Map by OSMID(only those that represent Node) containing OSMNode ID
+ //(helper function for Way Unordered Map) Populates OSMID_to_node unordered_map
+//Finds the corresponding OSMid of each node, creates a vector with OSMid as key and node as value
 void populateOSMID_to_node(){
-    //--Creating Map of Nodes (helper function for Way Unordered Map)
-    //Goes through each node, returns corresponding OSMid, creates a table with OSMid as key and node as value
-
-    //Note: this map only contains OSMIDs that link to an OSM Node 
+    //NOTE:  The node indexing used here (i) is different from the node indexing
+    //used by streetsDatabase
+    
     for (int i = 0; i < getNumberOfNodes(); i++){
-        //creates a pointer that enables accessing the node's OSMID
+        //create a pointer that enables accessing the node's OSMID
         const OSMNode* nodePtr = getNodeByIndex(i);
-        //stores to map: key as OSMID and value as the Node ID
-        OSMID_to_node[nodePtr->id()] = i; 
+        //stores to unordered_map: key as OSMID and value as the Node ID
+        OSMID_to_node.insert({nodePtr->id(),i}); 
     }
 }
 // Creating Unordered Map by OSMID (only those that represent Way) containing length
