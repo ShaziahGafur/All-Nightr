@@ -90,6 +90,22 @@ bool load_map(std::string map_streets_database_filename) {
     }
     //load corresponding OSM database
     loadOSMDatabaseBIN(map_streets_database_filename_OSM);
+    
+    //Populating Street Vector Nodes with streetsdatabaseAPI data
+    populateStreetVector;
+    
+    //Populating Feature Area Vector with area
+    populateFeatureAreaVector;
+    
+    //Populating Hashtable with OSMdatabaseAPI data
+    populateOSMID_to_node;
+    
+    //Populating OSMWay_lengths
+    populateOSMWay_lengths;
+    
+    //Populating streetSegmentsOfAnIntersection
+    populateIntersectionStreetSegments;
+
    
     return load_successful;
 }
