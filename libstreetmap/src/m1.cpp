@@ -45,8 +45,12 @@
 //-----Global Variables-----
 //StreetStruct --> Members: [street name, street segments, intersections]
 streetStruct stubStreetStruct;
-//Vector --> key: [streedID] value: [StreetStruct]
+//Vector --> key: [streetID] value: [StreetStruct]
 std::vector<streetStruct> streetVector(getNumStreets(), stubStreetStruct);
+
+//Vector --> key: [intersection] value: [streetSegmentsVector]
+std::vector<std::vector<int>> intersectionStreetSegments;
+
 //Hashtable --> key: [Node_Id] value: [OSMID]
 std::unordered_map<OSMID, int> OSMID_to_node; //Could possibly either store OSMNode* or int (node ID) as the value (shouldn't really matter)
 //Hashtable --> key: [OSMway] value: [length of way]
@@ -60,6 +64,9 @@ void populateStreetVector();
 void populateOSMID_to_node();
 //Populating OSMWay_lengths
 void populateOSMWay_lengths();
+//Populating streetSegmentsOfAnIntersection
+void populateIntersectionStreetSegments();
+
 
 
 bool load_map(std::string map_streets_database_filename) {
@@ -79,26 +86,6 @@ bool load_map(std::string map_streets_database_filename) {
     //load corresponding OSM database
     loadOSMDatabaseBIN(map_streets_database_filename_OSM);
 
-    /* 
-     * Creating nested vector. Outer: intersections. Inner: Each intersection has a vector of its street segment indices.
-     */
-    std::vector<std::vector<int>> intersectionStreetSegments;
-    //set size of outer vector to number of intersections
-    intersectionStreetSegments.resize(getNumIntersections());
-    
-    //iterate through number of intersections
-    for(unsigned i = 0; i < getNumIntersections(); i++){
-        //create a vector containing street segments of this specific intersection
-        std::vector<int> streetSegmentsOfAnIntersection;
-        //iterate through number of street segments for this intersection
-        for(unsigned j = 0; j < getIntersectionStreetSegmentCount(i); j++){
-            //add the StreetSegment id to vector of street segments
-            streetSegmentsOfAnIntersection.push_back(getIntersectionStreetSegment(i, j));
-            
-        }
-        //push whole vector of street segments for this intersection into outer vector of intersections
-        intersectionStreetSegments.push_back(streetSegmentsOfAnIntersection);
-    }
      /**
      * Loading Map with Feature Area
      * 
@@ -472,6 +459,26 @@ void populateOSMWay_lengths(){
         }
        OSMWay_lengths[wayPtr->id()] = wayLength;
        
+    }
+    
+}
+//Creating nested vector. Outer: intersection IDs. Inner: Each intersection has a vector of its street segment indices.
+void populateIntersectionStreetSegments(){
+   
+    //set size of outer vector to number of intersections
+    intersectionStreetSegments.resize(getNumIntersections());
+    
+    //iterate through number of intersections
+    for(unsigned i = 0; i < getNumIntersections(); i++){
+        //create a vector containing street segments of this specific intersection
+        std::vector<int> streetSegmentsOfAnIntersection;
+        //iterate through number of street segments for this intersection
+        for(unsigned j = 0; j < getIntersectionStreetSegmentCount(i); j++){
+            //add the StreetSegment id to vector of street segments
+            streetSegmentsOfAnIntersection.push_back(getIntersectionStreetSegment(i, j));
+        }
+        //push whole vector of street segments for this intersection into outer vector of intersections
+        intersectionStreetSegments.push_back(streetSegmentsOfAnIntersection);
     }
     
 }
