@@ -48,17 +48,16 @@
 streetStruct stubStreetStruct;
 //Vector --> key: [streetID] value: [StreetStruct]
 std::vector<streetStruct> streetVector;
-
 //Vector --> key: [intersection] value: [streetSegmentsVector]
 std::vector<std::vector<int>> intersectionStreetSegments;
-
 //Hashtable --> key: [Node_Id] value: [OSMID]
 std::unordered_map<OSMID, int> OSMID_to_node; //Could possibly either store OSMNode* or int (node ID) as the value (shouldn't really matter)
 //Hashtable --> key: [OSMway] value: [length of way]
 std::unordered_map<OSMID, double> OSMWay_lengths;
 //Vector --> key: [feature ID] value: [Area]
 std::vector<double> featureAreaVector;
-
+//Vector --> key: [segment] value: [length]
+std::vector<double> segment_lengths;
 
 
 //---Function Declarations-----
@@ -72,6 +71,8 @@ void populateOSMID_to_node();
 void populateOSMWay_lengths();
 //Populating streetSegmentsOfAnIntersection
 void populateIntersectionStreetSegments();
+//Populating segment_lengths
+void populate_segement_lengths();
 
 
 
@@ -135,46 +136,7 @@ double find_distance_between_two_points(std::pair<LatLon, LatLon> points){
 //Returns the length of the given street segment in meters
 double find_street_segment_length(int street_segment_id){
     
-    double streetSegmentLength = 0;
-    
-    InfoStreetSegment segmentInfo = getInfoStreetSegment(street_segment_id);
-    
-    //get number of curve points in street segment
-    int numCurvePoints = segmentInfo.curvePointCount;
-    
-    LatLon from = getIntersectionPosition (segmentInfo.from);
-    
-    //if there are zero curve points then "to" will be set to the end of the street segment
-    if(numCurvePoints > 0){
-        
-        //need variable to hold "to" positions
-        LatLon to;
-        
-        //***NOTE: HAVE TO ASK ABOUT NUMCURVEPOINTS INDICES (already posted on Piazza)***
-        // -M
-        for(int i = 0; i < numCurvePoints; i++){
-            //get the curvePoint Position (latlon)
-            to = getStreetSegmentCurvePoint(i, street_segment_id);
-            
-            //make a points pair to send to the find_distance_between_two_points function
-            std::pair<LatLon, LatLon> length(from, to);
-            
-            //calculate distance
-            streetSegmentLength += find_distance_between_two_points (length);\
-
-            //update "from" point
-            from = to;
-        }
-    }
-    
-    //for the last "from-to" distance
-    LatLon finalTo = getIntersectionPosition(segmentInfo.to);   
-    
-    std::pair<LatLon, LatLon> length(from, finalTo);
-
-    streetSegmentLength += find_distance_between_two_points (length);
-    
-    return streetSegmentLength;
+    return segment_lengths[street_segment_id];
 }
 
 //Returns the travel time to drive a street segment in seconds 
@@ -488,4 +450,53 @@ void populateIntersectionStreetSegments(){
         intersectionStreetSegments.push_back(streetSegmentsOfAnIntersection);
     }
     
+}
+//Populating segment_lengths
+void populate_segement_lengths(){
+    
+    double streetSegmentLength = 0;
+    
+     InfoStreetSegment segmentInfo;
+    
+    for(double id = 0; id < getNumStreetSegments(); id++){
+    
+        segmentInfo = getInfoStreetSegment(id);
+
+        //get number of curve points in street segment
+        int numCurvePoints = segmentInfo.curvePointCount;
+
+        LatLon from = getIntersectionPosition (segmentInfo.from);
+
+        //if there are zero curve points then "to" will be set to the end of the street segment
+        if(numCurvePoints > 0){
+
+            //need variable to hold "to" positions
+            LatLon to;
+
+            //***NOTE: HAVE TO ASK ABOUT NUMCURVEPOINTS INDICES (already posted on Piazza)***
+            // -M
+            for(int i = 0; i < numCurvePoints; i++){
+                //get the curvePoint Position (latlon)
+                to = getStreetSegmentCurvePoint(i, id);
+
+                //make a points pair to send to the find_distance_between_two_points function
+                std::pair<LatLon, LatLon> length(from, to);
+
+                //calculate distance
+                streetSegmentLength += find_distance_between_two_points (length);\
+
+                //update "from" point
+                from = to;
+            }
+        }
+
+        //for the last "from-to" distance
+        LatLon finalTo = getIntersectionPosition(segmentInfo.to);   
+
+        std::pair<LatLon, LatLon> length(from, finalTo);
+
+        streetSegmentLength += find_distance_between_two_points (length);
+        
+        segment_lengths[id] =  streetSegmentLength;
+    }   
 }
