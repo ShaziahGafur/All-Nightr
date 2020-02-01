@@ -47,7 +47,7 @@
 //StreetStruct --> Members: [street name, street segments, intersections]
 streetStruct stubStreetStruct;
 //Vector --> key: [streetID] value: [StreetStruct]
-std::vector<streetStruct> streetVector(getNumStreets(), stubStreetStruct);
+std::vector<streetStruct> streetVector;
 
 //Vector --> key: [intersection] value: [streetSegmentsVector]
 std::vector<std::vector<int>> intersectionStreetSegments;
@@ -342,14 +342,16 @@ double find_feature_area(int feature_id){
 //To implement this function you will have to  access the OSMDatabaseAPI.h 
 //functions.
 double find_way_length(OSMID way_id){
-//    double wayLength = 0; //placeholder, remove 
-    return OSMWay_lengths[way_id]; //This is the correct return statement. But map needs to be a global variable
-//    return wayLength;
+    double wayLength = 0; //placeholder, remove 
+//    return OSMWay_lengths[way_id]; //This is the correct return statement. But map needs to be a global variable
+    return wayLength;
 }
 
 
 //Creating Vector by Street containing street segments, intersections, and street name
 void populateStreetVector(){
+    
+    streetVector.resize(getNumStreets());
     
     //assigning street segments to their respective street
     for (unsigned i = 0; i < getNumStreetSegments(); i++){
