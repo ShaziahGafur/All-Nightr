@@ -327,7 +327,7 @@ std::vector<int> find_street_ids_from_partial_street_name(std::string street_pre
 //Assume a non self-intersecting polygon (i.e. no holes)
 //Return 0 if this feature is not a closed polygon.
 double find_feature_area(int feature_id){
-    return featureAreaVector[feature_id];// this is the correct return statement. But vector must be global
+    return featureAreaVector[feature_id];
 }
 
 //Returns the length of the OSMWay that has the given OSMID, in meters.
@@ -378,7 +378,7 @@ void populateStreetVector(){
     
 }
 
-//Creating vector by feature ID containing area
+//Populating vector by key: feature ID and value: area
 void populateFeatureAreaVector(){
     
     for (unsigned featureIdx = 0; featureIdx < getNumFeatures(); featureIdx++){
@@ -393,7 +393,7 @@ void populateFeatureAreaVector(){
         
         // If the first point and the last point (idx getFeaturePointCount-1) are NOT the same location, the feature is a polyline
         //the area is zero
-        if ((firstPoint.lat() == nextPoint.lat()) && (firstPoint.lon() == nextPoint.lon())) {
+        if (!((firstPoint.lat() == nextPoint.lat()) && (firstPoint.lon() == nextPoint.lon()))) {
             featureAreaVector.push_back(0);
             continue;
         }
