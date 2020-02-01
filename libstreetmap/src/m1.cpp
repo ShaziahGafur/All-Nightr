@@ -27,6 +27,7 @@
 #include "streetStruct.h"
 #include <iostream>
 #include <vector>
+#include <set>
 
 
 
@@ -335,11 +336,16 @@ double find_way_length(OSMID way_id){
 }
 
 
-//Creating Vector by Street containing street segments, intersections, and street name
+//Populating StreetVector with street segments, intersections, and street name
 void populateStreetVector(){
     
     streetVector.resize(getNumStreets());
     
+    //vector of sets which "removes" duplicate entries
+    //at the end, each set will be copied into the appropriate intersections vector
+    std::vector<std::set<int>> intersections_by_street_vector;
+    intersections_by_street_vector.resize(getNumStreets());
+  
     //assigning street segments to their respective street
     for (unsigned i = 0; i < getNumStreetSegments(); i++){
         
@@ -349,10 +355,17 @@ void populateStreetVector(){
         segmentInfo = getInfoStreetSegment(i);
         //accessing streetID in order to assign to proper streetStruct vector element
         streetVector[segmentInfo.streetID].addStreetSegment(i);
-        //assigning intersections to their respective street  -> duplicates will be dealt with...
-        streetVector[segmentInfo.streetID].addIntersection(segmentInfo.to);
-        streetVector[segmentInfo.streetID].addIntersection(segmentInfo.from); 
+        
+        //adding intersections to the appropriate set
+        intersections_by_street_vector[segmentInfo.streetID].insert(segmentInfo.to);
+        intersections_by_street_vector[segmentInfo.streetID].insert(segmentInfo.from);
     }
+    
+    //copying the intersections sets into the intersection vectors in StreetVector
+    for(unsigned i = 0; i < getNumStreets(); i++){
+        streetVector[i].intersections.assign(intersections_by_street_vector[i].begin(), intersections_by_street_vector[i].end());   
+    }
+   
    
     //assigning street names
     for (unsigned i = 0; i < getNumStreets(); i++){
