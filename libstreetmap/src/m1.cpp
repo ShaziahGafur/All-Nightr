@@ -341,10 +341,13 @@ void populateStreetVector(){
     
     streetVector.resize(getNumStreets());
     
-    //vector of sets which "removes" duplicate entries
-    //at the end, each set will be copied into the appropriate intersections vector
+    //vectors of sets which "removes" duplicate entries
+    //at the end, each set will be copied into the appropriate intersections/segmentSegments vector
     std::vector<std::set<int>> intersections_by_street_vector;
+    std::vector<std::set<int>> segments_by_street_vector;
+    
     intersections_by_street_vector.resize(getNumStreets());
+    segments_by_street_vector.resize(getNumStreets());
   
     //assigning street segments to their respective street
     for (unsigned i = 0; i < getNumStreetSegments(); i++){
@@ -353,17 +356,18 @@ void populateStreetVector(){
         
         //creating street segment info struct
         segmentInfo = getInfoStreetSegment(i);
-        //accessing streetID in order to assign to proper streetStruct vector element
-        streetVector[segmentInfo.streetID].addStreetSegment(i);
+        //accessing streetID in order to assign to proper segments_by_street_vector set element
+        segments_by_street_vector[segmentInfo.streetID].insert(i);
         
-        //adding intersections to the appropriate set
+        //adding intersections to the appropriate intersections_by_street_vector set element
         intersections_by_street_vector[segmentInfo.streetID].insert(segmentInfo.to);
         intersections_by_street_vector[segmentInfo.streetID].insert(segmentInfo.from);
     }
     
     //copying the intersections sets into the intersection vectors in StreetVector
     for(unsigned i = 0; i < getNumStreets(); i++){
-        streetVector[i].intersections.assign(intersections_by_street_vector[i].begin(), intersections_by_street_vector[i].end());   
+        streetVector[i].intersections.assign(intersections_by_street_vector[i].begin(), intersections_by_street_vector[i].end()); 
+        streetVector[i].streetSegments.assign(segments_by_street_vector[i].begin(), segments_by_street_vector[i].end());
     }
    
    
