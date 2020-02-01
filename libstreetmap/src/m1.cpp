@@ -48,7 +48,7 @@
 streetStruct stubStreetStruct;
 //Vector --> key: [streetID] value: [StreetStruct]
 std::vector<streetStruct> streetVector;
-//Vector --> key: [intersection] value: [streetSegmentsVector]
+//Vector --> key: [intersection ID] value: [streetSegmentsVector]
 std::vector<std::vector<int>> intersectionStreetSegments;
 //Hashtable --> key: [Node_Id] value: [OSMID]
 std::unordered_map<OSMID, int> OSMID_to_node; //Could possibly either store OSMNode* or int (node ID) as the value (shouldn't really matter)
@@ -56,7 +56,7 @@ std::unordered_map<OSMID, int> OSMID_to_node; //Could possibly either store OSMN
 std::unordered_map<OSMID, double> OSMWay_lengths;
 //Vector --> key: [feature ID] value: [Area]
 std::vector<double> featureAreaVector;
-//Vector --> key: [segment] value: [length]
+//Vector --> key: [segment ID] value: [length]
 std::vector<double> segment_lengths;
 //Vector --> key: [intersection ID] value: [pair of LatLon Coordinates]
 std::vector<LatLon> intersectionCoordinates;
@@ -76,7 +76,7 @@ void populateOSMWay_lengths();
 //Populating streetSegmentsOfAnIntersection
 void populateIntersectionStreetSegments();
 //Populating segment_lengths
-void populate_segement_lengths();
+void populate_segment_lengths();
 //Populating intersection Coordinates
 void populateIntersectionCoordinates();
 //Populating names of street with street index
@@ -130,7 +130,7 @@ void close_map() {
     closeStreetDatabase(); 
     closeOSMDatabase();
 }
-
+//result is in meters
 double find_distance_between_two_points(std::pair<LatLon, LatLon> points){
     double latAvg, p1_y, p1_x, p2_y, p2_x, distanceBetweenTwoPoints;
     
@@ -160,7 +160,7 @@ double find_street_segment_travel_time(int street_segment_id){
     double speedLimit_metersPerSec = 1000.0*(segmentInfo.speedLimit)/ 3600.0;
     
     //calculate travel time (time = distance/velocity)
-    double streetSegmentTravelTime = (speedLimit_metersPerSec / find_street_segment_length(street_segment_id));
+    double streetSegmentTravelTime = (segment_lengths[street_segment_id] / speedLimit_metersPerSec);
     
     return streetSegmentTravelTime;
 }
@@ -176,7 +176,7 @@ int find_closest_intersection(LatLon my_position){
     
     for (unsigned i = 1; i < intersectionCoordinates.size(); i++){
         path = std::pair<LatLon, LatLon> (my_position, intersectionCoordinates[i]);     
-        int distance = find_distance_between_two_points(path);
+        distance = find_distance_between_two_points(path);
         if (distance < shortestDistance){
             shortestDistance = distance;
             closestIntersection = i;
@@ -481,12 +481,14 @@ void populateIntersectionStreetSegments(){
     }
     
 }
-//Populating segment_lengths
-void populate_segement_lengths(){
+//Populating segment_lengths vector
+void populate_segment_lengths(){
+    
+    segment_lengths.resize(getNumStreetSegments());
     
     double streetSegmentLength = 0;
-    
-     InfoStreetSegment segmentInfo;
+    //general segment info struct
+    InfoStreetSegment segmentInfo;
     
     for(unsigned id = 0; id < getNumStreetSegments(); id++){
     
@@ -494,17 +496,15 @@ void populate_segement_lengths(){
 
         //get number of curve points in street segment
         int numCurvePoints = segmentInfo.curvePointCount;
-
-        LatLon from = getIntersectionPosition (segmentInfo.from);
+        //get starting point coordinates
+        LatLon from = getIntersectionPosition(segmentInfo.from);
 
         //if there are zero curve points then "to" will be set to the end of the street segment
         if(numCurvePoints > 0){
 
-            //need variable to hold "to" positions
+            //need variable that holds "to" positions
             LatLon to;
 
-            //***NOTE: HAVE TO ASK ABOUT NUMCURVEPOINTS INDICES (already posted on Piazza)***
-            // -M
             for(int i = 0; i < numCurvePoints; i++){
                 //get the curvePoint Position (latlon)
                 to = getStreetSegmentCurvePoint(i, id);
