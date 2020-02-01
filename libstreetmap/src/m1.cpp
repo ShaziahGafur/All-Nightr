@@ -387,12 +387,13 @@ void populateFeatureAreaVector(){
     
         int numOfFeaturePoints = getFeaturePointCount(featureIdx);
         LatLon firstPoint = getFeaturePoint(0, featureIdx);
-        LatLon nextPoint = getFeaturePoint(numOfFeaturePoints-1, featureIdx); //in this case, this is the last point of the polygon
+        LatLon nextPoint = getFeaturePoint(numOfFeaturePoints-1, featureIdx); //at first, this is the last point of the polygon
 
-        int sum1 = 0, sum2 = 0;
+        double sum1 = 0, sum2 = 0;
         
-        //if not closed polygon
-        if (!(firstPoint.lat()==nextPoint.lat()&&firstPoint.lon()==nextPoint.lon())) {
+        // If the first point and the last point (idx getFeaturePointCount-1) are NOT the same location, the feature is a polyline
+        //the area is zero
+        if ((firstPoint.lat() == nextPoint.lat()) && (firstPoint.lon() == nextPoint.lon())) {
             featureAreaVector.push_back(0);
             continue;
         }
@@ -401,7 +402,7 @@ void populateFeatureAreaVector(){
             featureAreaVector.push_back(0);
             continue;
         }
-        for (unsigned featurePointIdx =0; featurePointIdx < numOfFeaturePoints - 1; featurePointIdx++){
+        for (unsigned featurePointIdx = 0; featurePointIdx < numOfFeaturePoints - 1; featurePointIdx++){
             nextPoint = getFeaturePoint(featurePointIdx+1, featureIdx);
             //perform crosshatch, add to sum1 
             sum1+= (firstPoint.lon()*nextPoint.lat());
