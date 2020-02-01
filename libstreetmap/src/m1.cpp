@@ -77,7 +77,7 @@ void populateOSMWay_lengths();
 void populateIntersectionStreetSegments();
 //Populating segment_lengths
 void populate_segment_lengths();
-//Populating intersection Coordinates
+//Populating intersection Coordinates vector
 void populateIntersectionCoordinates();
 //Populating names of street with street index
 void populateStreetNames();
@@ -110,14 +110,16 @@ bool load_map(std::string map_streets_database_filename) {
     //Populating Hashtable with OSMdatabaseAPI data
     populateOSMID_to_node();
     
-    //Populating OSMWay_lengths
+    //Populating Hashtable with OSMWay_lengths
     populateOSMWay_lengths();
     
     //Populating streetSegmentsOfAnIntersection
     populateIntersectionStreetSegments();
     
+    //Populating intersectionCoordinates vector
     populateIntersectionCoordinates();
     
+    //Populating street names hash table
     populateStreetNames();
 
    
@@ -547,6 +549,6 @@ void populateIntersectionCoordinates() {
 void populateStreetNames() {
     
    for(unsigned streetIdx = 0; streetIdx < getNumStreets(); streetIdx++){
-       streetNames[getStreetName(streetIdx)] = streetIdx;
+       streetNames.insert({getStreetName(streetIdx), streetIdx});
    }
 }
