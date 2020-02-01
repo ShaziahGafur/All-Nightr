@@ -51,11 +51,16 @@ std::vector<streetStruct> streetVector(getNumStreets(), stubStreetStruct);
 std::unordered_map<OSMID, int> OSMID_to_node; //Could possibly either store OSMNode* or int (node ID) as the value (shouldn't really matter)
 //Hashtable --> key: [OSMway] value: [length of way]
 std::unordered_map<OSMID, double> OSMWay_lengths;
+//Vector --> key: [feature ID] value: [Area]
+std::vector<double> featureAreaVector;
+
 
 
 //---Function Declarations-----
 //Populating Street Vector Nodes with streetsdatabaseAPI data
 void populateStreetVector();
+//Populating Feature Area Vector with area
+void populateFeatureAreaVector();
 //Populating Hashtable with OSMdatabaseAPI data
 void populateOSMID_to_node();
 //Populating OSMWay_lengths
@@ -99,49 +104,7 @@ bool load_map(std::string map_streets_database_filename) {
         //push whole vector of street segments for this intersection into outer vector of intersections
         intersectionStreetSegments.push_back(streetSegmentsOfAnIntersection);
     }
-     /**
-     * Loading Map with Feature Area
-     * 
-     * Creating vector by feature ID containing area
-     */
-    //--Creating Vector--
-    std::vector<double> featureAreaVector;
-    for (unsigned featureIdx = 0; featureIdx < getNumFeatures(); featureIdx++){
-        
-        double featureArea;
-    
-        int numOfFeaturePoints = getFeaturePointCount(featureIdx);
-        LatLon firstPoint = getFeaturePoint(0, featureIdx);
-        LatLon nextPoint = getFeaturePoint(numOfFeaturePoints-1, featureIdx); //in this case, this is the last point of the polygon
-
-        int sum1 = 0, sum2 = 0;
-        
-        //if not closed polygon
-        if (!(firstPoint.lat()==nextPoint.lat()&&firstPoint.lon()==nextPoint.lon())) {
-            featureAreaVector.push_back(0);
-            continue;
-        }
-        //area of line = 0
-        else if (numOfFeaturePoints < 4) {
-            featureAreaVector.push_back(0);
-            continue;
-        }
-        for (unsigned featurePointIdx =0; featurePointIdx < numOfFeaturePoints - 1; featurePointIdx++){
-            nextPoint = getFeaturePoint(featurePointIdx+1, featureIdx);
-            //perform crosshatch, add to sum1 
-            sum1+= (firstPoint.lon()*nextPoint.lat());
-            //perform crosshatch, add to sum2         
-            sum2+= (firstPoint.lat()*nextPoint.lon());
-            firstPoint = nextPoint; //shift second point of current line segment as first point of next line segment
-        }   
-        //subtract: sum1 - sum2
-        //divide by two
-        featureArea = (sum1-sum2)/2;
-        if (featureArea < 0)
-            featureArea *= (-1);
-        //take positive value;
-        featureAreaVector.push_back(featureArea);
-    }
+     
    
     return load_successful;
 }
@@ -405,6 +368,48 @@ void populateStreetVector(){
         streetVector[i].setStreetName(getStreetName(i));
     }
     
+}
+
+//Creating vector by feature ID containing area
+void populateFeatureAreaVector(){
+    
+    for (unsigned featureIdx = 0; featureIdx < getNumFeatures(); featureIdx++){
+        
+        double featureArea;
+    
+        int numOfFeaturePoints = getFeaturePointCount(featureIdx);
+        LatLon firstPoint = getFeaturePoint(0, featureIdx);
+        LatLon nextPoint = getFeaturePoint(numOfFeaturePoints-1, featureIdx); //in this case, this is the last point of the polygon
+
+        int sum1 = 0, sum2 = 0;
+        
+        //if not closed polygon
+        if (!(firstPoint.lat()==nextPoint.lat()&&firstPoint.lon()==nextPoint.lon())) {
+            featureAreaVector.push_back(0);
+            continue;
+        }
+        //area of line = 0
+        else if (numOfFeaturePoints < 4) {
+            featureAreaVector.push_back(0);
+            continue;
+        }
+        for (unsigned featurePointIdx =0; featurePointIdx < numOfFeaturePoints - 1; featurePointIdx++){
+            nextPoint = getFeaturePoint(featurePointIdx+1, featureIdx);
+            //perform crosshatch, add to sum1 
+            sum1+= (firstPoint.lon()*nextPoint.lat());
+            //perform crosshatch, add to sum2         
+            sum2+= (firstPoint.lat()*nextPoint.lon());
+            firstPoint = nextPoint; //shift second point of current line segment as first point of next line segment
+        }   
+        //subtract: sum1 - sum2
+        //divide by two
+        featureArea = (sum1-sum2)/2;
+        if (featureArea < 0)
+            featureArea *= (-1);
+        //take positive value;
+        featureAreaVector.push_back(featureArea);
+    }
+   
 }
 
 
