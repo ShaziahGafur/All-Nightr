@@ -326,10 +326,7 @@ std::vector<int> find_street_ids_from_partial_street_name(std::string street_pre
 //Assume a non self-intersecting polygon (i.e. no holes)
 //Return 0 if this feature is not a closed polygon.
 double find_feature_area(int feature_id){
-    double featureArea;//remove after creating global variable
-//    return featureAreaVector[feature_id];// this is the correct return statement. But vector must be global
-    
-    return featureArea;//remove after creating global variable
+    return featureAreaVector[feature_id];// this is the correct return statement. But vector must be global
 }
 
 //Returns the length of the OSMWay that has the given OSMID, in meters.
@@ -423,14 +420,14 @@ void populateOSMID_to_node(){
 // Populates the OSMWay_lengths unordered_map
 void populateOSMWay_lengths(){
     
-    int wayLength;
+    double wayLength;
     
     std::vector<OSMID> nodesInWay;
     
     //Retrieves OSMNodes and calculate total distance, for each way
     for (unsigned i = 0; i < getNumberOfWays(); i++){
         //initialize length of way to 0 
-        wayLength = 0; 
+        wayLength = 0.0; 
         //creates a pointer that enables accessing the node's OSMID
         const OSMWay* wayPtr = getWayByIndex(i);
         //copies over values from getWayMembers, and changes nodesInWay's size accordingly
