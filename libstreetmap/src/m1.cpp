@@ -33,7 +33,6 @@
 #include <set>
 
 
-
 // load_map will be called with the name of the file that stores the "layer-2"
 // map data (the street and intersection data that is higher-level than the
 // raw OSM data). This file name will always end in ".streets.bin" and you 
@@ -410,42 +409,55 @@ void populateStreetVector(){
 
 //Populating vector by key: feature ID and value: area
 void populateFeatureAreaVector(){
-    
+    //iterate through total number of features
     for (unsigned featureIdx = 0; featureIdx < getNumFeatures(); featureIdx++){
         
-        double featureArea;
-    
-        int numOfFeaturePoints = getFeaturePointCount(featureIdx);
-        LatLon firstPoint = getFeaturePoint(0, featureIdx);
-        LatLon nextPoint = getFeaturePoint(numOfFeaturePoints-1, featureIdx); //at first, this is the last point of the polygon
-
-        double sum1 = 0, sum2 = 0;
+        //variables to help with area calculations
+        double featureArea = 0, sum1 = 0, sum2 = 0, sumOfLatPoints = 0;
+        double latAvg, p1_y, p1_x, p2_y, p2_x, distanceBetweenTwoPoints;
+        LatLon latLonIterator;
         
+        int numOfFeaturePoints = getFeaturePointCount(featureIdx);
+        
+        //find first and last points and check if features is polygon or polyline
+        LatLon firstPoint = getFeaturePoint(0, featureIdx);  
+        LatLon lastPoint = getFeaturePoint(numOfFeaturePoints-1, featureIdx); 
+
         // If the first point and the last point (idx getFeaturePointCount-1) are NOT the same location, the feature is a polyline
         //the area is zero
-        if (!((firstPoint.lat() == nextPoint.lat()) && (firstPoint.lon() == nextPoint.lon()))) {
+        if ((firstPoint.lat() != lastPoint.lat()) || (firstPoint.lon() != lastPoint.lon())) {
             featureAreaVector.push_back(0);
             continue;
         }
-//        //area of line = 0
-//        else if (numOfFeaturePoints < 4) {
-//            featureAreaVector.push_back(0);
-//            continue;
-//        }
-        for (unsigned featurePointIdx = 0; featurePointIdx < numOfFeaturePoints - 1; featurePointIdx++){
-            nextPoint = getFeaturePoint(featurePointIdx+1, featureIdx);
+    
+        //calculate latavg based on sum of all the points.lat() in the feature
+        for (unsigned featurePointIndex = 0; featurePointIndex < numOfFeaturePoints - 1; featurePointIndex++){
+            latLonIterator = getFeaturePoint(featurePointIndex, featureIdx);
+            sumOfLatPoints = sumOfLatPoints + latLonIterator.lat();
+        }
+        latAvg = sumOfLatPoints * DEGREE_TO_RADIAN/ (numOfFeaturePoints-1);
+                    
+        //iterate through feature points to get sums of crosshatch values of adjacent points
+        for (unsigned featurePointIdx = 1; featurePointIdx < numOfFeaturePoints; featurePointIdx++){
+            
+            //Declare and initialize adjacent LatLon points
+            LatLon previousPoint = getFeaturePoint(featurePointIdx-1, featureIdx);
+            LatLon nextPoint = getFeaturePoint(featurePointIdx, featureIdx);
+            
+            //convert LatLon points into x y coordinates
+            p1_y = previousPoint.lat()*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS;
+            p1_x = previousPoint.lon()*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS*cos(latAvg);
+            p2_y = nextPoint.lat()*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS;
+            p2_x = nextPoint.lon()*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS*cos(latAvg);
+            
             //perform crosshatch, add to sum1 
-            sum1+= (firstPoint.lon()*nextPoint.lat());
+            sum1 = sum1 + std::abs(p1_x * p2_y);
             //perform crosshatch, add to sum2         
-            sum2+= (firstPoint.lat()*nextPoint.lon());
-            firstPoint = nextPoint; //shift second point of current line segment as first point of next line segment
+            sum2 = sum2 + std::abs(p1_y * p2_x);
         }   
-        //subtract: sum1 - sum2
-        //divide by two
-        featureArea = (sum1-sum2)/2;
-        if (featureArea < 0)
-            featureArea *= (-1);
-        //take positive value;
+        //subtract: sum1 - sum2, divide by two
+        featureArea = std::abs((sum1-sum2)/2);
+        //add feature area into vector
         featureAreaVector.push_back(featureArea);
     }
    
