@@ -26,6 +26,7 @@
 #include <map> 
 #include <unordered_map> 
 #include "streetStruct.h"
+#include <bits/stdc++.h>
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -301,18 +302,22 @@ std::vector<int> find_intersections_of_street(int street_id){
 
 //Return all intersection ids for two intersecting streets
 //This function will typically return one intersection id.
-std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_ids){ 
-    std::vector<int> intersectionsOfTwoStreets; 
-    
+std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_ids){     
     int streetId1 = street_ids.first;
     int streetId2 = street_ids.second;
     std::vector<int> streetIntersections1 = streetVector[streetId1].intersections;
     std::vector<int> streetIntersections2 = streetVector[streetId2].intersections;
     
-    for (unsigned i = 0; i < streetIntersections2.size(); i++){ //for each intersection of Street 2
-        if (std::find(streetIntersections1.begin(), streetIntersections1.end(), streetIntersections2[i])!=streetIntersections1.end()) //check if Street 2's intersection exists in the entire vector of intersectionsOfStreet1
-            intersectionsOfTwoStreets.push_back(streetIntersections2[i]); //add the common intersection to the vector
-    }
+    std::vector<int> intersectionsOfTwoStreets(streetIntersections1.size() + streetIntersections2.size());
+    std::vector<int>::iterator it = set_intersection(streetIntersections1.begin(), 
+                        streetIntersections1.end(), 
+                        streetIntersections2.begin(), 
+                        streetIntersections2.end(),
+                        intersectionsOfTwoStreets.begin());
+//    for (unsigned i = 0; i < streetIntersections2.size(); i++){ //for each intersection of Street 2
+//        if (std::find(streetIntersections1.begin(), streetIntersections1.end(), streetIntersections2[i])!=streetIntersections1.end()) //check if Street 2's intersection exists in the entire vector of intersectionsOfStreet1
+//            intersectionsOfTwoStreets.push_back(streetIntersections2[i]); //add the common intersection to the vector
+//    }
     return intersectionsOfTwoStreets; 
 }
 
@@ -391,10 +396,11 @@ void populateStreetVector(){
     //copying the intersections sets into the intersection vectors in StreetVector
     for(unsigned i = 0; i < getNumStreets(); i++){
         streetVector[i].intersections.assign(intersections_by_street_vector[i].begin(), intersections_by_street_vector[i].end()); 
+        //sort vector holding intersection IDs
+        std::sort(streetVector[i].intersections.begin(), streetVector[i].intersections.end());
         streetVector[i].streetSegments.assign(segments_by_street_vector[i].begin(), segments_by_street_vector[i].end());
     }
-   
-   
+
     //assigning street names
     for (unsigned i = 0; i < getNumStreets(); i++){
         streetVector[i].setStreetName(getStreetName(i));
