@@ -23,10 +23,12 @@
 #include "OSMDatabaseAPI.h"
 #include <cmath>
 #include <string>
+#include <map> 
 #include <unordered_map> 
 #include "streetStruct.h"
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include <set>
 
 
@@ -62,7 +64,7 @@ std::vector<double> segment_lengths;
 //Vector --> key: [intersection ID] value: [pair of LatLon Coordinates]
 std::vector<LatLon> intersectionCoordinates;
 //Hashtable --> key: [Street Name] value: [Street Index]
-std::unordered_map<std::string, int> streetNames;
+std::multimap<std::string, int> streetNames;
 //----------------------------------------------------------------
 
 //---Function Declarations----------------------------------------
@@ -82,6 +84,8 @@ void populate_segment_lengths();
 void populateIntersectionCoordinates();
 //Populating names of street with street index
 void populateStreetNames();
+//returns true if a given streetName begins with the same characters as a given prefix
+bool compareStreetPrefix(std::string streetName, std::string prefix, int prefixLength);
 //------------------------------------------------------------------
 
 
@@ -322,8 +326,24 @@ std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_id
 std::vector<int> find_street_ids_from_partial_street_name(std::string street_prefix){
     std::vector<int> streetIdsFromPartialStreetName;
     
-    if (streetNames.count(street_prefix)!=0) //takes full (regular) name
-        streetIdsFromPartialStreetName.push_back(streetNames[street_prefix]);
+    if (street_prefix.empty())//if empty string
+        return streetIdsFromPartialStreetName;
+    
+    //convert prefix into a form without spaces
+    street_prefix.erase(remove_if(street_prefix.begin(), street_prefix.end(), isspace), street_prefix.end());
+    //convert prefix into all lowercase
+    std::transform(street_prefix.begin(), street_prefix.end(), street_prefix.begin(), 
+            [](unsigned char c){return std::tolower(c); });
+    
+    int prefixLength = street_prefix.length();        
+    std::multimap<std::string, int>::iterator itr;
+    //point to the element in map that is greater than or equal to the street_prefix
+    itr = streetNames.lower_bound(street_prefix);
+    //check if the street in map begins with the partial street name
+    while(compareStreetPrefix((*itr).first, street_prefix, prefixLength)){ //while streetNames begin with the same characters as the street_prefix
+        streetIdsFromPartialStreetName.push_back((*itr).second);
+    }
+       
     return streetIdsFromPartialStreetName;
 }
 
@@ -562,8 +582,29 @@ void populateIntersectionCoordinates() {
 }
 
 void populateStreetNames() {
+   std::string cachedStreetName;  
     
-   for(unsigned streetIdx = 0; streetIdx < getNumStreets(); streetIdx++){
+   for(unsigned streetIdx = 0; streetIdx < getNumStreets(); streetIdx++){ //loop through all streets of map
+       cachedStreetName = getStreetName(streetIdx); //retrieve street name from street index
+       //convert name into a form without spaces
+       cachedStreetName.erase(remove_if(cachedStreetName.begin(), cachedStreetName.end(), isspace), cachedStreetName.end());
+       //convert name into all lowercase
+       std::transform(cachedStreetName.begin(), cachedStreetName.end(), cachedStreetName.begin(), 
+               [](unsigned char c){return std::tolower(c); });
+       //add this string to the StreetNames multimap         
        streetNames.insert({getStreetName(streetIdx), streetIdx});
    }
+}
+
+//compares characters of street prefix and street name in streetName Map. streetName must begin with same character as prefix
+bool compareStreetPrefix(std::string streetName, std::string prefix, int prefixLength){
+    //if the prefix exceeds the street Name
+    if (prefixLength > streetName.length())
+        return 0;
+    //check one by one if prefix and street name have same characters 
+    for (unsigned i = 0; i < prefixLength; i++){
+        if (prefix[i]!=streetName[i])
+            return 0; //mismatch found
+    }
+    return 1; //streetName begins with that prefix
 }
