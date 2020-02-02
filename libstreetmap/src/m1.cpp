@@ -239,13 +239,23 @@ std::vector<std::string> find_street_names_of_intersection(int intersection_id){
 bool are_directly_connected(std::pair<int, int> intersection_ids){
     bool directlyConnected;
     InfoStreetSegment streetSegmentStruct;
+    
+    //check corner case: if intersection is connected to itself
+    
+    //Vector --> key: [intersection ID] value: [streetSegmentsVector]
+//std::vector<std::vector<int>> intersectionStreetSegments;
+    //Vector --> key: [streetID] value: [StreetStruct]
+//std::vector<streetStruct> streetVector;
+    
     //iterate through segments connected to first intersection
-    for (int i = 0; i < getIntersectionStreetSegmentCount(intersection_ids.first); i++){
+    for (int segmentIndex = intersectionStreetSegments[intersection_ids.first].front(); segmentIndex != intersectionStreetSegments[intersection_ids.first].back(); segmentIndex++){
+        
         //create street segment struct for segments connected to intersection
-        streetSegmentStruct = getInfoStreetSegment(getIntersectionStreetSegment(intersection_ids.first, i));
+        streetSegmentStruct = getInfoStreetSegment(getIntersectionStreetSegment(intersection_ids.first, segmentIndex));
         //check if the street segment is connected to second intersection- if it is, set directlyConnected to true
         if ((streetSegmentStruct.from == intersection_ids.second) || (streetSegmentStruct.to == intersection_ids.second)){
             directlyConnected = true;
+            return directlyConnected;
         }
         else{
             directlyConnected = false;
