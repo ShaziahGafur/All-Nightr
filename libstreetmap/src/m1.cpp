@@ -153,7 +153,8 @@ double find_distance_between_two_points(std::pair<LatLon, LatLon> points){
 
 //Returns the length of the given street segment in meters
 double find_street_segment_length(int street_segment_id){
-    if (street_segment_id < getNumStreetSegments()){
+    //if street_segment)id is within existent range
+    if ((street_segment_id < getNumStreetSegments()) && (street_segment_id >= 0)){
         return segment_lengths[street_segment_id];
     }
     else{
@@ -231,38 +232,70 @@ std::vector<std::string> find_street_names_of_intersection(int intersection_id){
 }
 
 //Returns true if you can get from intersection_ids.first to intersection_ids.second using a single 
-//street segment (hint: check for 1-way streets too)
-//corner case: an intersection is considered to be connected to itself
-
-//NOTE: not sure why 1-way streets are relevant or how intersection would be connected to itself
-bool are_directly_connected(std::pair<int, int> intersection_ids){
-    bool directlyConnected;
-    InfoStreetSegment streetSegmentStruct;
+//street segment
+bool are_directly_connected(std::pair<int, int> intersection_ids){    
+    //function compares street segment vectors of two intersections to find any commonalities
+    //then checks if going from intersection1 to intersection2 is allowed (i.e. legal)
     
-    //check corner case: if intersection is connected to itself
+    int intersection1 = intersection_ids.first;
     
-    //Vector --> key: [intersection ID] value: [streetSegmentsVector]
-//std::vector<std::vector<int>> intersectionStreetSegments;
-    //Vector --> key: [streetID] value: [StreetStruct]
-//std::vector<streetStruct> streetVector;
+    int intersection2 = intersection_ids.second;
     
-    //iterate through segments connected to first intersection
-    for (int segmentIndex = intersectionStreetSegments[intersection_ids.first].front(); segmentIndex != intersectionStreetSegments[intersection_ids.first].back(); segmentIndex++){
+    //corner case: segment's "to" and "from" are the same
+    if(intersection1 == intersection2) 
+        return true;
+    
+    //extracting the street segment vector of both intersections
+    std::vector<int> intersection1_segments = intersectionStreetSegments[intersection1];
+    
+    std::vector<int> intersection2_segments = intersectionStreetSegments[intersection2];
+    
+    //vector to be returned (list of all intersections)
+    std::vector<int> commonStreetSegments;
+    
+    //resizing commonStreetSegments so that it can be assigned values
+    commonStreetSegments.resize(intersection1_segments.size() + intersection2_segments.size());    
+    
+    //iterator used in subsequent set_intersection function 
+     std::vector<int>::iterator it;
+    
+    //set_intersection is an STL function which finds elements common in two sets, and
+    //returns them into a third vector
+    it = std::set_intersection(intersection1_segments.begin(), 
+                        intersection1_segments.end(), 
+                        intersection2_segments.begin(), 
+                        intersection2_segments.end(),
+                        commonStreetSegments.begin());
+    
+    //resizes commonStreetSegments to the actual number of intersections
+    commonStreetSegments.resize(it-commonStreetSegments.begin());
+    
+    //check if no common segments found
+    if(commonStreetSegments.empty() == true) 
+        return false;
+    
+    InfoStreetSegment info;
+    
+    //NOTE: Street segment could be 1-way, therefore can get from second to first, but not first to second!!!!
+    for(std::vector<int>::iterator id = commonStreetSegments.begin(); it < commonStreetSegments.end(); ++it){
         
-        //create street segment struct for segments connected to intersection
-        streetSegmentStruct = getInfoStreetSegment(getIntersectionStreetSegment(intersection_ids.first, segmentIndex));
-        //check if the street segment is connected to second intersection- if it is, set directlyConnected to true
-        if ((streetSegmentStruct.from == intersection_ids.second) || (streetSegmentStruct.to == intersection_ids.second)){
-            directlyConnected = true;
-            return directlyConnected;
+        info = getInfoStreetSegment(*id);
+        
+        //check if street is one-way only. If not, can just return true;
+        if(info.oneWay == true){
+            //if street is one-way, ensure that the "from" is intersection1.
+            if(info.from == intersection1)
+                return true;
+            else
+                return false;
         }
-        else{
-            directlyConnected = false;
-        }
+        else
+            return true;
     }
     
-    return directlyConnected;
+    return false;
 }
+
 
 //Returns all intersections reachable by traveling down one street segment 
 //from given intersection (hint: you can't travel the wrong way on a 1-way street)
