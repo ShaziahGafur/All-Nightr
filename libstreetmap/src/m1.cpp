@@ -61,7 +61,7 @@ std::unordered_map<OSMID, double> OSMWay_lengths;
 std::vector<double> featureAreaVector;
 //Vector --> key: [segment ID] value: [length]
 std::vector<double> segment_lengths;
-//Vector --> key: [intersection ID] value: [pair of LatLon Coordinates]
+//Vector --> key: [intersection ID] value: [LatLon Coordinates]
 std::vector<LatLon> intersectionCoordinates;
 //Hashtable --> key: [Street Name] value: [Street Index]
 std::multimap<std::string, int> streetNames;
@@ -295,32 +295,43 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
 //from given intersection (hint: you can't travel the wrong way on a 1-way street)
 //the returned vector should NOT contain duplicate intersections
 std::vector<int> find_adjacent_intersections(int intersection_id){
+
+    InfoStreetSegment info;
+
     std::vector<int> adjacentIntersections;
-    InfoStreetSegment streetSegmentStruct;
-    //iterate through street segments for given intersection
-    for (int i = 0; i < getIntersectionStreetSegmentCount(intersection_id); i++){
-        //get street segment info struct
-        streetSegmentStruct = getInfoStreetSegment(getIntersectionStreetSegment(intersection_id, i));
+    
+    //adjacentIntersections set which will "remove" duplicate entries
+    //at the end, each set will be copied into the adjacentIntersections vector
+    std::set<int> adjacentIntersections_set;
+    
+ 
+    //retrieve vector of all the street segments attached to the given intersection
+    std::vector<int>  connected_street_segments = intersectionStreetSegments[intersection_id];
+    
+    for(std::vector<int>::iterator it = connected_street_segments.begin(); it < connected_street_segments.end(); ++it){
         //check if street is one way
-        if (streetSegmentStruct.oneWay){
-            //check if its 'from' intersection is the intersection_id (it is going to the adjacent intersection)
-            if (streetSegmentStruct.from == intersection_id){
-                //add to intersection its going 'to' to adjacentIntersection vector
-                adjacentIntersections.push_back(streetSegmentStruct.to);
+        info = getInfoStreetSegment(*it);
+        
+        if (info.oneWay){
+            //check if its 'from' intersection is the intersection_id (it is going TO the adjacent intersection) 
+            if (info.from == intersection_id){
+                //add intersection to the adjacentIntersection vector
+                adjacentIntersections_set.insert(info.to);
             }
         }
         else{   //not one-way
             //check if 'from' or 'to' intersection of street segment is intersection_id and push back the other one into adjacentIntersections
-            if (streetSegmentStruct.from == intersection_id){
-                adjacentIntersections.push_back(streetSegmentStruct.to);
-            }
-            else{
-                adjacentIntersections.push_back(streetSegmentStruct.from);
-            }
+            if (info.from == intersection_id)
+                adjacentIntersections_set.insert(info.to);
+         
+            else
+             adjacentIntersections_set.insert(info.from);
         }
-        
-    }
+    } 
     
+    adjacentIntersections.resize(adjacentIntersections_set.size());
+    adjacentIntersections.assign(adjacentIntersections_set.begin(), adjacentIntersections_set.end()); 
+        
     return adjacentIntersections;
 }
 
