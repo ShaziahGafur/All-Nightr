@@ -126,8 +126,7 @@ bool load_map(std::string map_streets_database_filename) {
     
     //Populating street names hash table
     populateStreetNames();
-
-   
+    
     return load_successful;
 }
 
@@ -376,11 +375,11 @@ double find_way_length(OSMID way_id){
 
 //Populating StreetVector with street segments, intersections, and street name
 void populateStreetVector(){
-    
+    //makes sure we can write into the streetVector
     streetVector.resize(getNumStreets());
     
-    //vectors of sets which "removes" duplicate entries
-    //at the end, each set will be copied into the appropriate intersections/segmentSegments vector
+    //vectors of sets which "remove" duplicate entries
+    //at the end, each set will be copied into the appropriate intersections/segment vector
     std::vector<std::set<int>> intersections_by_street_vector;
     std::vector<std::set<int>> segments_by_street_vector;
     
@@ -394,19 +393,21 @@ void populateStreetVector(){
         
         //creating street segment info struct
         segmentInfo = getInfoStreetSegment(i);
-        //accessing streetID in order to assign to proper segments_by_street_vector set element
+        //inserts street segment to correct segments_by_street_vector set
         segments_by_street_vector[segmentInfo.streetID].insert(i);
         
-        //adding intersections to the appropriate intersections_by_street_vector set element
+        //inserts street segment to correct intersections_by_street_vector set
         intersections_by_street_vector[segmentInfo.streetID].insert(segmentInfo.to);
         intersections_by_street_vector[segmentInfo.streetID].insert(segmentInfo.from);
     }
     
-    //copying the intersections sets into the intersection vectors in StreetVector
+    //copying the sets into the vectors in StreetVector
     for(unsigned i = 0; i < getNumStreets(); i++){
+        //storing intersections
+        streetVector[i].intersections.resize(intersections_by_street_vector[i].size());
         streetVector[i].intersections.assign(intersections_by_street_vector[i].begin(), intersections_by_street_vector[i].end()); 
-        //sort vector holding intersection IDs
-        std::sort(streetVector[i].intersections.begin(), streetVector[i].intersections.end());
+        //storing street segments
+        streetVector[i].streetSegments.resize(segments_by_street_vector[i].size());
         streetVector[i].streetSegments.assign(segments_by_street_vector[i].begin(), segments_by_street_vector[i].end());
     }
 
