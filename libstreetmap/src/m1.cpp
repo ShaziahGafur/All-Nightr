@@ -183,12 +183,16 @@ int find_closest_intersection(LatLon my_position){
     int shortestDistance = find_distance_between_two_points(path);
     
     int distance;
-    int closestIntersection;
+    int closestIntersection = 0;
     
-    for (unsigned i = 1; i < intersectionCoordinates.size(); i++){
-        path = std::pair<LatLon, LatLon> (my_position, intersectionCoordinates[i]);     
+    for (unsigned i = 1; i < getNumIntersections(); i++){
+        
+        path.second = intersectionCoordinates[i];     
+        
         distance = find_distance_between_two_points(path);
+        
         if (distance < shortestDistance){
+            
             shortestDistance = distance;
             closestIntersection = i;
         }
@@ -199,14 +203,7 @@ int find_closest_intersection(LatLon my_position){
 
 //Returns the street segments for the given intersection 
 std::vector<int> find_street_segments_of_intersection(int intersection_id){
-    std::vector<int> ssOfIntersection;
-    
-    int street_segment_count = getIntersectionStreetSegmentCount(intersection_id);
-    
-    for (int i = 0; i < street_segment_count; i++){
-        ssOfIntersection.push_back(getIntersectionStreetSegment(intersection_id, i));
-    } 
-    return ssOfIntersection;
+    return intersectionStreetSegments[intersection_id];
 }
 
 //Returns the street names at the given intersection (includes duplicate street 
@@ -253,8 +250,8 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
     std::vector<int> commonStreetSegments;
     
     //resizing commonStreetSegments so that it can be assigned values
-    commonStreetSegments.resize(intersection1_segments.size() + intersection2_segments.size());    
-    
+    commonStreetSegments.resize(intersection1_segments.size() + intersection2_segments.size());  
+   
     //iterator used in subsequent set_intersection function 
      std::vector<int>::iterator it;
     
@@ -270,25 +267,26 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
     commonStreetSegments.resize(it-commonStreetSegments.begin());
     
     //check if no common segments found
-    if(commonStreetSegments.empty() == true) 
+    if(commonStreetSegments.empty() == true)
         return false;
     
     InfoStreetSegment info;
-    
+   
     //NOTE: Street segment could be 1-way, therefore can get from second to first, but not first to second!!!!
-    for(std::vector<int>::iterator id = commonStreetSegments.begin(); id < commonStreetSegments.end(); ++id){
+    for(unsigned i = 0; i < commonStreetSegments.size(); ++i){
         
-        info = getInfoStreetSegment(*id);
+        info = getInfoStreetSegment(commonStreetSegments[i]);
         
         //check if street is one-way only. If not, can just return true;
         if(info.oneWay == true){
-            //if street is one-way, ensure that the "from" is intersection1.
+            //if street is one-way, ensure that intersection1 is "from"
             if(info.from == intersection1)
                 return true;
         }
         else //if connecting street is not one-way
             return true;
     }
+    //if only connecting street segments are one-way
     return false;
 }
 
@@ -354,7 +352,7 @@ std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_id
     intersectionsOfTwoStreets.resize(streetIntersections1.size() + streetIntersections2.size());    
     
     //iterator used in subsequent set_intersection function 
-     std::vector<int>::iterator it;
+    std::vector<int>::iterator it;
     
     //set_intersection is an STL function which finds elements common in two sets, and
     //returns them into a third vector
@@ -466,7 +464,7 @@ void populateFeatureAreaVector(){
         
         //variables to help with area calculations
         double featureArea = 0, sum1 = 0, sum2 = 0, sumOfLatPoints = 0;
-        double latAvg, p1_y, p1_x, p2_y, p2_x, distanceBetweenTwoPoints;
+        double latAvg, p1_y, p1_x, p2_y, p2_x;
         LatLon latLonIterator;
         
         int numOfFeaturePoints = getFeaturePointCount(featureIdx);
@@ -588,7 +586,7 @@ void populateIntersectionStreetSegments(){
             streetSegmentsOfAnIntersection.push_back(getIntersectionStreetSegment(i, j));
         }
         //push whole vector of street segments for this intersection into outer vector of intersections
-        intersectionStreetSegments.push_back(streetSegmentsOfAnIntersection);
+        intersectionStreetSegments[i] = streetSegmentsOfAnIntersection;
     }
     
 }
@@ -624,7 +622,7 @@ void populate_segment_lengths(){
                 std::pair<LatLon, LatLon> length(from, to);
 
                 //calculate distance
-                streetSegmentLength += find_distance_between_two_points (length);
+                streetSegmentLength += find_distance_between_two_points(length);
 
                 //update "from" point
                 from = to;
@@ -641,7 +639,8 @@ void populate_segment_lengths(){
         segment_lengths[id] =  streetSegmentLength;
     }   
 }
-
+//Populate intersectionCoordinates vector
+//key: intersectionId value: LatLon coordinates
 void populateIntersectionCoordinates() {
     
    for(unsigned i = 0; i < getNumIntersections(); i++){
