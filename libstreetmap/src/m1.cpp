@@ -241,13 +241,8 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
     
     int intersection2 = intersection_ids.second;
     
-    //corner case: segment's "to" and "from" are the same
-    if(intersection1 == intersection2) 
-        return true;
-    
     //extracting the street segment vector of both intersections
     std::vector<int> intersection1_segments = intersectionStreetSegments[intersection1];
-    
     std::vector<int> intersection2_segments = intersectionStreetSegments[intersection2];
     
     //vector to be returned (list of all intersections)
@@ -274,6 +269,10 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
     if(commonStreetSegments.empty() == true) 
         return false;
     
+    //corner case: "to" and "from" are the same
+    if(intersection1 == intersection2) 
+        return true;
+    
     InfoStreetSegment info;
     
     //NOTE: Street segment could be 1-way, therefore can get from second to first, but not first to second!!!!
@@ -289,11 +288,9 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
             else
                 return false;
         }
-        else
+        else //if street is not one-way
             return true;
     }
-    
-    return false;
 }
 
 
