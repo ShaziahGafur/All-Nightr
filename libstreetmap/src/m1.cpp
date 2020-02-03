@@ -310,22 +310,34 @@ std::vector<int> find_intersections_of_street(int street_id){
 
 //Return all intersection ids for two intersecting streets
 //This function will typically return one intersection id.
-std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_ids){     
+std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_ids){
+    //extracting the streedIds
     int streetId1 = street_ids.first;
     int streetId2 = street_ids.second;
+    
+    //extracting the street intersection vector of both streets
     std::vector<int> streetIntersections1 = streetVector[streetId1].intersections;
     std::vector<int> streetIntersections2 = streetVector[streetId2].intersections;
     
-    std::vector<int> intersectionsOfTwoStreets(streetIntersections1.size() + streetIntersections2.size());
-    std::vector<int>::iterator it = set_intersection(streetIntersections1.begin(), 
+    //vector to be returned (list of all intersections)
+    std::vector<int> intersectionsOfTwoStreets;
+    //resizing intersectionsOfTwoStreets so that it can be assigned values
+    intersectionsOfTwoStreets.resize(streetIntersections1.size() + streetIntersections2.size());    
+    
+    //iterator used in subsequent set_intersection function 
+     std::vector<int>::iterator it;
+    
+    //set_intersection is an STL function which finds elements common in two sets, and
+    //returns them into a third vector
+    it = std::set_intersection(streetIntersections1.begin(), 
                         streetIntersections1.end(), 
                         streetIntersections2.begin(), 
                         streetIntersections2.end(),
                         intersectionsOfTwoStreets.begin());
-//    for (unsigned i = 0; i < streetIntersections2.size(); i++){ //for each intersection of Street 2
-//        if (std::find(streetIntersections1.begin(), streetIntersections1.end(), streetIntersections2[i])!=streetIntersections1.end()) //check if Street 2's intersection exists in the entire vector of intersectionsOfStreet1
-//            intersectionsOfTwoStreets.push_back(streetIntersections2[i]); //add the common intersection to the vector
-//    }
+    
+    //resizes intersectionsOfTwoStreets to the actual number of intersections
+    intersectionsOfTwoStreets.resize(it-intersectionsOfTwoStreets.begin());
+    
     return intersectionsOfTwoStreets; 
 }
 
