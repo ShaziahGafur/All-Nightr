@@ -245,6 +245,10 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
     std::vector<int> intersection1_segments = intersectionStreetSegments[intersection1];
     std::vector<int> intersection2_segments = intersectionStreetSegments[intersection2];
     
+    //corner case: "to" and "from" are the same
+    if(intersection1 == intersection2) 
+        return true;
+    
     //vector to be returned (list of all intersections)
     std::vector<int> commonStreetSegments;
     
@@ -269,14 +273,10 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
     if(commonStreetSegments.empty() == true) 
         return false;
     
-    //corner case: "to" and "from" are the same
-    if(intersection1 == intersection2) 
-        return true;
-    
     InfoStreetSegment info;
     
     //NOTE: Street segment could be 1-way, therefore can get from second to first, but not first to second!!!!
-    for(std::vector<int>::iterator id = commonStreetSegments.begin(); it < commonStreetSegments.end(); ++it){
+    for(std::vector<int>::iterator id = commonStreetSegments.begin(); id < commonStreetSegments.end(); ++id){
         
         info = getInfoStreetSegment(*id);
         
@@ -285,12 +285,11 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
             //if street is one-way, ensure that the "from" is intersection1.
             if(info.from == intersection1)
                 return true;
-            else
-                return false;
         }
-        else //if street is not one-way
+        else //if connecting street is not one-way
             return true;
     }
+    return false;
 }
 
 
