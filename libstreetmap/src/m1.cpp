@@ -103,49 +103,57 @@ bool compareStreetPrefix(std::string streetName, std::string prefix, int prefixL
 
 
 bool load_map(std::string map_streets_database_filename) {
-    bool load_successful = false; //Indicates whether the map has loaded 
-                                  //successfully
+     //Indicates whether both maps have loaded successfully
+    bool load_successful;
 
+    //check if streets database bin file loads successfully
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
-    //Make sure this load_successful is updated to reflect whetherloading the map succeeded or failed
     
-    std:: string map_streets_database_filename_OSM = map_streets_database_filename;
-    
-    //remove.street.bin from string to add .osm.bin
-    if (!(map_streets_database_filename_OSM.empty())){
-        map_streets_database_filename_OSM.resize(map_streets_database_filename.size()-11);
-        map_streets_database_filename_OSM = map_streets_database_filename_OSM + "osm.bin";
+    //if streets database loaded, create string for OSM filename and load it
+    if(load_successful){
+        
+        //string to load OSM filename
+        std:: string map_streets_database_filename_OSM = map_streets_database_filename;
+        
+        //remove.street.bin from string, concatenate .osm.bin
+        if (!(map_streets_database_filename_OSM.empty())){
+            map_streets_database_filename_OSM.resize(map_streets_database_filename.size()-11);
+            map_streets_database_filename_OSM = map_streets_database_filename_OSM + "osm.bin";
+        }
+        //load corresponding OSM database
+        load_successful = loadOSMDatabaseBIN(map_streets_database_filename_OSM);
     }
-    //load corresponding OSM database
-    loadOSMDatabaseBIN(map_streets_database_filename_OSM);
     
-    //Populating Street Vector Nodes with streetsdatabaseAPI data
-    populateStreetVector();
+    //if load_successful is still true, populate data structures
+    if (load_successful){
+        //Populating Street Vector Nodes with streetsdatabaseAPI data
+        populateStreetVector();
     
-    //Populating Feature Area Vector with area
-    populateFeatureAreaVector();
+        //Populating Feature Area Vector with area
+        populateFeatureAreaVector();
     
-    //Populating Hashtable with OSMdatabaseAPI data
-    populateOSMID_to_node();
+        //Populating Hashtable with OSMdatabaseAPI data
+        populateOSMID_to_node();
     
-    //Populating Hashtable with OSMWay_lengths
-    populateOSMWay_lengths();
+        //Populating Hashtable with OSMWay_lengths
+        populateOSMWay_lengths();
     
-    //Populating streetSegmentsOfAnIntersection
-    populateIntersectionStreetSegments();
+        //Populating streetSegmentsOfAnIntersection
+        populateIntersectionStreetSegments();
     
-    //Populating intersectionCoordinates vector
-    populateIntersectionCoordinates();
+        //Populating intersectionCoordinates vector
+        populateIntersectionCoordinates();
     
-    //Populating street names hash table
-    populateStreetNames();
+        //Populating street names hash table
+        populateStreetNames();
     
-    //Populate segment lengths
-    populate_segment_lengths();
+        //Populate segment lengths
+        populate_segment_lengths();
     
-    //Populate segment travel times;
-    populate_segment_travel_time();
+        //Populate segment travel times;
+        populate_segment_travel_time();
     
+    }
     return load_successful;
 }
 
