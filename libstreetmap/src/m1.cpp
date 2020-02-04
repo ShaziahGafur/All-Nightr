@@ -127,6 +127,9 @@ bool load_map(std::string map_streets_database_filename) {
     //Populating street names hash table
     populateStreetNames();
     
+    //Populate segment lengths
+    populate_segment_lengths();
+    
     return load_successful;
 }
 
@@ -154,6 +157,7 @@ double find_distance_between_two_points(std::pair<LatLon, LatLon> points){
 //Returns the length of the given street segment in meters
 double find_street_segment_length(int street_segment_id){
     //if street_segment)id is within existent range
+    
     if ((street_segment_id < getNumStreetSegments()) && (street_segment_id >= 0)){
         return segment_lengths[street_segment_id];
     }
@@ -612,6 +616,8 @@ void populate_segment_lengths(){
     
     for(unsigned id = 0; id < getNumStreetSegments(); id++){
     
+        streetSegmentLength = 0;
+        
         segmentInfo = getInfoStreetSegment(id);
 
         //get number of curve points in street segment
