@@ -74,7 +74,7 @@ std::vector<double> segmentTravelTime;
 //Vector --> key: [intersection ID] value: [LatLon Coordinates]
 std::vector<LatLon> intersectionCoordinates;
 
-//Hashtable --> key: [Street Name] value: [Street Index]
+//Multimap --> key: [Street Name] value: [Street Index]
 std::multimap<std::string, int> streetNames;
 //----------------------------------------------------------------
 
@@ -98,7 +98,7 @@ void populateIntersectionCoordinates();
 //Populating names of street with street index
 void populateStreetNames();
 //returns true if a given streetName begins with the same characters as a given prefix
-bool compareStreetPrefix(std::string streetName, std::string prefix, int prefixLength);
+bool isStreetName(std::string streetName, std::string prefix, int prefixLength);
 //------------------------------------------------------------------
 
 
@@ -160,6 +160,9 @@ bool load_map(std::string map_streets_database_filename) {
 
 void close_map() {
     //Clean-up your map related data structures here
+    
+    streetNames.clear();
+    
     closeStreetDatabase(); 
     closeOSMDatabase();
 }
@@ -408,32 +411,43 @@ std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_id
 //You can choose what to return if the street prefix passed in is an empty (length 0) 
 //string, but your program must not crash if street_prefix is a length 0 string.
 std::vector<int> find_street_ids_from_partial_street_name(std::string street_prefix){
+
+    //vector to be returned(value:street id's that max prefix)
     std::vector<int> streetIdsFromPartialStreetName;
-    streetIdsFromPartialStreetName.resize(getNumIntersections());
+    
     if (street_prefix.empty())//if empty is string
         return streetIdsFromPartialStreetName; //return empty vector
     
     //remove spaces from street_prefix
-    street_prefix.erase(remove_if(street_prefix.begin(), street_prefix.end(), isspace), street_prefix.end());
+    street_prefix.erase(std::remove_if(street_prefix.begin(), street_prefix.end(), isspace), street_prefix.end());
+    
     //convert prefix into all lowercase
     std::transform(street_prefix.begin(), street_prefix.end(), street_prefix.begin(), 
             [](unsigned char c){return std::tolower(c); });
-
-    int prefixLength = street_prefix.length(); //length of prefix   
-    std::multimap<std::string, int>::iterator itr; 
-    //point to the element in map that is greater than or equal to the street_prefix
-    itr = streetNames.lower_bound(street_prefix);
-    std::multimap<std::string, int>::iterator itrLowerBound;
-    itrLowerBound = itr; 
-
+     
+    int prefixLength = street_prefix.length(); //length of prefix  
+    
+    //iterator to be used to traverse streetNames from lower bound 
+    std::multimap<std::string, int>::iterator itr = streetNames.lower_bound(street_prefix); 
+    
     //check if the street in map begins with the partial street name
-    while(compareStreetPrefix((*itr).first, street_prefix, prefixLength)){ //while streetNames begin with the same characters as the street_prefix
-        streetIdsFromPartialStreetName.push_back((*itr).second);
-        itr++;
+    //first argument is street name (streetName --> Key)
+    //second is street_prefix, third is length
+    
+    bool foundAllStreets = false;
+ 
+    //go through all the streets after lower bound and check if prefix matches start up street name
+    //if it does, add street name to streetIdsFromPartialStreetName
+    //when it doesn't match, exit while loop
+    while (!foundAllStreets){
+        if((itr != streetNames.end()) && (isStreetName(itr -> first, street_prefix, prefixLength))){ //while streetNames begin with the same characters as the street_prefix       
+            streetIdsFromPartialStreetName.push_back(itr -> second);
+            itr++;
+        }
+        else{
+            foundAllStreets = true;
+        }
     }
-    int numOfIDs = std::distance(itrLowerBound, itr);
-//    std::cout<<"Num of IDs"<<numOfIDs<<"\n";//remove
-    streetIdsFromPartialStreetName.resize(numOfIDs);   
     return streetIdsFromPartialStreetName;
 }
 
@@ -715,31 +729,37 @@ void populateIntersectionCoordinates() {
        
    }
 }
-
+//Populates streetNames multi-map
+//Key -> Name  value -> streetID
 void populateStreetNames() {
+   //variable to hold street names
    std::string cachedStreetName;  
     
    for(unsigned streetIdx = 0; streetIdx < getNumStreets(); streetIdx++){ //loop through all streets of map
-       cachedStreetName = getStreetName(streetIdx); //retrieve street name from street index
+       //retrieve street name from street index
+       cachedStreetName = getStreetName(streetIdx); 
+       
        //convert name into a form without spaces
-       cachedStreetName.erase(remove_if(cachedStreetName.begin(), cachedStreetName.end(), isspace), cachedStreetName.end());
+       cachedStreetName.erase(std::remove_if(cachedStreetName.begin(), cachedStreetName.end(), isspace), cachedStreetName.end());
+       
        //convert name into all lowercase
        std::transform(cachedStreetName.begin(), cachedStreetName.end(), cachedStreetName.begin(), 
                [](unsigned char c){return std::tolower(c); });
+               
        //add this string to the StreetNames multimap         
-       streetNames.insert({getStreetName(streetIdx), streetIdx});
-//       std::cout<<"Street name (key): "<<getStreetName(streetIdx)<<", value: "<<streetIdx<<"\n";
+       streetNames.insert(std::make_pair(cachedStreetName, streetIdx));
    }
 }
 
 //compares characters of street prefix and street name in streetName Map. streetName must begin with same character as prefix
-bool compareStreetPrefix(std::string streetName, std::string prefix, int prefixLength){
+bool isStreetName(std::string streetName, std::string prefix, int prefixLength){
     //if the prefix exceeds the street Name
     if (prefixLength > streetName.length())
         return false;
     //check one by one if prefix and street name have same characters 
     for (unsigned i = 0; i < prefixLength; i++){
-        if (prefix[i]!=streetName[i])
+        
+        if (prefix[i] != streetName[i])
             return false; //mismatch found
     }
     return true; //streetName begins with that prefix
