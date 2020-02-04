@@ -49,20 +49,31 @@
 //-----Global Variables------------------------------------------
 //StreetStruct --> Members: [street name, street segments, intersections]
 streetStruct stubStreetStruct;
+
 //Vector --> key: [streetID] value: [StreetStruct]
 std::vector<streetStruct> streetVector;
+
 //Vector --> key: [intersection ID] value: [streetSegmentsVector]
 std::vector<std::vector<int>> intersectionStreetSegments;
+
 //Hashtable --> key: [Node_Id] value: [OSMID]
 std::unordered_map<OSMID, int> OSMID_to_node;
+
 //Hashtable --> key: [OSMway] value: [length of way]
 std::unordered_map<OSMID, double> OSMWay_lengths;
+
 //Vector --> key: [feature ID] value: [Area]
 std::vector<double> featureAreaVector;
+
 //Vector --> key: [segment ID] value: [length]
 std::vector<double> segment_lengths;
+
+//Vector --> key: [segment ID] value: [travel_time]
+std::vector<double> segmentTravelTime;
+
 //Vector --> key: [intersection ID] value: [LatLon Coordinates]
 std::vector<LatLon> intersectionCoordinates;
+
 //Hashtable --> key: [Street Name] value: [Street Index]
 std::multimap<std::string, int> streetNames;
 //----------------------------------------------------------------
@@ -80,6 +91,8 @@ void populateOSMWay_lengths();
 void populateIntersectionStreetSegments();
 //Populating segment_lengths
 void populate_segment_lengths();
+//Populating segment_travel_time
+void populate_segment_travel_time();
 //Populating intersection Coordinates vector
 void populateIntersectionCoordinates();
 //Populating names of street with street index
@@ -130,6 +143,9 @@ bool load_map(std::string map_streets_database_filename) {
     //Populate segment lengths
     populate_segment_lengths();
     
+    //Populate segment travel times;
+    populate_segment_travel_time();
+    
     return load_successful;
 }
 
@@ -170,14 +186,7 @@ double find_street_segment_length(int street_segment_id){
 //(time = distance/speed_limit)
 double find_street_segment_travel_time(int street_segment_id){
     
-    //Retrieve speed limit info in m/sec
-    InfoStreetSegment segmentInfo = getInfoStreetSegment(street_segment_id);
-    double speedLimit_metersPerSec = 1000.0*(segmentInfo.speedLimit)/ 3600.0;
-    
-    //calculate travel time (time = distance/velocity)
-    double streetSegmentTravelTime = (segment_lengths[street_segment_id] / speedLimit_metersPerSec);
-    
-    return streetSegmentTravelTime;
+    return segmentTravelTime[street_segment_id];
 }
 
 //Returns the nearest intersection to the given position
@@ -616,7 +625,7 @@ void populate_segment_lengths(){
     
     segment_lengths.resize(getNumStreetSegments());
     
-    double streetSegmentLength = 0;
+    double streetSegmentLength;
     //general segment info struct
     InfoStreetSegment segmentInfo;
     
@@ -662,6 +671,32 @@ void populate_segment_lengths(){
         segment_lengths[id] =  streetSegmentLength;
     }   
 }
+
+void populate_segment_travel_time(){
+    
+    segmentTravelTime.resize(getNumStreetSegments());
+    
+    double streetSegmentTravelTime, speedLimit_metersPerSec;
+    //general segment info struct
+    InfoStreetSegment segmentInfo;
+    
+    for (unsigned street_segment_id = 0; street_segment_id < getNumStreetSegments(); street_segment_id++){
+        //reset travel time to 0
+        streetSegmentTravelTime = 0;
+        
+        //Retrieve speed limit info in m/sec
+        segmentInfo = getInfoStreetSegment(street_segment_id);
+        speedLimit_metersPerSec = 1000.0*(segmentInfo.speedLimit)/ 3600.0;
+        
+        //calculate travel time (time = distance/velocity)
+        streetSegmentTravelTime = (segment_lengths[street_segment_id] / speedLimit_metersPerSec);
+        
+        //put travel time into segmentTravelTime vector
+        segmentTravelTime[street_segment_id] =  streetSegmentTravelTime;
+    }   
+}
+
+
 //Populate intersectionCoordinates vector
 //key: intersectionId value: LatLon coordinates
 void populateIntersectionCoordinates() {
