@@ -157,9 +157,24 @@ bool load_map(std::string map_streets_database_filename) {
 
 
 void close_map() {
-    //Clean-up your map related data structures here
     
     StreetNames.clear();
+    
+    StreetVector.clear();
+    
+    IntersectionStreetSegments.clear();
+    
+    OSMID_to_node.clear();
+    
+    OSMWay_lengths.clear();
+    
+    FeatureAreaVector.clear();
+    
+    SegmentLengths.clear();
+    
+    SegmentTravelTime.clear();
+    
+    IntersectionCoordinates.clear();
     
     closeStreetDatabase(); 
     closeOSMDatabase();
@@ -752,6 +767,7 @@ void populateStreetNames() {
        //add this string to the StreetNames multimap key --> [name], value --> [id]          
        StreetNames.insert(std::make_pair(cachedStreetName, streetIdx));
 
+}
 }
 
 //compares characters of street prefix and street name in streetName Map. streetName must begin with same character as prefix
