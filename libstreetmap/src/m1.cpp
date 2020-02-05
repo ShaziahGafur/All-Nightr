@@ -32,20 +32,6 @@
 #include <algorithm>
 #include <set>
 
-
-// load_map will be called with the name of the file that stores the "layer-2"
-// map data (the street and intersection data that is higher-level than the
-// raw OSM data). This file name will always end in ".streets.bin" and you 
-// can call loadStreetsDatabaseBIN with this filename to initialize the
-// layer 2 API.
-// If you need data from the lower level, layer 1, API that provides raw OSM
-// data (nodes, ways, etc.) you will also need to initialize the layer 1 
-// OSMDatabaseAPI by calling loadOSMDatabaseBIN. That function needs the 
-// name of the ".osm.bin" file that matches your map -- just change 
-// ".streets" to ".osm" in the map_streets_database_filename to get the proper
-// name.
-
-
 //-----Global Variables------------------------------------------
 //StreetStruct --> Members: [street name, street segments, intersections]
 streetStruct stubStreetStruct;
@@ -101,15 +87,27 @@ void populateStreetNames();
 bool isStreetName(std::string streetName, std::string prefix, int prefixLength);
 //------------------------------------------------------------------
 
-
+// load_map will be called with the name of the file that stores the "layer-2"
+// map data (the street and intersection data that is higher-level than the
+// raw OSM data). This file name will always end in ".streets.bin" and you 
+// can call loadStreetsDatabaseBIN with this filename to initialize the
+// layer 2 API.
+// If you need data from the lower level, layer 1, API that provides raw OSM
+// data (nodes, ways, etc.) you will also need to initialize the layer 1 
+// OSMDatabaseAPI by calling loadOSMDatabaseBIN. That function needs the 
+// name of the ".osm.bin" file that matches your map -- just change 
+// ".streets" to ".osm" in the map_streets_database_filename to get the proper
+// name.
+//
+//Load map also calls functions to populate global data structures which will be used to make other functions faster
 bool load_map(std::string map_streets_database_filename) {
-     //Indicates whether both maps have loaded successfully
+    
     bool load_successful;
 
     //check if streets database bin file loads successfully
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
     
-    //if streets database loaded, create string for OSM filename and load it
+    //if streets database loaded, create string for OSM filename and load OSM database
     if(load_successful){
         
         //string to load OSM filename
