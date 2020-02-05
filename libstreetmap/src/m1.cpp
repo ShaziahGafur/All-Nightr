@@ -189,6 +189,7 @@ double find_street_segment_length(int street_segment_id){
         return segment_lengths[street_segment_id];
     }
     else{
+        std::cout<<"Invalid street segment ID";
         return 0;
     }
 }
@@ -197,7 +198,13 @@ double find_street_segment_length(int street_segment_id){
 //(time = distance/speed_limit)
 double find_street_segment_travel_time(int street_segment_id){
     
-    return segmentTravelTime[street_segment_id];
+    if ((street_segment_id < getNumStreetSegments()) && (street_segment_id >= 0)){
+        return segmentTravelTime[street_segment_id];
+    }
+    else{
+        std::cout<<"Invalid street segment ID";
+        return 0;
+    }
 }
 
 //Returns the nearest intersection to the given position
@@ -227,7 +234,15 @@ int find_closest_intersection(LatLon my_position){
 
 //Returns the street segments for the given intersection 
 std::vector<int> find_street_segments_of_intersection(int intersection_id){
-    return intersectionStreetSegments[intersection_id];
+    
+    if ((intersection_id < getNumIntersections()) && (intersection_id >= 0)){
+        return intersectionStreetSegments[intersection_id];
+    }
+    else{
+        std::cout<<"Invalid intersection ID";
+        std::vector<int> emptyVector;
+        return emptyVector;
+    }
 }
 
 //Returns the street names at the given intersection (includes duplicate street 
@@ -236,6 +251,11 @@ std::vector<std::string> find_street_names_of_intersection(int intersection_id){
     
     //container for intersection street names
     std::vector<std::string> streetNamesOfIntersection;
+    
+    if ((intersection_id >= getNumIntersections()) || (intersection_id < 0)){
+        std::cout<<"Invalid intersection ID";
+        return streetNamesOfIntersection;
+    }
     
     //container for the intersection street segments
     std::vector<int> ssOfIntersection = find_street_segments_of_intersection(intersection_id);
@@ -257,11 +277,15 @@ std::vector<std::string> find_street_names_of_intersection(int intersection_id){
 bool are_directly_connected(std::pair<int, int> intersection_ids){    
     //function compares street segment vectors of two intersections to find any commonalities
     //then checks if going from intersection1 to intersection2 is allowed (i.e. legal)
-    
-    int intersection1 = intersection_ids.first;
-    
+    int maxIntersectionID = getNumIntersections(); 
+ 
+    int intersection1 = intersection_ids.first; 
     int intersection2 = intersection_ids.second;
     
+    if (intersection1 >= maxIntersectionID ||intersection2 >= maxIntersectionID ||intersection1<0||intersection2<0){
+        std::cout<<"One or more Intersection IDs is invalid";
+        return false;
+    }
     //extracting the street segment vector of both intersections
     std::vector<int> intersection1_segments = intersectionStreetSegments[intersection1];
     std::vector<int> intersection2_segments = intersectionStreetSegments[intersection2];
@@ -319,10 +343,15 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
 //from given intersection (hint: you can't travel the wrong way on a 1-way street)
 //the returned vector should NOT contain duplicate intersections
 std::vector<int> find_adjacent_intersections(int intersection_id){
-
+    
     InfoStreetSegment info;
 
     std::vector<int> adjacentIntersections;
+    
+    if ((intersection_id >= getNumIntersections()) || (intersection_id < 0)){
+        std::cout<<"Invalid intersection ID";
+        return adjacentIntersections;
+    }
     
     //adjacentIntersections set which will "remove" duplicate entries
     //at the end, each set will be copied into the adjacentIntersections vector
@@ -362,10 +391,22 @@ std::vector<int> find_adjacent_intersections(int intersection_id){
 //Returns all street segments for the given street
 std::vector<int> find_street_segments_of_street(int street_id){
     
+    if ((street_id >= getNumStreets()) || (street_id < 0)){
+        std::cout<<"Invalid Street ID";
+        std::vector<int> emptyVector;
+        return emptyVector;
+    }
+    
     return streetVector[street_id].streetSegments;
 }
 //Returns all intersections along the a given street
 std::vector<int> find_intersections_of_street(int street_id){ 
+    
+    if ((street_id >= getNumStreets()) || (street_id < 0)){
+        std::cout<<"Invalid Street ID";
+        std::vector<int> emptyVector;
+        return emptyVector;
+    }
     
     return streetVector[street_id].intersections;
 }
@@ -373,16 +414,24 @@ std::vector<int> find_intersections_of_street(int street_id){
 //Return all intersection ids for two intersecting streets
 //This function will typically return one intersection id.
 std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_ids){
+    
+    //vector to be returned (list of all intersections)
+    std::vector<int> intersectionsOfTwoStreets;
+    
     //extracting the streedIds
     int streetId1 = street_ids.first;
     int streetId2 = street_ids.second;
     
+    int maxStreetID = getNumStreets(); 
+    
+    if (streetId1 >= maxStreetID ||streetId2 >= maxStreetID ||streetId1<0||streetId2<0){
+        std::cout<<"One or more Street IDs is invalid";
+        return intersectionsOfTwoStreets;
+    }
     //extracting the street intersection vector of both streets
     std::vector<int> streetIntersections1 = streetVector[streetId1].intersections;
     std::vector<int> streetIntersections2 = streetVector[streetId2].intersections;
     
-    //vector to be returned (list of all intersections)
-    std::vector<int> intersectionsOfTwoStreets;
     //resizing intersectionsOfTwoStreets so that it can be assigned values
     intersectionsOfTwoStreets.resize(streetIntersections1.size() + streetIntersections2.size());    
     
@@ -415,9 +464,10 @@ std::vector<int> find_street_ids_from_partial_street_name(std::string street_pre
     //vector to be returned(value:street id's that max prefix)
     std::vector<int> streetIdsFromPartialStreetName;
     
-    if (street_prefix.empty())//if empty is string
+    if (street_prefix.empty()){//if empty is string
+        std::cout<<"Empty street prefix";
         return streetIdsFromPartialStreetName; //return empty vector
-    
+    }
     //remove spaces from street_prefix
     street_prefix.erase(std::remove_if(street_prefix.begin(), street_prefix.end(), isspace), street_prefix.end());
     
@@ -455,6 +505,12 @@ std::vector<int> find_street_ids_from_partial_street_name(std::string street_pre
 //Assume a non self-intersecting polygon (i.e. no holes)
 //Return 0 if this feature is not a closed polygon.
 double find_feature_area(int feature_id){
+    
+    if ((feature_id >= getNumFeatures()) || (feature_id < 0)){
+        std::cout<<"Invalid Feature ID";
+        return 0;
+    }
+    
     return featureAreaVector[feature_id];
 }
 
