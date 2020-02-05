@@ -365,45 +365,48 @@ std::vector<int> find_adjacent_intersections(int intersection_id){
     return adjacentIntersections;
 }
 
-//Returns all street segments for the given street
+//Return: vector of all street segments for the given street
+//Uses streetVector vector with street id argument (if it exists)
 std::vector<int> find_street_segments_of_street(int street_id){
     
     return streetVector[street_id].streetSegments;
 }
-//Returns all intersections along the a given street
+//Return: vector all intersections of the a given street
+//Uses streetVector vector with street id argument (if it exists)
 std::vector<int> find_intersections_of_street(int street_id){ 
     
     return streetVector[street_id].intersections;
 }
 
-//Return all intersection ids for two intersecting streets
+//Return: vector of all intersection ids for two intersecting streets
 //This function will typically return one intersection id.
 std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_ids){
-    //extracting the streedIds
+    
+    //Extracting the streedIds
     int streetId1 = street_ids.first;
     int streetId2 = street_ids.second;
     
-    //extracting the street intersection vector of both streets
+    //Extracting the street intersection vector of both streets
     std::vector<int> streetIntersections1 = streetVector[streetId1].intersections;
     std::vector<int> streetIntersections2 = streetVector[streetId2].intersections;
     
-    //vector to be returned (list of all intersections)
+    //Vector to be returned (list of all intersections)
     std::vector<int> intersectionsOfTwoStreets;
     //resizing intersectionsOfTwoStreets so that it can be assigned values
     intersectionsOfTwoStreets.resize(streetIntersections1.size() + streetIntersections2.size());    
     
-    //iterator used in subsequent set_intersection function 
+    //Iterator used in subsequent set_intersection function 
     std::vector<int>::iterator it;
     
-    //set_intersection is an STL function which finds elements common in two sets, and
-    //returns them into a third vector
+    //Set_intersection is an STL function which finds elements common in two sets, and
+    //Returns them into a third vector
     it = std::set_intersection(streetIntersections1.begin(), 
                         streetIntersections1.end(), 
                         streetIntersections2.begin(), 
                         streetIntersections2.end(),
                         intersectionsOfTwoStreets.begin());
     
-    //resizes intersectionsOfTwoStreets to the actual number of intersections
+    //Resizes intersectionsOfTwoStreets to the actual number of intersections
     intersectionsOfTwoStreets.resize(it-intersectionsOfTwoStreets.begin());
     
     return intersectionsOfTwoStreets; 
