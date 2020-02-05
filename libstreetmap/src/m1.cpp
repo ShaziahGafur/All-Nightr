@@ -32,29 +32,13 @@
 #include <algorithm>
 #include <set>
 
-
-// load_map will be called with the name of the file that stores the "layer-2"
-// map data (the street and intersection data that is higher-level than the
-// raw OSM data). This file name will always end in ".streets.bin" and you 
-// can call loadStreetsDatabaseBIN with this filename to initialize the
-// layer 2 API.
-// If you need data from the lower level, layer 1, API that provides raw OSM
-// data (nodes, ways, etc.) you will also need to initialize the layer 1 
-// OSMDatabaseAPI by calling loadOSMDatabaseBIN. That function needs the 
-// name of the ".osm.bin" file that matches your map -- just change 
-// ".streets" to ".osm" in the map_streets_database_filename to get the proper
-// name.
-
-
 //-----Global Variables------------------------------------------
-//StreetStruct --> Members: [street name, street segments, intersections]
-streetStruct stubStreetStruct;
-
 //Vector --> key: [streetID] value: [StreetStruct]
-std::vector<streetStruct> streetVector;
+//StreetStruct --> Members: [street name, street segments, intersections]
+std::vector<streetStruct> StreetVector;
 
 //Vector --> key: [intersection ID] value: [streetSegmentsVector]
-std::vector<std::vector<int>> intersectionStreetSegments;
+std::vector<std::vector<int>> IntersectionStreetSegments;
 
 //Hashtable --> key: [Node_Id] value: [OSMID]
 std::unordered_map<OSMID, int> OSMID_to_node;
@@ -63,19 +47,19 @@ std::unordered_map<OSMID, int> OSMID_to_node;
 std::unordered_map<OSMID, double> OSMWay_lengths;
 
 //Vector --> key: [feature ID] value: [Area]
-std::vector<double> featureAreaVector;
+std::vector<double> FeatureAreaVector;
 
 //Vector --> key: [segment ID] value: [length]
-std::vector<double> segment_lengths;
+std::vector<double> SegmentLengths;
 
 //Vector --> key: [segment ID] value: [travel_time]
-std::vector<double> segmentTravelTime;
+std::vector<double> SegmentTravelTime;
 
 //Vector --> key: [intersection ID] value: [LatLon Coordinates]
-std::vector<LatLon> intersectionCoordinates;
+std::vector<LatLon> IntersectionCoordinates;
 
 //Multimap --> key: [Street Name] value: [Street Index]
-std::multimap<std::string, int> streetNames;
+std::multimap<std::string, int> StreetNames;
 //----------------------------------------------------------------
 
 //---Function Declarations----------------------------------------
@@ -89,10 +73,10 @@ void populateOSMID_to_node();
 void populateOSMWay_lengths();
 //Populating streetSegmentsOfAnIntersection
 void populateIntersectionStreetSegments();
-//Populating segment_lengths
-void populate_segment_lengths();
+//Populating SegmentLengths
+void populateSegmentLengths();
 //Populating segment_travel_time
-void populate_segment_travel_time();
+void populateSegmentTravelTime();
 //Populating intersection Coordinates vector
 void populateIntersectionCoordinates();
 //Populating names of street with street index
@@ -101,30 +85,42 @@ void populateStreetNames();
 bool isStreetName(std::string streetName, std::string prefix, int prefixLength);
 //------------------------------------------------------------------
 
-
+// load_map will be called with the name of the file that stores the "layer-2"
+// map data (the street and intersection data that is higher-level than the
+// raw OSM data). This file name will always end in ".streets.bin" and you 
+// can call loadStreetsDatabaseBIN with this filename to initialize the
+// layer 2 API.
+// If you need data from the lower level, layer 1, API that provides raw OSM
+// data (nodes, ways, etc.) you will also need to initialize the layer 1 
+// OSMDatabaseAPI by calling loadOSMDatabaseBIN. That function needs the 
+// name of the ".osm.bin" file that matches your map -- just change 
+// ".streets" to ".osm" in the map_streets_database_filename to get the proper
+// name.
+//
+//Load map also calls functions to populate global data structures which will be used to make other functions faster
 bool load_map(std::string map_streets_database_filename) {
-     //Indicates whether both maps have loaded successfully
+    
     bool load_successful;
 
-    //check if streets database bin file loads successfully
+    //Check if streets database bin file loads successfully
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
     
-    //if streets database loaded, create string for OSM filename and load it
+    //If streets database loaded, create string for OSM filename and load OSM database
     if(load_successful){
         
-        //string to load OSM filename
+        //String to load OSM filename
         std:: string map_streets_database_filename_OSM = map_streets_database_filename;
         
-        //remove.street.bin from string, concatenate .osm.bin
+        //Remove ".street.bin" from string, concatenate ".osm.bin"
         if (!(map_streets_database_filename_OSM.empty())){
             map_streets_database_filename_OSM.resize(map_streets_database_filename.size()-11);
             map_streets_database_filename_OSM = map_streets_database_filename_OSM + "osm.bin";
         }
-        //load corresponding OSM database
+        //Load corresponding OSM database
         load_successful = loadOSMDatabaseBIN(map_streets_database_filename_OSM);
     }
     
-    //if load_successful is still true, populate data structures
+    //If load_successful is still true, populate data structures
     if (load_successful){
         //Populating Street Vector Nodes with streetsdatabaseAPI data
         populateStreetVector();
@@ -141,17 +137,17 @@ bool load_map(std::string map_streets_database_filename) {
         //Populating streetSegmentsOfAnIntersection
         populateIntersectionStreetSegments();
     
-        //Populating intersectionCoordinates vector
+        //Populating IntersectionCoordinates vector
         populateIntersectionCoordinates();
     
         //Populating street names hash table
         populateStreetNames();
     
         //Populate segment lengths
-        populate_segment_lengths();
+        populateSegmentLengths();
     
         //Populate segment travel times;
-        populate_segment_travel_time();
+        populateSegmentTravelTime();
     
     }
     return load_successful;
@@ -159,34 +155,60 @@ bool load_map(std::string map_streets_database_filename) {
 
 
 void close_map() {
-    //Clean-up your map related data structures here
     
-    streetNames.clear();
+    //Clean-up your multi map here
+    StreetNames.clear();
     
+    StreetVector.clear();
+    
+    IntersectionStreetSegments.clear();
+    
+    OSMID_to_node.clear();
+    
+    OSMWay_lengths.clear();
+    
+    FeatureAreaVector.clear();
+    
+    SegmentLengths.clear();
+    
+    SegmentTravelTime.clear();
+    
+    IntersectionCoordinates.clear();
+    
+    //Call close functions from StreetsDatabase API
     closeStreetDatabase(); 
     closeOSMDatabase();
 }
-//result is in meters
+
+//Return: distance between 2 points (metres)
+//Finds distance in metres between 2 LatLon points by converting them to x y coordinates
+//Use distance formula to get distance and then scale it by multiplying by radius of the earth
 double find_distance_between_two_points(std::pair<LatLon, LatLon> points){
+    
     double latAvg, p1_y, p1_x, p2_y, p2_x, distanceBetweenTwoPoints;
     
+    //Calculate average latitude of points
     latAvg = (points.first.lat()*DEGREE_TO_RADIAN + points.second.lat()*DEGREE_TO_RADIAN ) * 0.5;
+    
+    //Convert latitude and longitude to x and y coordinates
     p1_y = points.first.lat()*DEGREE_TO_RADIAN ;
     p1_x = points.first.lon()*DEGREE_TO_RADIAN *cos(latAvg);
     p2_y = points.second.lat()*DEGREE_TO_RADIAN ;
     p2_x = points.second.lon()*DEGREE_TO_RADIAN *cos(latAvg);
     
+    
+    //Use distance formula to find distance and then scale to size of Earth
     distanceBetweenTwoPoints = EARTH_RADIUS_METERS * sqrt(pow(p2_y - p1_y , 2)+ pow(p2_x - p1_x , 2));
   
     return distanceBetweenTwoPoints;
 }
 
-//Returns the length of the given street segment in meters
+//Return: street segment length (metres)
+//Uses SegmentLengths vector with index segment id argument (if it exists)
 double find_street_segment_length(int street_segment_id){
-    //if street_segment)id is within existent range
     
     if ((street_segment_id < getNumStreetSegments()) && (street_segment_id >= 0)){
-        return segment_lengths[street_segment_id];
+        return SegmentLengths[street_segment_id];
     }
     else{
         std::cout<<"Invalid street segment ID";
@@ -194,12 +216,12 @@ double find_street_segment_length(int street_segment_id){
     }
 }
 
-//Returns the travel time to drive a street segment in seconds 
-//(time = distance/speed_limit)
+//Return: travel time (in seconds)
+//Uses SegmentTravelTime vector with index segment id argument (if it exists)
 double find_street_segment_travel_time(int street_segment_id){
     
     if ((street_segment_id < getNumStreetSegments()) && (street_segment_id >= 0)){
-        return segmentTravelTime[street_segment_id];
+        return SegmentTravelTime[street_segment_id];
     }
     else{
         std::cout<<"Invalid street segment ID";
@@ -207,18 +229,22 @@ double find_street_segment_travel_time(int street_segment_id){
     }
 }
 
-//Returns the nearest intersection to the given position
 int find_closest_intersection(LatLon my_position){
+//Function iterates through each intersection and compares its distance to my_position
+//The closest ID is returned as closestIntersection 
+//Ids are accessed from the IntersectionCoordinates structure
 
-    std::pair<LatLon, LatLon> path(my_position, intersectionCoordinates[0]);     
+    //calculates distance to intersection 0, to begin comparison
+    std::pair<LatLon, LatLon> path(my_position, IntersectionCoordinates[0]);     
     int shortestDistance = find_distance_between_two_points(path);
     
     int distance;
     int closestIntersection = 0;
     
+    //start iterating distance to intersection 1, since we start with distance to intersection 0
     for (unsigned i = 1; i < getNumIntersections(); i++){
-        
-        path.second = intersectionCoordinates[i];     
+        //store next intersection into the path pair
+        path.second = IntersectionCoordinates[i];     
         
         distance = find_distance_between_two_points(path);
         
@@ -232,11 +258,12 @@ int find_closest_intersection(LatLon my_position){
     return closestIntersection;
 }
 
-//Returns the street segments for the given intersection 
+//Returns: vector of street segments of an intersection
+//Uses intersectionStreetSegments vector with intersection id argument (if it exists)
 std::vector<int> find_street_segments_of_intersection(int intersection_id){
     
     if ((intersection_id < getNumIntersections()) && (intersection_id >= 0)){
-        return intersectionStreetSegments[intersection_id];
+        return IntersectionStreetSegments[intersection_id];
     }
     else{
         std::cout<<"Invalid intersection ID";
@@ -245,8 +272,8 @@ std::vector<int> find_street_segments_of_intersection(int intersection_id){
     }
 }
 
-//Returns the street names at the given intersection (includes duplicate street 
-//names in returned vector)
+//Returns: vector of street names of intersection
+
 std::vector<std::string> find_street_names_of_intersection(int intersection_id){
     
     //container for intersection street names
@@ -257,24 +284,26 @@ std::vector<std::string> find_street_names_of_intersection(int intersection_id){
         return streetNamesOfIntersection;
     }
     
-    //container for the intersection street segments
-    std::vector<int> ssOfIntersection = find_street_segments_of_intersection(intersection_id);
+    //Call find_street_segments_of_intersection to get segments of interest
+    std::vector<int> streetsegmentOfIntersection = find_street_segments_of_intersection(intersection_id);
     
-    //go through all connecting street segments to find street names
-    for(std::vector<int>::iterator it = ssOfIntersection.begin(); it != ssOfIntersection.end(); ++it){
-        //retrieve struct with street segment info 
-        InfoStreetSegment ssInfoStruct = getInfoStreetSegment(*it);
+    //Iterate through all street segments to find street names
+    for(std::vector<int>::iterator it = streetsegmentOfIntersection.begin(); it != streetsegmentOfIntersection.end(); ++it){
         
-        //get street name from street ID
-        streetNamesOfIntersection.push_back(getStreetName(ssInfoStruct.streetID));
+        //Retrieve current street segment info struct
+        //Get it's streetId and push into return vector
+        InfoStreetSegment streetSegmentInfoStruct = getInfoStreetSegment(*it);
+        streetNamesOfIntersection.push_back(getStreetName(streetSegmentInfoStruct.streetID));
     }
     
     return streetNamesOfIntersection;
 }
 
-//Returns true if you can get from intersection_ids.first to intersection_ids.second using a single 
-//street segment
+//Returns: true if you can get from intersection_ids.first to intersection_ids.second using a single street segment
+//Compares street segment vectors of two intersections to find any commonalities
+//Checks if going from intersection1 to intersection2 is allowed (i.e. legal- could be one-way)
 bool are_directly_connected(std::pair<int, int> intersection_ids){    
+    
     //function compares street segment vectors of two intersections to find any commonalities
     //then checks if going from intersection1 to intersection2 is allowed (i.e. legal)
     int maxIntersectionID = getNumIntersections(); 
@@ -287,51 +316,52 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
         return false;
     }
     //extracting the street segment vector of both intersections
-    std::vector<int> intersection1_segments = intersectionStreetSegments[intersection1];
-    std::vector<int> intersection2_segments = intersectionStreetSegments[intersection2];
+  
+    //Get the street segment vector of both intersections
+    std::vector<int> intersection1_segments = IntersectionStreetSegments[intersection1];
+    std::vector<int> intersection2_segments = IntersectionStreetSegments[intersection2];
     
-    //corner case: "to" and "from" are the same
+    //Corner case: "to" and "from" are the same intersection
     if(intersection1 == intersection2) 
         return true;
     
-    //vector to be returned (list of all intersections)
+    //Vector to check if two intersections share a street segment
     std::vector<int> commonStreetSegments;
     
-    //resizing commonStreetSegments so that it can be assigned values
+    //Resizing commonStreetSegments so that it can be assigned values
     commonStreetSegments.resize(intersection1_segments.size() + intersection2_segments.size());  
    
-    //iterator used in subsequent set_intersection function 
-     std::vector<int>::iterator it;
-    
-    //set_intersection is an STL function which finds elements common in two sets, and
-    //returns them into a third vector
+    //Set_intersection is an STL function which finds elements common in two sets, and puts them into a third vector (last argument)  
+    //Returns iterator which points to last match element added to commonStreetSegments
+    std::vector<int>::iterator it;
     it = std::set_intersection(intersection1_segments.begin(), 
                         intersection1_segments.end(), 
                         intersection2_segments.begin(), 
                         intersection2_segments.end(),
                         commonStreetSegments.begin());
     
-    //resizes commonStreetSegments to the actual number of intersections
+    //Resize commonStreetSegments to the actual number of intersections
     commonStreetSegments.resize(it-commonStreetSegments.begin());
     
-    //check if no common segments found
+    //Check if no common segments found
     if(commonStreetSegments.empty() == true)
         return false;
     
+    //Struct to check if segments are one-way
     InfoStreetSegment info;
-   
-    //NOTE: Street segment could be 1-way, therefore can get from second to first, but not first to second!!!!
+    
     for(unsigned i = 0; i < commonStreetSegments.size(); ++i){
         
         info = getInfoStreetSegment(commonStreetSegments[i]);
         
-        //check if street is one-way only. If not, can just return true;
+        //Check if street is one-way only
         if(info.oneWay == true){
-            //if street is one-way, ensure that intersection1 is "from"
+            //If street is one-way, ensure that intersection1 is "from"
             if(info.from == intersection1)
                 return true;
         }
-        else //if connecting street is not one-way
+        //Connecting street is not one-way
+        else 
             return true;
     }
     //if only connecting street segments are one-way
@@ -339,56 +369,54 @@ bool are_directly_connected(std::pair<int, int> intersection_ids){
 }
 
 
-//Returns all intersections reachable by traveling down one street segment 
-//from given intersection (hint: you can't travel the wrong way on a 1-way street)
-//the returned vector should NOT contain duplicate intersections
+//Return: vector of all intersections reachable by traveling across one street segment from given intersection
 std::vector<int> find_adjacent_intersections(int intersection_id){
     
     InfoStreetSegment info;
 
     std::vector<int> adjacentIntersections;
+    std::set<int> adjacentIntersectionsSet;
     
     if ((intersection_id >= getNumIntersections()) || (intersection_id < 0)){
         std::cout<<"Invalid intersection ID";
         return adjacentIntersections;
     }
     
-    //adjacentIntersections set which will "remove" duplicate entries
-    //at the end, each set will be copied into the adjacentIntersections vector
-    std::set<int> adjacentIntersections_set;
-    
+    //AdjacentIntersections set will "remove" duplicate entries
+    //Each set will be copied into the adjacentIntersections vector
  
-    //retrieve vector of all the street segments attached to the given intersection
-    std::vector<int>  connected_street_segments = intersectionStreetSegments[intersection_id];
+    //Retrieve vector of all the street segments of given intersection
+    std::vector<int>  connectedStreetSegments = IntersectionStreetSegments[intersection_id];
     
-    for(std::vector<int>::iterator it = connected_street_segments.begin(); it < connected_street_segments.end(); ++it){
-        //check if street is one way
-        info = getInfoStreetSegment(*it);
+    for(std::vector<int>::iterator it = connectedStreetSegments.begin(); it < connectedStreetSegments.end(); ++it){
         
+        //Check if street is one way
+        info = getInfoStreetSegment(*it);
         if (info.oneWay){
-            //check if its 'from' intersection is the intersection_id (it is going TO the adjacent intersection) 
+            //Check if 'from' intersection is the intersection_id and it is going TO the adjacent intersection; then add it to adjacentIntersections
             if (info.from == intersection_id){
-                //add intersection to the adjacentIntersection vector
-                adjacentIntersections_set.insert(info.to);
+                adjacentIntersectionsSet.insert(info.to);
             }
         }
-        else{   //not one-way
-            //check if 'from' or 'to' intersection of street segment is intersection_id and push back the other one into adjacentIntersections
+        else{
+            //Check if 'from' or 'to' intersection of street segment is intersection_id and push back the other into adjacentIntersections
             if (info.from == intersection_id)
-                adjacentIntersections_set.insert(info.to);
+                adjacentIntersectionsSet.insert(info.to);
          
             else
-             adjacentIntersections_set.insert(info.from);
+             adjacentIntersectionsSet.insert(info.from);
         }
     } 
     
-    adjacentIntersections.resize(adjacentIntersections_set.size());
-    adjacentIntersections.assign(adjacentIntersections_set.begin(), adjacentIntersections_set.end()); 
+    //Resize adjacentIntersections vector to size of adjacentIntersections set and then assign values from set into vector
+    adjacentIntersections.resize(adjacentIntersectionsSet.size());
+    adjacentIntersections.assign(adjacentIntersectionsSet.begin(), adjacentIntersectionsSet.end()); 
         
     return adjacentIntersections;
 }
 
-//Returns all street segments for the given street
+//Return: vector of all street segments for the given street
+//Uses streetVector vector with street id argument (if it exists)
 std::vector<int> find_street_segments_of_street(int street_id){
     
     if ((street_id >= getNumStreets()) || (street_id < 0)){
@@ -396,10 +424,11 @@ std::vector<int> find_street_segments_of_street(int street_id){
         std::vector<int> emptyVector;
         return emptyVector;
     }
-    
-    return streetVector[street_id].streetSegments;
+
+    return StreetVector[street_id].streetSegments;
 }
-//Returns all intersections along the a given street
+//Return: vector all intersections of the a given street
+//Uses streetVector vector with street id argument (if it exists)
 std::vector<int> find_intersections_of_street(int street_id){ 
     
     if ((street_id >= getNumStreets()) || (street_id < 0)){
@@ -408,17 +437,16 @@ std::vector<int> find_intersections_of_street(int street_id){
         return emptyVector;
     }
     
-    return streetVector[street_id].intersections;
+    return StreetVector[street_id].intersections;
 }
 
-//Return all intersection ids for two intersecting streets
+//Return: vector of all intersection ids for two intersecting streets
 //This function will typically return one intersection id.
 std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_ids){
-    
-    //vector to be returned (list of all intersections)
+    //Vector to be returned (list of all intersections)
     std::vector<int> intersectionsOfTwoStreets;
     
-    //extracting the streedIds
+    //Extracting the streedIds
     int streetId1 = street_ids.first;
     int streetId2 = street_ids.second;
     
@@ -428,25 +456,25 @@ std::vector<int> find_intersections_of_two_streets(std::pair<int, int> street_id
         std::cout<<"One or more Street IDs is invalid";
         return intersectionsOfTwoStreets;
     }
-    //extracting the street intersection vector of both streets
-    std::vector<int> streetIntersections1 = streetVector[streetId1].intersections;
-    std::vector<int> streetIntersections2 = streetVector[streetId2].intersections;
+    //Extracting the street intersection vector of both streets
+    std::vector<int> streetIntersections1 = StreetVector[streetId1].intersections;
+    std::vector<int> streetIntersections2 = StreetVector[streetId2].intersections;
     
     //resizing intersectionsOfTwoStreets so that it can be assigned values
     intersectionsOfTwoStreets.resize(streetIntersections1.size() + streetIntersections2.size());    
     
-    //iterator used in subsequent set_intersection function 
+    //Iterator used in subsequent set_intersection function 
     std::vector<int>::iterator it;
     
-    //set_intersection is an STL function which finds elements common in two sets, and
-    //returns them into a third vector
+    //Set_intersection is an STL function which finds elements common in two sets, and
+    //Returns them into a third vector
     it = std::set_intersection(streetIntersections1.begin(), 
                         streetIntersections1.end(), 
                         streetIntersections2.begin(), 
                         streetIntersections2.end(),
                         intersectionsOfTwoStreets.begin());
     
-    //resizes intersectionsOfTwoStreets to the actual number of intersections
+    //Resizes intersectionsOfTwoStreets to the actual number of intersections
     intersectionsOfTwoStreets.resize(it-intersectionsOfTwoStreets.begin());
     
     return intersectionsOfTwoStreets; 
@@ -477,8 +505,8 @@ std::vector<int> find_street_ids_from_partial_street_name(std::string street_pre
      
     int prefixLength = street_prefix.length(); //length of prefix  
     
-    //iterator to be used to traverse streetNames from lower bound 
-    std::multimap<std::string, int>::iterator itr = streetNames.lower_bound(street_prefix); 
+    //iterator to be used to traverse StreetNames from lower bound 
+    std::multimap<std::string, int>::iterator itr = StreetNames.lower_bound(street_prefix); 
     
     //check if the street in map begins with the partial street name
     //first argument is street name (streetName --> Key)
@@ -490,7 +518,7 @@ std::vector<int> find_street_ids_from_partial_street_name(std::string street_pre
     //if it does, add street name to streetIdsFromPartialStreetName
     //when it doesn't match, exit while loop
     while (!foundAllStreets){
-        if((itr != streetNames.end()) && (isStreetName(itr -> first, street_prefix, prefixLength))){ //while streetNames begin with the same characters as the street_prefix       
+        if((itr != StreetNames.end()) && (isStreetName(itr -> first, street_prefix, prefixLength))){ //while StreetNames begin with the same characters as the street_prefix       
             streetIdsFromPartialStreetName.push_back(itr -> second);
             itr++;
         }
@@ -511,7 +539,7 @@ double find_feature_area(int feature_id){
         return 0;
     }
     
-    return featureAreaVector[feature_id];
+    return FeatureAreaVector[feature_id];
 }
 
 //Returns the length of the OSMWay that has the given OSMID, in meters.
@@ -522,8 +550,8 @@ double find_way_length(OSMID way_id){
 
 //Populating StreetVector with street segments, intersections, and street name
 void populateStreetVector(){
-    //makes sure we can write into the streetVector
-    streetVector.resize(getNumStreets());
+    //makes sure we can write into the StreetVector
+    StreetVector.resize(getNumStreets());
     
     //vectors of sets which "remove" duplicate entries
     //at the end, each set will be copied into the appropriate intersections/segment vector
@@ -551,16 +579,16 @@ void populateStreetVector(){
     //copying the sets into the vectors in StreetVector
     for(unsigned i = 0; i < getNumStreets(); i++){
         //storing intersections
-        streetVector[i].intersections.resize(intersections_by_street_vector[i].size());
-        streetVector[i].intersections.assign(intersections_by_street_vector[i].begin(), intersections_by_street_vector[i].end()); 
+        StreetVector[i].intersections.resize(intersections_by_street_vector[i].size());
+        StreetVector[i].intersections.assign(intersections_by_street_vector[i].begin(), intersections_by_street_vector[i].end()); 
         //storing street segments
-        streetVector[i].streetSegments.resize(segments_by_street_vector[i].size());
-        streetVector[i].streetSegments.assign(segments_by_street_vector[i].begin(), segments_by_street_vector[i].end());
+        StreetVector[i].streetSegments.resize(segments_by_street_vector[i].size());
+        StreetVector[i].streetSegments.assign(segments_by_street_vector[i].begin(), segments_by_street_vector[i].end());
     }
 
     //assigning street names
     for (unsigned i = 0; i < getNumStreets(); i++){
-        streetVector[i].setStreetName(getStreetName(i));
+        StreetVector[i].setStreetName(getStreetName(i));
     }
     
 }
@@ -584,7 +612,7 @@ void populateFeatureAreaVector(){
         // If the first point and the last point (idx getFeaturePointCount-1) are NOT the same location, the feature is a polyline
         //the area is zero
         if ((firstPoint.lat() != lastPoint.lat()) || (firstPoint.lon() != lastPoint.lon())) {
-            featureAreaVector.push_back(0);
+            FeatureAreaVector.push_back(0);
             continue;
         }
     
@@ -616,7 +644,7 @@ void populateFeatureAreaVector(){
         //subtract: sum1 - sum2, divide by two
         featureArea = std::abs((sum1-sum2)/2);
         //add feature area into vector
-        featureAreaVector.push_back(featureArea);
+        FeatureAreaVector.push_back(featureArea);
     }
    
 }
@@ -682,7 +710,7 @@ void populateOSMWay_lengths(){
 void populateIntersectionStreetSegments(){
    
     //set size of outer vector to number of intersections
-    intersectionStreetSegments.resize(getNumIntersections());
+    IntersectionStreetSegments.resize(getNumIntersections());
     
     //iterate through number of intersections
     for(unsigned i = 0; i < getNumIntersections(); i++){
@@ -694,14 +722,14 @@ void populateIntersectionStreetSegments(){
             streetSegmentsOfAnIntersection.push_back(getIntersectionStreetSegment(i, j));
         }
         //push whole vector of street segments for this intersection into outer vector of intersections
-        intersectionStreetSegments[i] = streetSegmentsOfAnIntersection;
+        IntersectionStreetSegments[i] = streetSegmentsOfAnIntersection;
     }
     
 }
-//Populating segment_lengths vector
-void populate_segment_lengths(){
+//Populating SegmentLengths vector
+void populateSegmentLengths(){
     
-    segment_lengths.resize(getNumStreetSegments());
+    SegmentLengths.resize(getNumStreetSegments());
     
     double streetSegmentLength;
     //general segment info struct
@@ -746,13 +774,13 @@ void populate_segment_lengths(){
 
         streetSegmentLength += find_distance_between_two_points (length);
         
-        segment_lengths[id] =  streetSegmentLength;
+        SegmentLengths[id] =  streetSegmentLength;
     }   
 }
 
-void populate_segment_travel_time(){
+void populateSegmentTravelTime(){
     
-    segmentTravelTime.resize(getNumStreetSegments());
+    SegmentTravelTime.resize(getNumStreetSegments());
     
     double streetSegmentTravelTime, speedLimit_metersPerSec;
     //general segment info struct
@@ -767,25 +795,25 @@ void populate_segment_travel_time(){
         speedLimit_metersPerSec = 1000.0*(segmentInfo.speedLimit)/ 3600.0;
         
         //calculate travel time (time = distance/velocity)
-        streetSegmentTravelTime = (segment_lengths[street_segment_id] / speedLimit_metersPerSec);
+        streetSegmentTravelTime = (SegmentLengths[street_segment_id] / speedLimit_metersPerSec);
         
-        //put travel time into segmentTravelTime vector
-        segmentTravelTime[street_segment_id] =  streetSegmentTravelTime;
+        //put travel time into SegmentTravelTime vector
+        SegmentTravelTime[street_segment_id] =  streetSegmentTravelTime;
     }   
 }
 
 
-//Populate intersectionCoordinates vector
+//Populate IntersectionCoordinates vector
 //key: intersectionId value: LatLon coordinates
 void populateIntersectionCoordinates() {
     
    for(unsigned i = 0; i < getNumIntersections(); i++){
        LatLon intersectionLatLon = getIntersectionPosition(i);
-       intersectionCoordinates.push_back(intersectionLatLon);  
+       IntersectionCoordinates.push_back(intersectionLatLon);  
        
    }
 }
-//Populates streetNames multi-map
+//Populates StreetNames multi-map
 //Key -> Name  value -> streetID
 void populateStreetNames() {
    //variable to hold name of a single street, with removed spaces and characters all lowercase 
@@ -802,9 +830,10 @@ void populateStreetNames() {
        std::transform(cachedStreetName.begin(), cachedStreetName.end(), cachedStreetName.begin(), 
                [](unsigned char c){return std::tolower(c); });
                
-       //add this string to the StreetNames multimap as the key. ID of the street is the value;          
-       streetNames.insert(std::make_pair(cachedStreetName, streetIdx));
-   }
+       //add this string to the StreetNames multimap key --> [name], value --> [id]          
+       StreetNames.insert(std::make_pair(cachedStreetName, streetIdx));
+
+}
 }
 
 //compares characters of street prefix and street name in streetName Map. streetName must begin with same character as prefix
