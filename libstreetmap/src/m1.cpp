@@ -735,31 +735,33 @@ void populateIntersectionCoordinates() {
 //Populates StreetNames multi-map
 //Key -> Name  value -> streetID
 void populateStreetNames() {
-   //variable to hold street names
+   //variable to hold name of a single street, with removed spaces and characters all lowercase 
    std::string cachedStreetName;  
     
    for(unsigned streetIdx = 0; streetIdx < getNumStreets(); streetIdx++){ //loop through all streets of map
        //retrieve street name from street index
        cachedStreetName = getStreetName(streetIdx); 
        
-       //convert name into a form without spaces
+       //remove spaces from streetName string
        cachedStreetName.erase(std::remove_if(cachedStreetName.begin(), cachedStreetName.end(), isspace), cachedStreetName.end());
        
        //convert name into all lowercase
        std::transform(cachedStreetName.begin(), cachedStreetName.end(), cachedStreetName.begin(), 
                [](unsigned char c){return std::tolower(c); });
                
-       //add this string to the StreetNames multimap         
+       //add this string to the StreetNames multimap key --> [name], value --> [id]          
        StreetNames.insert(std::make_pair(cachedStreetName, streetIdx));
-   }
+
 }
 
 //compares characters of street prefix and street name in streetName Map. streetName must begin with same character as prefix
+//returns true if the given streetName begins with the prefix
+//otherwise, returns false
 bool isStreetName(std::string streetName, std::string prefix, int prefixLength){
     //if the prefix exceeds the street Name
     if (prefixLength > streetName.length())
         return false;
-    //check one by one if prefix and street name have same characters 
+    //check characters one by one if prefix and street name have same characters 
     for (unsigned i = 0; i < prefixLength; i++){
         
         if (prefix[i] != streetName[i])
