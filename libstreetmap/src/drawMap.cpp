@@ -2,10 +2,14 @@
 #include "ezgl/application.hpp"
 #include "ezgl/graphics.hpp"
 
-
+void draw_map();
+void draw_map_blank_canvas ();
 void draw_main_canvas (ezgl::renderer *g);
 
-void draw_map (){       
+void draw_map(){
+    draw_map_blank_canvas();
+}
+void draw_map_blank_canvas (){       
 ezgl::application::settings settings;
 settings.main_ui_resource="libstreetmap/resources/main.ui";
 settings.window_identifier="MainWindow";
