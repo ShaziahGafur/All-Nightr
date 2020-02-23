@@ -8,13 +8,15 @@
 #include <string>
 
 /************  GLOBAL VARIABLES  *****************/
+
 std::vector<intersection_data> intersections;
 
 
-/************  FUNCTION DECLARATIONS*************/
+/************  FUNCTION DECLARATIONS  ***********/
 void populateIntersections();
 void draw_map_blank_canvas ();
 void draw_main_canvas (ezgl::renderer *g);
+void draw_intersections();
 
 /************************************************/
 
@@ -41,11 +43,27 @@ void draw_map_blank_canvas (){
 }
 
 void draw_main_canvas (ezgl::renderer *g){
-    g->draw_rectangle({0, 0}, {1000, 1000});
-    g->set_color (ezgl::BLACK);
-    g->set_color (0, 0, 0, 255);  // 8-bit r, g, b, alpha. alpha of 255 is opaque, 0 is transparent
-    g->set_line_width (3);   // 3 pixels wide
-    g->set_line_dash (ezgl::line_dash::asymmetric_5_3);
+    
+//    g->draw_rectangle({0, 0}, {1000, 1000});
+//    g->set_color (ezgl::BLACK);
+//    g->set_color (0, 0, 0, 255);  // 8-bit r, g, b, alpha. alpha of 255 is opaque, 0 is transparent
+//    g->set_line_width (3);   // 3 pixels wide
+//    g->set_line_dash (ezgl::line_dash::asymmetric_5_3);
+    
+    //draw_intersections();
+    
+    for(size_t i = 0; i < intersections.size(); ++i){
+
+      float x = intersections[i].position.lon();
+      float y = intersections[i].position.lat();
+
+      float width = 1;
+
+      float height = width;
+
+      g->fill_rectangle({x,y}, {x + width, y + height});
+    
+}
 }
 
 void populateIntersections(){
@@ -63,3 +81,18 @@ void populateIntersections(){
         intersections[i].name = getIntersectionName(i);
     }
 }
+
+/*void draw_intersections(ezgl::renderer *g){
+    for(size_t i = 0; i < intersections.size(); ++i){
+        
+        float x = intersections[i].position.lon();
+        float y = intersections[i].position.lat();
+        
+        float width = 1;
+        
+        float height = width;
+        
+        g.fill_rectangle({x,y}, {x + width, y + height});
+    
+    }
+}*/
