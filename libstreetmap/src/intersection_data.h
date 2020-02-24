@@ -8,8 +8,6 @@
 
 struct intersection_data{
     
-public:
-    //members
     LatLon position;
     std::string name;
     bool highlight = false;
