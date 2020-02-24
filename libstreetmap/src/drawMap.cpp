@@ -17,11 +17,11 @@ std::vector<intersection_data> intersections;
 void populateIntersections();
 void draw_map_blank_canvas ();
 void draw_main_canvas (ezgl::renderer *g);
-<<<<<<< HEAD
+
 void draw_intersections();
-=======
+
 void find_map_bounds(double& max_lat, double& min_lat, double& max_lon, double& min_lon);
->>>>>>> 4c5c8c7b96cd876931db37e5dec5cc18f12fcd52
+
 
 /************************************************/
 
@@ -67,7 +67,6 @@ void draw_map_blank_canvas (){
 
 
 
-<<<<<<< HEAD
 application.run(NULL,NULL,NULL,NULL);     
 }
 
@@ -78,12 +77,9 @@ void draw_main_canvas (ezgl::renderer *g){
     g->set_line_width (3);   // 3 pixels wide
     g->set_line_dash (ezgl::line_dash::asymmetric_5_3);
     
-}
-=======
-    application.run(NULL,NULL,NULL,NULL);            
-}
 
-void draw_main_canvas (ezgl::renderer *g){
+
+//void draw_main_canvas (ezgl::renderer *g){
     
 //    g->draw_rectangle({0, 0}, {1000, 1000});
 //    g->set_color (ezgl::BLACK);
@@ -158,4 +154,4 @@ void populateIntersections(){
     
     }
 }*/
->>>>>>> ca6e813c839a8752ec9d3e3476c37b8e64f5fce1
+
