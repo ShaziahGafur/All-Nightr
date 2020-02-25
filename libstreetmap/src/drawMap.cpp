@@ -1,4 +1,5 @@
 #include "m1.h"
+#include "globals.h"
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include "m2.h"
