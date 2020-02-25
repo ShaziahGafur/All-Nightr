@@ -11,7 +11,7 @@
 /************  GLOBAL VARIABLES  *****************/
 
 std::vector<intersection_data> intersections;
-
+float latAvg; //average latitude of map, value set in draw_map_blank_canvas
 
 /************  FUNCTION DECLARATIONS  ***********/
 void draw_map_blank_canvas ();
@@ -21,6 +21,10 @@ void draw_intersections();
 
 void find_map_bounds(double& max_lat, double& min_lat, double& max_lon, double& min_lon);
 
+float x_from_lon(float lon);
+float y_from_lat(float lat);
+float lon_from_x(float x);
+float lat_from_y(float y);
 
 /************************************************/
 
@@ -59,6 +63,8 @@ void draw_map_blank_canvas (){
         min_lon = std::min(min_lon, intersections[i].position.lon());
     }
     
+    latAvg = (max_lat + min_lat ) * 0.5; //sets value of global variable
+    
     ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat});
     application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
     application.run(NULL,NULL,NULL,NULL);
@@ -75,9 +81,10 @@ void draw_main_canvas (ezgl::renderer *g){
 
       float x = intersections[i].position.lon();
       float y = intersections[i].position.lat();
-
+//      x = x_from_lon(x);
+//      y = y_from_lat(y);
+            
       float width = 0.001;
-
       float height = width;
 
       g->fill_rectangle({x,y}, {x + width, y + height});
@@ -94,8 +101,7 @@ void find_map_bounds(double& max_lat, double& min_lat, double& max_lon, double& 
     min_lat = max_lat;
     max_lon = getIntersectionPosition(0).lon();
     min_lon = max_lon;
-    
-    
+        
 //    
 //    //loops through all intersections, searches for the max & min lat & lons in the entire map and assigning them to the double pointers
     for (int intersectionId = 0; intersectionId < getNumIntersections(); intersectionId++){
@@ -106,6 +112,24 @@ void find_map_bounds(double& max_lat, double& min_lat, double& max_lon, double& 
         min_lon = std::min(min_lon, intersections[intersectionId].position.lon());
     }
 }
+
+float x_from_lon(float lon){
+    return lon*DEGREE_TO_RADIAN *cos(latAvg); 
+}
+
+float y_from_lat(float lat){
+    return lat*DEGREE_TO_RADIAN;
+}
+
+float lon_from_x(float x){
+    return 0;
+}
+
+float lat_from_y(float y){
+    return 0;
+}
+
+
 //void populateIntersections(){
 //    
 //    int numIntersections = getNumIntersections();
@@ -137,4 +161,3 @@ void find_map_bounds(double& max_lat, double& min_lat, double& max_lon, double& 
     
     }
 }*/
-
