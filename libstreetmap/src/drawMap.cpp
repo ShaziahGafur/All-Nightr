@@ -66,7 +66,7 @@ void draw_map_blank_canvas (){
         
         sumLat = sumLat + intersections[i].position.lat();
     }
-    
+        
     //update global variable
     latAvg = sumLat /** DEGREE_TO_RADIAN*// (numIntersections/*-1*/); //lat avg calculation fixed. Remove comments after looking it over
             
@@ -86,9 +86,12 @@ void draw_map_blank_canvas (){
 void draw_main_canvas (ezgl::renderer *g){
     g->draw_rectangle({0, 0}, {1000, 1000});
 //    g->set_color (ezgl::BLACK);
-//    g->set_color (0, 0, 0, 255);  // 8-bit r, g, b, alpha. alpha of 255 is opaque, 0 is transparent
+//    g->set_color (200, 0, 0, 255);  // 8-bit r, g, b, alpha. alpha of 255 is opaque, 0 is transparent
 //    g->set_line_width (3);   // 3 pixels wide
 //    g->set_line_dash (ezgl::line_dash::asymmetric_5_3);
+    
+    //Drawing Intersections
+    //***********************************************************************************
     
     for(size_t i = 0; i < intersections.size(); ++i){
 
@@ -105,6 +108,30 @@ void draw_main_canvas (ezgl::renderer *g){
       g->fill_rectangle({x,y}, {x + width, y + height});
     
     }
+    
+    //Drawing Streets
+     //***********************************************************************************
+    
+    g->set_color (255, 255, 0, 255);
+    
+    for (int streetIdx = 0; streetIdx < StreetVector.size(); streetIdx++ ){ //for each street
+        std::vector<int> segments = StreetVector[streetIdx].streetSegments;
+        for (int segmentId = 0; segmentId < segments.size(); segmentId++ ){
+            struct InfoStreetSegment segmentInfo = getInfoStreetSegment(segments[segmentId]);
+            if (segmentInfo.curvePointCount==0){
+                int fromIntersection = segmentInfo.from; 
+                int toIntersection = segmentInfo.to; 
+                
+                float xF = intersections[fromIntersection].position.lon();
+                float yF = intersections[fromIntersection].position.lat();
+                
+                float xT = intersections[toIntersection].position.lon();
+                float yT = intersections[toIntersection].position.lat();
+                g->draw_line({xF, yF}, {xT, yT});
+            }
+        }
+    }  
+    
 }
 
 std::pair < double, double > latLonToCartesian (double lat, double lon){
