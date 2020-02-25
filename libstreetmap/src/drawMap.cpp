@@ -21,12 +21,19 @@ void draw_intersections();
 
 void find_map_bounds(double& max_lat, double& min_lat, double& max_lon, double& min_lon);
 
-
+std::pair < double, double > latLonToCartesian (double lat, double lon, double latAvg);
 /************************************************/
 
 
 void draw_map(){
+<<<<<<< HEAD
     draw_map_blank_canvas();
+=======
+    
+    populateIntersections();
+    draw_map_blank_canvas();
+
+>>>>>>> added function to convert lat lon to xy coordinates
 }
 void draw_map_blank_canvas (){       
     ezgl::application::settings settings;
@@ -45,7 +52,20 @@ void draw_map_blank_canvas (){
     double min_lon = max_lon;
     intersections.resize(numIntersections);
     
+<<<<<<< HEAD
     for(int i = 0; i < numIntersections; i++){
+=======
+    
+        std::cout<<"Max lat is: "<<max_lat;
+    //loop through intersections to get latitude average
+    double sumLat = 0;
+    for (int intersectionId = 0; intersectionId < getNumIntersections(); intersectionId++){
+        sumLat = sumLat + intersections[intersectionId].position.lat();
+    }
+    double latAvg = sumLat * DEGREE_TO_RADIAN/ (getNumIntersections()-1);
+//    //loops through all intersections, searches for the max & min lat & lons in the entire map and assigning them to the double pointers
+    for (int intersectionId = 0; intersectionId < getNumIntersections(); intersectionId++){
+>>>>>>> added function to convert lat lon to xy coordinates
         
         //get position from streetsdatabaseAPI function
         intersections[i].position = getIntersectionPosition(i);
@@ -58,8 +78,20 @@ void draw_map_blank_canvas (){
         max_lon = std::max(max_lon, intersections[i].position.lon());
         min_lon = std::min(min_lon, intersections[i].position.lon());
     }
+<<<<<<< HEAD
     
     ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat});
+=======
+    //convert latlon points to cartesian points
+    //declare pair of min and Max cartesian coordinates and assign them to return pair of latlon to cartesian helper function
+    
+    std::pair < double, double > minCartesian = latLonToCartesian (min_lat, min_lon, latAvg);
+    std::pair < double, double > maxCartesian = latLonToCartesian (max_lat, max_lon, latAvg);
+    
+    //**Must Change parameters from 0, 0, 1000, 1000 to the max and min lat lons below
+    ezgl::rectangle initial_world({minCartesian.first, minCartesian.second},{maxCartesian.first, maxCartesian.second});
+//    ezgl::rectangle initial_world({0, 0},{1000, 1000});
+>>>>>>> added function to convert lat lon to xy coordinates
     application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
     application.run(NULL,NULL,NULL,NULL);
 }
@@ -138,3 +170,10 @@ void find_map_bounds(double& max_lat, double& min_lat, double& max_lon, double& 
     }
 }*/
 
+std::pair < double, double > latLonToCartesian (double lat, double lon, double latAvg){
+    //convert LatLon points into x y coordinates
+    double y = lat*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS;
+    double x = lon*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS*cos(latAvg);
+    std::pair < double, double> cartesian (x, y);
+    return cartesian;
+}
