@@ -10,6 +10,7 @@
 #include <string>
 #include <cmath>
 
+
 /************  GLOBAL VARIABLES  *****************/
 //Vector --> key: [intersection ID] value: [intersection_data struct]
 std::vector<intersection_data> intersections;
@@ -86,14 +87,14 @@ void draw_map_blank_canvas (){
     
     //update the global variable with calculated lat average
     latAvg = sumLat/(numIntersections);
-    std::cout << latAvg;
             
     //convert latlon points to cartesian points
     //declare pair of min and Max cartesian coordinates and assign them to return pair of latlon to cartesian helper function
     
-    std::pair < double, double > minCartesian = latLonToCartesian (min_lat, min_lon);
-    std::pair < double, double > maxCartesian = latLonToCartesian (max_lat, max_lon);
+//    std::pair < double, double > minCartesian = latLonToCartesian (min_lat, min_lon);
+//    std::pair < double, double > maxCartesian = latLonToCartesian (max_lat, max_lon);
     //ezgl::rectangle initial_world({minCartesian.first, minCartesian.second},{maxCartesian.first, maxCartesian.second});
+    
     
     ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat}); //keep this initial_world version (refer to tutorial slides)
     
@@ -102,16 +103,88 @@ void draw_map_blank_canvas (){
 }
 
 void draw_main_canvas (ezgl::renderer *g){
-    //settings
+//    g->set_line_dash (ezgl::line_dash::asymmetric_5_3);
+    
+    //Drawing Backgrounds
+    //***********************************************************************************
     g->draw_rectangle({min_lon, min_lat},{max_lon, max_lat});
-    g->set_color (ezgl::BLACK);
-    g->set_color (200, 0, 0, 255);  // 8-bit r, g, b, alpha. alpha of 255 is opaque, 0 is transparent
-    g->set_line_width (3);   // 3 pixels wide
-    g->set_line_dash (ezgl::line_dash::asymmetric_5_3);
+    g->set_color (225, 230, 234, 255);
+    g->fill_rectangle({min_lon,min_lat}, {max_lon, max_lat});
+    
+    
+    //Drawing Streets
+     //***********************************************************************************
+    
+    g->set_line_width (10);   // 3 pixels wide
+    g->set_color (255, 255, 255, 255); 
+    g->set_line_dash(ezgl::line_dash::none);
+    
+    for (int streetIdx = 0; streetIdx < StreetVector.size(); streetIdx++ ){ //for each street
+        std::vector<int> segments = StreetVector[streetIdx].streetSegments;
+        for (int i = 0; i < segments.size(); i++ ){
+            int segmentID = segments[i];
+            struct InfoStreetSegment segmentInfo = getInfoStreetSegment(segmentID);
+            int numCurvePoints = segmentInfo.curvePointCount;
+            if (numCurvePoints==0){
+                int fromIntersection = segmentInfo.from; 
+                int toIntersection = segmentInfo.to; 
+                
+                float xF = intersections[fromIntersection].position.lon();
+                float yF = intersections[fromIntersection].position.lat();
+                
+                float xT = intersections[toIntersection].position.lon();
+                float yT = intersections[toIntersection].position.lat();
+                g->draw_line({xF, yF}, {xT, yT});
+            }
+            else{
+                //first deal with all curves from segment's "from" intersection to the last curve point
+                
+                //first curve of the segment
+                LatLon pointsLeft  = getIntersectionPosition(segmentInfo.from);
+                LatLon pointsRight = getStreetSegmentCurvePoint(0, segmentID);
+                
+                float xL = pointsLeft.lon();
+                float yL = pointsLeft.lat();
+                
+                float xR = pointsRight.lon();
+                float yR = pointsRight.lat();
+                
+                g->draw_line({xL, yL}, {xR, yR});
+////                
+                for (int curvePointIndex = 0; curvePointIndex < numCurvePoints - 1; curvePointIndex++){
+                    pointsLeft = pointsRight;
+                    pointsRight = getStreetSegmentCurvePoint(curvePointIndex + 1, segmentID);
+                    xL = pointsLeft.lon();
+                    yL = pointsLeft.lat();
+
+                    xR = pointsRight.lon();
+                    yR = pointsRight.lat();
+
+                    g->draw_line({xL, yL}, {xR, yR});
+                }
+                
+                //then, deal with the last curve point to the segment's "to" intersection
+                pointsLeft = pointsRight;
+                pointsRight = getIntersectionPosition(segmentInfo.to);
+                xL = pointsLeft.lon();
+                yL = pointsLeft.lat();
+
+                xR = pointsRight.lon();
+                yR = pointsRight.lat();                
+                
+                g->draw_line({xL, yL}, {xR, yR});
+                
+            }
+        }
+    }  
     
     //Drawing Intersections
     //***********************************************************************************
     
+    //Primitives
+    g->set_color (200, 200, 200, 255);
+    
+    //Drawing
     for(size_t i = 0; i < intersections.size(); ++i){
 
       float x = intersections[i].position.lon();
@@ -124,32 +197,11 @@ void draw_main_canvas (ezgl::renderer *g){
       float width = 0.0001;
       float height = width;
 
-      g->fill_rectangle({x,y}, {x + width, y + height});
+      g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
     
     }
     
-    //Drawing Streets
-     //***********************************************************************************
     
-    g->set_color (255, 255, 0, 255);
-    
-    for (int streetIdx = 0; streetIdx < StreetVector.size(); streetIdx++ ){ //for each street
-        std::vector<int> segments = StreetVector[streetIdx].streetSegments;
-        for (int segmentId = 0; segmentId < segments.size(); segmentId++ ){
-            struct InfoStreetSegment segmentInfo = getInfoStreetSegment(segments[segmentId]);
-            if (segmentInfo.curvePointCount==0){
-                int fromIntersection = segmentInfo.from; 
-                int toIntersection = segmentInfo.to; 
-                
-                float xF = intersections[fromIntersection].position.lon();
-                float yF = intersections[fromIntersection].position.lat();
-                
-                float xT = intersections[toIntersection].position.lon();
-                float yT = intersections[toIntersection].position.lat();
-                g->draw_line({xF, yF}, {xT, yT});
-            }
-        }
-    }  
     
 }
 
