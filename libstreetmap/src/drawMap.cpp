@@ -8,11 +8,18 @@
 #include "intersection_data.h"
 #include <vector>
 #include <string>
+#include <cmath>
 
 /************  GLOBAL VARIABLES  *****************/
-
+//Vector --> key: [intersection ID] value: [intersection_data struct]
 std::vector<intersection_data> intersections;
-float latAvg; //average latitude of map, value set in draw_map_blank_canvas
+//average latitude of map, value set in draw_map_blank_canvas
+float latAvg; 
+//corners of the map, value set in draw_map())
+double max_lat;
+double min_lat;
+double max_lon;
+double min_lon;
 
 /************  FUNCTION DECLARATIONS  ***********/
 void draw_map_blank_canvas ();
@@ -42,40 +49,51 @@ void draw_map_blank_canvas (){
     ezgl::application application(settings);
 
     
+   //find the maximum and minimum intersections of the map
+    max_lat = getIntersectionPosition(0).lat(); 
+    min_lat = max_lat;
+    max_lon = getIntersectionPosition(0).lon();
+    min_lon = max_lon;
+    
+    //populate the intersections vector
     int numIntersections = getNumIntersections();
-        
-    double max_lat = getIntersectionPosition(0).lat(); 
-    double min_lat = max_lat;
-    double max_lon = getIntersectionPosition(0).lon();
-    double min_lon = max_lon;
     intersections.resize(numIntersections);
     
+    //variable used in (long,lat) -> (x,y) conversion
     double sumLat = 0;
+    
+    //for-loop which populates the intersections vector and keeps track of the min and max lat/lon positions
     for(int i = 0; i < numIntersections; i++){
-        
+
         //get position from streetsdatabaseAPI function
         intersections[i].position = getIntersectionPosition(i);
         
         //get name from streetsdatabaseAPI function
         intersections[i].name = getIntersectionName(i);
         
+        //compare the lat/lon positions to update max/min
         max_lat = std::max(max_lat, intersections[i].position.lat());
         min_lat = std::min(min_lat, intersections[i].position.lat());
         max_lon = std::max(max_lon, intersections[i].position.lon());
         min_lon = std::min(min_lon, intersections[i].position.lon());
         
+        //update the sum of latitude
         sumLat = sumLat + intersections[i].position.lat();
     }
         
-    //update global variable
-    latAvg = sumLat /** DEGREE_TO_RADIAN*// (numIntersections/*-1*/); //lat avg calculation fixed. Remove comments after looking it over
-            
-      //convert latlon points to cartesian points
-      //declare pair of min and Max cartesian coordinates and assign them to return pair of latlon to cartesian helper function
+    //convert latsum to radians
+    sumLat = sumLat * DEGREE_TO_RADIAN;
     
-//    std::pair < double, double > minCartesian = latLonToCartesian (min_lat, min_lon);
-//    std::pair < double, double > maxCartesian = latLonToCartesian (max_lat, max_lon);
-//    ezgl::rectangle initial_world({minCartesian.first, minCartesian.second},{maxCartesian.first, maxCartesian.second});
+    //update the global variable with calculated lat average
+    latAvg = sumLat/(numIntersections);
+    std::cout << latAvg;
+            
+    //convert latlon points to cartesian points
+    //declare pair of min and Max cartesian coordinates and assign them to return pair of latlon to cartesian helper function
+    
+    std::pair < double, double > minCartesian = latLonToCartesian (min_lat, min_lon);
+    std::pair < double, double > maxCartesian = latLonToCartesian (max_lat, max_lon);
+    //ezgl::rectangle initial_world({minCartesian.first, minCartesian.second},{maxCartesian.first, maxCartesian.second});
     
     ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat}); //keep this initial_world version (refer to tutorial slides)
     
@@ -84,11 +102,12 @@ void draw_map_blank_canvas (){
 }
 
 void draw_main_canvas (ezgl::renderer *g){
-    g->draw_rectangle({0, 0}, {1000, 1000});
-//    g->set_color (ezgl::BLACK);
-//    g->set_color (200, 0, 0, 255);  // 8-bit r, g, b, alpha. alpha of 255 is opaque, 0 is transparent
-//    g->set_line_width (3);   // 3 pixels wide
-//    g->set_line_dash (ezgl::line_dash::asymmetric_5_3);
+    //settings
+    g->draw_rectangle({min_lon, min_lat},{max_lon, max_lat});
+    g->set_color (ezgl::BLACK);
+    g->set_color (200, 0, 0, 255);  // 8-bit r, g, b, alpha. alpha of 255 is opaque, 0 is transparent
+    g->set_line_width (3);   // 3 pixels wide
+    g->set_line_dash (ezgl::line_dash::asymmetric_5_3);
     
     //Drawing Intersections
     //***********************************************************************************
@@ -102,7 +121,7 @@ void draw_main_canvas (ezgl::renderer *g){
 //      x = x_from_lon(x);
 //      y = y_from_lat(y);
      
-      float width = 0.001;
+      float width = 0.0001;
       float height = width;
 
       g->fill_rectangle({x,y}, {x + width, y + height});
@@ -143,8 +162,7 @@ std::pair < double, double > latLonToCartesian (double lat, double lon){
 }
 
 float x_from_lon (float lon){
-    //convert LatLon points into x y coordinates
-//    double y = lat*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS;
+    //convert Lon into x coordinate, return x 
     return lon*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS*cos(latAvg);
 }
 
