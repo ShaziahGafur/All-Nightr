@@ -38,8 +38,8 @@ void draw_intersections();
 
 std::pair < double, double > latLonToCartesian (double lat, double lon);
 
-float y_from_lat (float lat);
-float x_from_lon (float lon);
+double y_from_lat (double lat);
+double x_from_lon (double lon);
 
 /************************************************/
 
@@ -102,6 +102,7 @@ void draw_map_blank_canvas (){
 //    std::pair < double, double > maxCartesian = latLonToCartesian (max_lat, max_lon);
     //ezgl::rectangle initial_world({minCartesian.first, minCartesian.second},{maxCartesian.first, maxCartesian.second});
     
+    min_lon
    
     ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat}); //keep this initial_world version (refer to tutorial slides)
     //  ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat});
@@ -316,12 +317,12 @@ std::pair < double, double > latLonToCartesian (double lat, double lon){
     return cartesian;
 }
 
-float x_from_lon (float lon){
+double x_from_lon (double lon){
     //convert Lon into x coordinate, return x 
     return lon*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS*cos(latAvg);
 }
 
-float y_from_lat (float lat){
+double y_from_lat (double lat){
     //convert LatLon points into x y coordinates
     return lat*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS;
 }
