@@ -95,13 +95,6 @@ void draw_map_blank_canvas (){
     //update the global variable with calculated lat average
     latAvg = sumLat/(numIntersections);
             
-    //convert latlon points to cartesian points
-    //declare pair of min and Max cartesian coordinates and assign them to return pair of latlon to cartesian helper function
-    
-//    std::pair < double, double > minCartesian = latLonToCartesian (min_lat, min_lon);
-//    std::pair < double, double > maxCartesian = latLonToCartesian (max_lat, max_lon);
-    //ezgl::rectangle initial_world({minCartesian.first, minCartesian.second},{maxCartesian.first, maxCartesian.second});
-
     min_lon = x_from_lon(min_lon);
     min_lat = y_from_lat(min_lat);
     max_lon = x_from_lon(max_lon);
@@ -125,146 +118,7 @@ void draw_main_canvas (ezgl::renderer *g){
     g->set_color (225, 230, 234, 255);
     g->fill_rectangle({min_lon,min_lat}, {max_lon, max_lat});
     
-    
-    //Drawing Streets
-     //***********************************************************************************
-    
-//    g->set_line_width (10);   // 3 pixels wide
-//    g->set_color (255, 255, 255, 255); 
-//    g->set_line_dash(ezgl::line_dash::none);
-    
-    for (int streetIdx = 0; streetIdx < StreetVector.size(); streetIdx++ ){ //for each street
-        std::vector<int> segments = StreetVector[streetIdx].streetSegments;
-        streetName = getStreetName(streetIdx);
-        
-        for (int i = 0; i < segments.size(); i++ ){
-            int segmentID = segments[i];
-            struct InfoStreetSegment segmentInfo = getInfoStreetSegment(segmentID);
-            int numCurvePoints = segmentInfo.curvePointCount;
-            segmentLength = find_street_segment_length(segmentID);
-            std::string roadType = WayRoadType.at(segmentInfo.wayOSMID);
-            
-            if(roadType=="motorway"){
-                g->set_color (232, 144, 160, 255);
-                g->set_line_width (20);
-                g->set_line_dash(ezgl::line_dash::none);
-            }
-            else if(roadType=="trunk"){
-                g->set_color (250, 178, 154, 255);
-                g->set_line_width (18);
-                g->set_line_dash(ezgl::line_dash::none);
-            }
-            else if(roadType=="primary"){
-                g->set_color (252, 215, 162, 255);
-                g->set_line_width (16);
-                g->set_line_dash(ezgl::line_dash::none);
-            }
-            else if(roadType=="secondary"){
-                g->set_color (246, 251, 187, 255);
-                g->set_line_width (12);
-                g->set_line_dash(ezgl::line_dash::none);
-            }
-            else if(roadType=="tertiary"){
-                g->set_color (255, 255, 255, 255);
-                g->set_line_width (10);
-                g->set_line_dash(ezgl::line_dash::none);
-            }
-            else if(roadType=="residential"){
-                g->set_color (255, 255, 255, 255);
-                g->set_line_width (5);
-                g->set_line_dash(ezgl::line_dash::none);
-            }
-            else if(roadType=="unclassified"){
-                g->set_color (255, 255, 255, 255);
-                g->set_line_width (5);
-                g->set_line_dash(ezgl::line_dash::none);
-            }
-            else{
-                g->set_line_width (10);
-                g->set_color (255,255,255, 255);
-                g->set_line_dash(ezgl::line_dash::none);
-            }     
-            
-            if (numCurvePoints==0){ //if segment is a straight line
-                int fromIntersection = segmentInfo.from; 
-                int toIntersection = segmentInfo.to; 
-                
-                std::pair <double, double> xyFrom = latLonToCartesian(intersections[fromIntersection].position);
-                std::pair <double, double> xyTo = latLonToCartesian(intersections[toIntersection].position);
-
-                g->set_color (255, 255, 255, 255);
-                g->draw_line({xyFrom.first, xyFrom.second}, {xyTo.first, xyTo.second});
-                
-                //find slope of the segment
-                segmentSlope = (xyTo.second - xyFrom.second)/(xyTo.first - xyFrom.first);
-                rotationAngle = atan(segmentSlope)/DEGREE_TO_RADIAN;
-                xMiddleOfSegment = 0.5*(xyFrom.first + xyTo.first);
-                yMiddleOfSegment = 0.5*(xyFrom.second + xyTo.second);
-                        
-                //draw text
-                g->set_color (0, 0, 0, 255);   
-                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
-                g->set_text_rotation(rotationAngle);
-            }
-            else{//segment is curved
-                //first deal with all curves from segment's "from" intersection to the last curve point
-                
-                //first curve of the segment
-                LatLon pointsLeft  = getIntersectionPosition(segmentInfo.from);
-                LatLon pointsRight = getStreetSegmentCurvePoint(0, segmentID);
-                
-                std::pair <double, double> xyLeft = latLonToCartesian(pointsLeft);
-                std::pair <double, double> xyRight = latLonToCartesian(pointsRight);
-                
-                g->set_color (255, 255, 255, 255); 
-                g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
-
-                for (int curvePointIndex = 0; curvePointIndex < numCurvePoints - 1; curvePointIndex++){
-                    pointsLeft = pointsRight;
-                    pointsRight = getStreetSegmentCurvePoint(curvePointIndex + 1, segmentID);
-                    
-                    xyLeft = latLonToCartesian(pointsLeft);
-                    xyRight = latLonToCartesian(pointsRight);
-
-                    g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
-                }
-                
-                //then, deal with the last curve point to the segment's "to" intersection
-                pointsLeft = pointsRight;
-                pointsRight = getIntersectionPosition(segmentInfo.to);
-                
-                xyLeft = latLonToCartesian(pointsLeft);
-                xyRight = latLonToCartesian(pointsRight);
-                     
-                g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
-            }
-        }
-    }  
-    
-    //Drawing Intersections
-    //***********************************************************************************
-    
-    //Primitives
-    g->set_color (200, 200, 200, 255);
-    
-    //Drawing
-    for(size_t i = 0; i < intersections.size(); ++i){
-
-      float x = intersections[i].position.lon();
-      float y = intersections[i].position.lat();
-
-      //must convert lat lon values to cartesian (refer to tutorial slides)
-      x = x_from_lon(x);
-      y = y_from_lat(y);
-     
-      float width = 0.0001;
-      float height = width;
-
-      g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
-    
-    }
-    
-    //Drawing Features
+   //Drawing Features
     //***********************************************************************************
     g->set_line_dash(ezgl::line_dash::none);
     
@@ -338,6 +192,139 @@ void draw_main_canvas (ezgl::renderer *g){
         }
     }
     
+    //Drawing Streets
+     //***********************************************************************************
+    
+    
+    for (int streetIdx = 0; streetIdx < StreetVector.size(); streetIdx++ ){ //for each street
+        std::vector<int> segments = StreetVector[streetIdx].streetSegments;
+        streetName = getStreetName(streetIdx);
+        
+        for (int i = 0; i < segments.size(); i++ ){
+            int segmentID = segments[i];
+            struct InfoStreetSegment segmentInfo = getInfoStreetSegment(segmentID);
+            int numCurvePoints = segmentInfo.curvePointCount;
+            segmentLength = find_street_segment_length(segmentID);
+            std::string roadType = WayRoadType.at(segmentInfo.wayOSMID);
+                        
+            if(roadType=="motorway"){
+                g->set_color (232, 144, 160, 255);
+                g->set_line_width (20);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else if(roadType=="trunk"){
+                g->set_color (250, 178, 154, 255);
+                g->set_line_width (18);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else if(roadType=="primary"){
+                g->set_color (252, 215, 162, 255);
+                g->set_line_width (16);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else if(roadType=="secondary"){
+                g->set_color (246, 251, 187, 255);
+                g->set_line_width (12);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else if(roadType=="tertiary"){
+                g->set_color (255, 255, 255, 255);
+                g->set_line_width (10);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else if(roadType=="residential"){
+                g->set_color (255, 255, 255, 255);
+                g->set_line_width (5);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else if(roadType=="unclassified"){
+                g->set_color (255, 255, 255, 255);
+                g->set_line_width (5);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else{
+                g->set_line_width (5);
+                g->set_color (255, 255, 255, 255);
+                g->set_line_dash(ezgl::line_dash::none);
+            }     
+            
+            if (numCurvePoints==0){ //if segment is a straight line
+                int fromIntersection = segmentInfo.from; 
+                int toIntersection = segmentInfo.to; 
+                
+                std::pair <double, double> xyFrom = latLonToCartesian(intersections[fromIntersection].position);
+                std::pair <double, double> xyTo = latLonToCartesian(intersections[toIntersection].position);
+
+                g->draw_line({xyFrom.first, xyFrom.second}, {xyTo.first, xyTo.second});
+                
+                //find slope of the segment
+                segmentSlope = (xyTo.second - xyFrom.second)/(xyTo.first - xyFrom.first);
+                rotationAngle = atan(segmentSlope)/DEGREE_TO_RADIAN;
+                xMiddleOfSegment = 0.5*(xyFrom.first + xyTo.first);
+                yMiddleOfSegment = 0.5*(xyFrom.second + xyTo.second);
+                        
+                //draw text
+                g->set_color (0, 0, 0, 255);   
+                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
+                g->set_text_rotation(rotationAngle);
+            }
+            else{//segment is curved
+                //first deal with all curves from segment's "from" intersection to the last curve point
+                
+                //first curve of the segment
+                LatLon pointsLeft  = getIntersectionPosition(segmentInfo.from);
+                LatLon pointsRight = getStreetSegmentCurvePoint(0, segmentID);
+                
+                std::pair <double, double> xyLeft = latLonToCartesian(pointsLeft);
+                std::pair <double, double> xyRight = latLonToCartesian(pointsRight);
+                
+                g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
+
+                for (int curvePointIndex = 0; curvePointIndex < numCurvePoints - 1; curvePointIndex++){
+                    pointsLeft = pointsRight;
+                    pointsRight = getStreetSegmentCurvePoint(curvePointIndex + 1, segmentID);
+                    
+                    xyLeft = latLonToCartesian(pointsLeft);
+                    xyRight = latLonToCartesian(pointsRight);
+
+                    g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
+                }
+                
+                //then, deal with the last curve point to the segment's "to" intersection
+                pointsLeft = pointsRight;
+                pointsRight = getIntersectionPosition(segmentInfo.to);
+                
+                xyLeft = latLonToCartesian(pointsLeft);
+                xyRight = latLonToCartesian(pointsRight);
+                     
+                g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
+            }
+        }
+    }  
+    
+    //Drawing Intersections
+    //***********************************************************************************
+    
+    //Primitives
+    g->set_color (200, 200, 200, 255);
+    
+    //Drawing
+    for(size_t i = 0; i < intersections.size(); ++i){
+
+      float x = intersections[i].position.lon();
+      float y = intersections[i].position.lat();
+
+      //must convert lat lon values to cartesian (refer to tutorial slides)
+      x = x_from_lon(x);
+      y = y_from_lat(y);
+     
+      float width = 0.0001;
+      float height = width;
+
+      g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
+    
+    }
+    
 }
 
 std::pair < double, double > latLonToCartesian (LatLon latLonPoint){
@@ -378,4 +365,35 @@ void populateWayRoadType(){
         
     }
     
+    for (unsigned i = 0; i < getNumberOfRelations(); i++){
+        //creates a pointer that enables accessing the node's OSMID
+        const OSMRelation* relationPtr = getRelationByIndex(i);
+        std::string key,value;
+        key="N/A"; //in case the way has no keys
+        for(int j=0;j<getTagCount(relationPtr); ++j){
+            std::tie(key,value) = getTagPair(relationPtr,j);
+            if (key=="highway")
+                break;
+        }
+        if (key=="highway"){ //if highway key exists
+            WayRoadType.insert({relationPtr->id(),value});
+        }
+        
+    }
+    
+    for (unsigned i = 0; i < getNumberOfNodes(); i++){
+        //creates a pointer that enables accessing the node's OSMID
+        const OSMNode* nodePtr = getNodeByIndex(i);
+        std::string key,value;
+        key="N/A"; //in case the way has no keys
+        for(int j=0;j<getTagCount(nodePtr); ++j){
+            std::tie(key,value) = getTagPair(nodePtr,j);
+            if (key=="highway")
+                break;
+        }
+        if (key=="highway"){ //if highway key exists
+            WayRoadType.insert({nodePtr->id(),value});
+        }
+        
+    }  
 }
