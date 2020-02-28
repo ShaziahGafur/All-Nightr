@@ -21,7 +21,7 @@ std::unordered_map<OSMID, std::string> WayRoadType;
 
 //average latitude of map, value set in draw_map_blank_canvas
 float latAvg; 
-//corners of the map, value set in draw_map())
+//corners of the map, value set in draw_map
 double max_lat;
 double min_lat;
 double max_lon;
@@ -36,7 +36,7 @@ void draw_intersections();
 
 //void find_map_bounds(double& max_lat, double& min_lat, double& max_lon, double& min_lon);
 
-std::pair < double, double > latLonToCartesian (double lat, double lon);
+std::pair < double, double > latLonToCartesian (LatLon latLonPoint);
 
 double y_from_lat (double lat);
 double x_from_lon (double lon);
@@ -101,7 +101,7 @@ void draw_map_blank_canvas (){
 //    std::pair < double, double > minCartesian = latLonToCartesian (min_lat, min_lon);
 //    std::pair < double, double > maxCartesian = latLonToCartesian (max_lat, max_lon);
     //ezgl::rectangle initial_world({minCartesian.first, minCartesian.second},{maxCartesian.first, maxCartesian.second});
-    
+
     min_lon = x_from_lon(min_lon);
     min_lat = y_from_lat(min_lat);
     max_lon = x_from_lon(max_lon);
@@ -173,38 +173,30 @@ void draw_main_canvas (ezgl::renderer *g){
                 LatLon pointsLeft  = getIntersectionPosition(segmentInfo.from);
                 LatLon pointsRight = getStreetSegmentCurvePoint(0, segmentID);
                 
-                float xL = pointsLeft.lon();
-                float yL = pointsLeft.lat();
-                
-                float xR = pointsRight.lon();
-                float yR = pointsRight.lat();
+                std::pair <double, double> xyLeft = latLonToCartesian(pointsLeft);
+                std::pair <double, double> xyRight = latLonToCartesian(pointsRight);
                 
                 g->set_color (255, 255, 255, 255); 
-                g->draw_line({xL, yL}, {xR, yR});
+                g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
 ////                
                 for (int curvePointIndex = 0; curvePointIndex < numCurvePoints - 1; curvePointIndex++){
                     pointsLeft = pointsRight;
                     pointsRight = getStreetSegmentCurvePoint(curvePointIndex + 1, segmentID);
-                    xL = x_from_lon(pointsLeft.lon());
-                    yL = y_from_lat(pointsLeft.lat());
+                    
+                    xyLeft = latLonToCartesian(pointsLeft);
+                    xyRight = latLonToCartesian(pointsRight);
 
-                    xR = x_from_lon(pointsRight.lon());
-                    yR = y_from_lat(pointsRight.lat());
-
-                    g->draw_line({xL, yL}, {xR, yR});
+                    g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
                 }
                 
                 //then, deal with the last curve point to the segment's "to" intersection
                 pointsLeft = pointsRight;
                 pointsRight = getIntersectionPosition(segmentInfo.to);
-                xL = pointsLeft.lon();
-                yL = pointsLeft.lat();
-
-                xR = pointsRight.lon();
-                yR = pointsRight.lat();                
                 
-                g->draw_line({xL, yL}, {xR, yR});
-                
+                xyLeft = latLonToCartesian(pointsLeft);
+                xyRight = latLonToCartesian(pointsRight);
+                     
+                g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
             }
         }
     }  
@@ -278,18 +270,15 @@ void draw_main_canvas (ezgl::renderer *g){
             for (unsigned featurePointId = 1; featurePointId < numOfFeaturePoints; featurePointId++){
                 //Declare and initialize adjacent LatLon points
                 LatLon previousPoint = getFeaturePoint(featurePointId-1, featureId);
-                LatLon point = getFeaturePoint(featurePointId, featureId);
+                LatLon nextPoint = getFeaturePoint(featurePointId, featureId);
             
                 //convert LatLon points into x y coordinates
-                double previousPoint_x = x_from_lon (previousPoint.lon());
-                double previousPoint_y = y_from_lat (previousPoint.lat());
-
-                double point_x = x_from_lon (point.lon());
-                double point_y = y_from_lat (point.lat());
+                std::pair<double,double> xyPrevious = latLonToCartesian(previousPoint);
+                std::pair<double,double> xyNext = latLonToCartesian(nextPoint);
 
                 //draw line between feature points
                 g->set_line_width(3);
-                g->draw_line({previousPoint_x , previousPoint_y}, {point_x, point_y});
+                g->draw_line({xyPrevious.first , xyPrevious.second}, {xyNext.first, xyNext.second});
             }
         }
         else{
@@ -299,10 +288,9 @@ void draw_main_canvas (ezgl::renderer *g){
             for (unsigned featurePointId = 0; featurePointId < numOfFeaturePoints; featurePointId++){
 
                 //convert LatLon points into (x, y) coordinate pairs
-                double point_x = x_from_lon (getFeaturePoint(featurePointId, featureId).lon());
-                double point_y = y_from_lat (getFeaturePoint(featurePointId, featureId).lat());
+                std::pair <double,double> featurePoints = latLonToCartesian(getFeaturePoint(featurePointId, featureId));
 
-                points_xy_coordinates.push_back(ezgl::point2d(point_x, point_y));
+                points_xy_coordinates.push_back(ezgl::point2d(featurePoints.first, featurePoints.second));
             }
             
        //     ezgl function which takes a vector<point2d> (i.e (x,y) coordinates for each point that defines the feature outline)
@@ -312,17 +300,18 @@ void draw_main_canvas (ezgl::renderer *g){
     
 }
 
-std::pair < double, double > latLonToCartesian (double lat, double lon){
+std::pair < double, double > latLonToCartesian (LatLon latLonPoint){
     //convert LatLon points into x y coordinates
-    double y = lat*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS;
-    double x = lon*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS*cos(latAvg);
+    double y = latLonPoint.lat()*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS;
+    double x = latLonPoint.lon()*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS*cos(latAvg);
     std::pair < double, double> cartesian (x, y);
     return cartesian;
 }
 
 double x_from_lon (double lon){
     //convert Lon into x coordinate, return x 
-    return lon*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS*cos(latAvg);
+    double x = lon*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS*cos(latAvg);
+    return x;
 }
 
 double y_from_lat (double lat){
