@@ -129,9 +129,9 @@ void draw_main_canvas (ezgl::renderer *g){
     //Drawing Streets
      //***********************************************************************************
     
-    g->set_line_width (10);   // 3 pixels wide
-    g->set_color (255, 255, 255, 255); 
-    g->set_line_dash(ezgl::line_dash::none);
+//    g->set_line_width (10);   // 3 pixels wide
+//    g->set_color (255, 255, 255, 255); 
+//    g->set_line_dash(ezgl::line_dash::none);
     
     for (int streetIdx = 0; streetIdx < StreetVector.size(); streetIdx++ ){ //for each street
         std::vector<int> segments = StreetVector[streetIdx].streetSegments;
@@ -142,31 +142,73 @@ void draw_main_canvas (ezgl::renderer *g){
             struct InfoStreetSegment segmentInfo = getInfoStreetSegment(segmentID);
             int numCurvePoints = segmentInfo.curvePointCount;
             segmentLength = find_street_segment_length(segmentID);
+            std::string roadType = WayRoadType.at(segmentInfo.wayOSMID);
             
-            if (numCurvePoints==0){
+            if(roadType=="motorway"){
+                g->set_color (232, 144, 160, 255);
+                g->set_line_width (20);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else if(roadType=="trunk"){
+                g->set_color (250, 178, 154, 255);
+                g->set_line_width (18);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else if(roadType=="primary"){
+                g->set_color (252, 215, 162, 255);
+                g->set_line_width (16);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else if(roadType=="secondary"){
+                g->set_color (246, 251, 187, 255);
+                g->set_line_width (12);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else if(roadType=="tertiary"){
+                g->set_color (255, 255, 255, 255);
+                g->set_line_width (10);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else if(roadType=="residential"){
+                g->set_color (255, 255, 255, 255);
+                g->set_line_width (5);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else if(roadType=="unclassified"){
+                g->set_color (255, 255, 255, 255);
+                g->set_line_width (5);
+                g->set_line_dash(ezgl::line_dash::none);
+            }
+            else{
+                g->set_line_width (10);
+                g->set_color (255,255,255, 255);
+                g->set_line_dash(ezgl::line_dash::none);
+            }     
+            
+            if (numCurvePoints==0){ //if segment is a straight line
                 int fromIntersection = segmentInfo.from; 
                 int toIntersection = segmentInfo.to; 
                 
-//                float xF = intersections[fromIntersection].position.lon();
-  //              float yF = intersections[fromIntersection].position.lat();
+                float xF = intersections[fromIntersection].position.lon();
+                float yF = intersections[fromIntersection].position.lat();
                 
-    //            float xT = intersections[toIntersection].position.lon();
-      //          float yT = intersections[toIntersection].position.lat();
-        //        g->set_color (255, 255, 255, 255);
-          //      g->draw_line({xF, yF}, {xT, yT});
+                float xT = intersections[toIntersection].position.lon();
+                float yT = intersections[toIntersection].position.lat();
+                g->set_color (255, 255, 255, 255);
+                g->draw_line({xF, yF}, {xT, yT});
                 
                 //find slope of the segment
 //                segmentSlope = (yT - yF)/(xT - xF);
-  //              rotationAngle = atan(segmentSlope);
-    //            xMiddleOfSegment = 0.5*(xF + xT);
-      //          yMiddleOfSegment = 0.5*(yF + yT);
+//                rotationAngle = atan(segmentSlope);
+//                xMiddleOfSegment = 0.5*(xF + xT);
+//                yMiddleOfSegment = 0.5*(yF + yT);
                         
                 //draw text
-        //        g->set_color (0, 0, 0, 255);   
-          //      g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
-            //    g->set_text_rotation(rotationAngle);
+//                g->set_color (0, 0, 0, 255);   
+//                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
+//                g->set_text_rotation(rotationAngle);
             }
-            else{
+            else{//segment is curved
                 //first deal with all curves from segment's "from" intersection to the last curve point
                 
                 //first curve of the segment
@@ -179,7 +221,6 @@ void draw_main_canvas (ezgl::renderer *g){
                 float xR = pointsRight.lon();
                 float yR = pointsRight.lat();
                 
-                g->set_color (255, 255, 255, 255); 
                 g->draw_line({xL, yL}, {xR, yR});
 ////                
                 for (int curvePointIndex = 0; curvePointIndex < numCurvePoints - 1; curvePointIndex++){
