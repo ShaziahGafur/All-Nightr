@@ -102,7 +102,10 @@ void draw_map_blank_canvas (){
 //    std::pair < double, double > maxCartesian = latLonToCartesian (max_lat, max_lon);
     //ezgl::rectangle initial_world({minCartesian.first, minCartesian.second},{maxCartesian.first, maxCartesian.second});
     
-    min_lon
+    min_lon = x_from_lon(min_lon);
+    min_lat = y_from_lat(min_lat);
+    max_lon = x_from_lon(max_lon);
+    max_lat = y_from_lat(max_lat);
    
     ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat}); //keep this initial_world version (refer to tutorial slides)
     //  ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat});
@@ -144,24 +147,24 @@ void draw_main_canvas (ezgl::renderer *g){
                 int fromIntersection = segmentInfo.from; 
                 int toIntersection = segmentInfo.to; 
                 
-                float xF = intersections[fromIntersection].position.lon();
-                float yF = intersections[fromIntersection].position.lat();
+//                float xF = intersections[fromIntersection].position.lon();
+  //              float yF = intersections[fromIntersection].position.lat();
                 
-                float xT = intersections[toIntersection].position.lon();
-                float yT = intersections[toIntersection].position.lat();
-                g->set_color (255, 255, 255, 255);
-                g->draw_line({xF, yF}, {xT, yT});
+    //            float xT = intersections[toIntersection].position.lon();
+      //          float yT = intersections[toIntersection].position.lat();
+        //        g->set_color (255, 255, 255, 255);
+          //      g->draw_line({xF, yF}, {xT, yT});
                 
                 //find slope of the segment
-                segmentSlope = (yT - yF)/(xT - xF);
-                rotationAngle = atan(segmentSlope);
-                xMiddleOfSegment = 0.5*(xF + xT);
-                yMiddleOfSegment = 0.5*(yF + yT);
+//                segmentSlope = (yT - yF)/(xT - xF);
+  //              rotationAngle = atan(segmentSlope);
+    //            xMiddleOfSegment = 0.5*(xF + xT);
+      //          yMiddleOfSegment = 0.5*(yF + yT);
                         
                 //draw text
-                g->set_color (0, 0, 0, 255);   
-                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
-                g->set_text_rotation(rotationAngle);
+        //        g->set_color (0, 0, 0, 255);   
+          //      g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
+            //    g->set_text_rotation(rotationAngle);
             }
             else{
                 //first deal with all curves from segment's "from" intersection to the last curve point
@@ -182,12 +185,12 @@ void draw_main_canvas (ezgl::renderer *g){
                 for (int curvePointIndex = 0; curvePointIndex < numCurvePoints - 1; curvePointIndex++){
                     pointsLeft = pointsRight;
                     pointsRight = getStreetSegmentCurvePoint(curvePointIndex + 1, segmentID);
-                    xL = pointsLeft.lon();
-                    yL = pointsLeft.lat();
+                    xL = x_from_lon(pointsLeft.lon());
+                    yL = y_from_lat(pointsLeft.lat());
 
-                    xR = pointsRight.lon();
-                    yR = pointsRight.lat();
-                    
+                    xR = x_from_lon(pointsRight.lon());
+                    yR = y_from_lat(pointsRight.lat());
+
                     g->draw_line({xL, yL}, {xR, yR});
                 }
                 
@@ -219,8 +222,8 @@ void draw_main_canvas (ezgl::renderer *g){
       float y = intersections[i].position.lat();
 
       //must convert lat lon values to cartesian (refer to tutorial slides)
-//      x = x_from_lon(x);
-//      y = y_from_lat(y);
+      x = x_from_lon(x);
+      y = y_from_lat(y);
      
       float width = 0.0001;
       float height = width;
@@ -277,16 +280,16 @@ void draw_main_canvas (ezgl::renderer *g){
                 LatLon previousPoint = getFeaturePoint(featurePointId-1, featureId);
                 LatLon point = getFeaturePoint(featurePointId, featureId);
             
-//                //convert LatLon points into x y coordinates
-//                previousPoint_x = x_from_lon (previousPoint.lon());
-//                previousPoint_y = y_from_lat (previousPoint.lat());
-//
-//                point_x = x_from_lon (point.lon());
-//                point_y = y_from_lat (point.lat());
+                //convert LatLon points into x y coordinates
+                double previousPoint_x = x_from_lon (previousPoint.lon());
+                double previousPoint_y = y_from_lat (previousPoint.lat());
+
+                double point_x = x_from_lon (point.lon());
+                double point_y = y_from_lat (point.lat());
 
                 //draw line between feature points
                 g->set_line_width(3);
-                g->draw_line({previousPoint.lon(), previousPoint.lat()}, {point.lon(), point.lat()});
+                g->draw_line({previousPoint_x , previousPoint_y}, {point_x, point_y});
             }
         }
         else{
@@ -295,11 +298,11 @@ void draw_main_canvas (ezgl::renderer *g){
             //iterate through feature points to get (x,y) coordinates  in order to draw the polygon
             for (unsigned featurePointId = 0; featurePointId < numOfFeaturePoints; featurePointId++){
 
-//                //convert LatLon points into (x, y) coordinate pairs
-//                point_x = x_from_lon (getFeaturePoint(featurePointId, featureId).lon());
-//                point_y = y_from_lat (getFeaturePoint(featurePointId, featureId).lat());
+                //convert LatLon points into (x, y) coordinate pairs
+                double point_x = x_from_lon (getFeaturePoint(featurePointId, featureId).lon());
+                double point_y = y_from_lat (getFeaturePoint(featurePointId, featureId).lat());
 
-                points_xy_coordinates.push_back(ezgl::point2d(getFeaturePoint(featurePointId, featureId).lon(), getFeaturePoint(featurePointId, featureId).lat()));
+                points_xy_coordinates.push_back(ezgl::point2d(point_x, point_y));
             }
             
        //     ezgl function which takes a vector<point2d> (i.e (x,y) coordinates for each point that defines the feature outline)
