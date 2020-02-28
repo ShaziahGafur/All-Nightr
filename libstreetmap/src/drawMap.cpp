@@ -147,24 +147,23 @@ void draw_main_canvas (ezgl::renderer *g){
                 int fromIntersection = segmentInfo.from; 
                 int toIntersection = segmentInfo.to; 
                 
-//                float xF = intersections[fromIntersection].position.lon();
-  //              float yF = intersections[fromIntersection].position.lat();
-                
-    //            float xT = intersections[toIntersection].position.lon();
-      //          float yT = intersections[toIntersection].position.lat();
-        //        g->set_color (255, 255, 255, 255);
-          //      g->draw_line({xF, yF}, {xT, yT});
+                std::pair <double, double> xyFrom = latLonToCartesian(intersections[fromIntersection].position);
+
+                std::pair <double, double> xyTo = latLonToCartesian(intersections[toIntersection].position);
+
+                g->set_color (255, 255, 255, 255);
+                g->draw_line({xyFrom.first, xyFrom.second}, {xyTo.first, xyTo.second});
                 
                 //find slope of the segment
-//                segmentSlope = (yT - yF)/(xT - xF);
-  //              rotationAngle = atan(segmentSlope);
-    //            xMiddleOfSegment = 0.5*(xF + xT);
-      //          yMiddleOfSegment = 0.5*(yF + yT);
+                segmentSlope = (xyTo.second - xyFrom.second)/(xyTo.first - xyFrom.first);
+                rotationAngle = atan(segmentSlope)/DEGREE_TO_RADIAN;
+                xMiddleOfSegment = 0.5*(xyFrom.first + xyTo.first);
+                yMiddleOfSegment = 0.5*(xyFrom.second + xyTo.second);
                         
                 //draw text
-        //        g->set_color (0, 0, 0, 255);   
-          //      g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
-            //    g->set_text_rotation(rotationAngle);
+                g->set_color (0, 0, 0, 255);   
+                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
+                g->set_text_rotation(rotationAngle);
             }
             else{
                 //first deal with all curves from segment's "from" intersection to the last curve point
