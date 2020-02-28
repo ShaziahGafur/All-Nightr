@@ -102,7 +102,7 @@ void draw_map_blank_canvas (){
 //    std::pair < double, double > maxCartesian = latLonToCartesian (max_lat, max_lon);
     //ezgl::rectangle initial_world({minCartesian.first, minCartesian.second},{maxCartesian.first, maxCartesian.second});
     
-    
+   
     ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat}); //keep this initial_world version (refer to tutorial slides)
     //  ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat});
     
@@ -112,7 +112,9 @@ void draw_map_blank_canvas (){
 
 void draw_main_canvas (ezgl::renderer *g){
 //    g->set_line_dash (ezgl::line_dash::asymmetric_5_3);
-      
+    //Variables
+    float segmentSlope, rotationAngle, xMiddleOfSegment, yMiddleOfSegment, segmentLength;
+    std::string streetName;
     //Drawing Backgrounds
     //***********************************************************************************
     g->draw_rectangle({min_lon, min_lat},{max_lon, max_lat});
@@ -129,10 +131,14 @@ void draw_main_canvas (ezgl::renderer *g){
     
     for (int streetIdx = 0; streetIdx < StreetVector.size(); streetIdx++ ){ //for each street
         std::vector<int> segments = StreetVector[streetIdx].streetSegments;
+        streetName = getStreetName(streetIdx);
+        
         for (int i = 0; i < segments.size(); i++ ){
             int segmentID = segments[i];
             struct InfoStreetSegment segmentInfo = getInfoStreetSegment(segmentID);
             int numCurvePoints = segmentInfo.curvePointCount;
+            segmentLength = find_street_segment_length(segmentID);
+            
             if (numCurvePoints==0){
                 int fromIntersection = segmentInfo.from; 
                 int toIntersection = segmentInfo.to; 
@@ -142,7 +148,19 @@ void draw_main_canvas (ezgl::renderer *g){
                 
                 float xT = intersections[toIntersection].position.lon();
                 float yT = intersections[toIntersection].position.lat();
+                g->set_color (255, 255, 255, 255);
                 g->draw_line({xF, yF}, {xT, yT});
+                
+                //find slope of the segment
+                segmentSlope = (yT - yF)/(xT - xF);
+                rotationAngle = atan(segmentSlope);
+                xMiddleOfSegment = 0.5*(xF + xT);
+                yMiddleOfSegment = 0.5*(yF + yT);
+                        
+                //draw text
+                g->set_color (0, 0, 0, 255);   
+                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
+                g->set_text_rotation(rotationAngle);
             }
             else{
                 //first deal with all curves from segment's "from" intersection to the last curve point
@@ -157,6 +175,7 @@ void draw_main_canvas (ezgl::renderer *g){
                 float xR = pointsRight.lon();
                 float yR = pointsRight.lat();
                 
+                g->set_color (255, 255, 255, 255); 
                 g->draw_line({xL, yL}, {xR, yR});
 ////                
                 for (int curvePointIndex = 0; curvePointIndex < numCurvePoints - 1; curvePointIndex++){
@@ -167,7 +186,7 @@ void draw_main_canvas (ezgl::renderer *g){
 
                     xR = pointsRight.lon();
                     yR = pointsRight.lat();
-
+                    
                     g->draw_line({xL, yL}, {xR, yR});
                 }
                 
