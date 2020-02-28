@@ -30,6 +30,10 @@ extern std::unordered_map<OSMID, int> OSMID_to_node;
 //Hashtable --> key: [OSMway] value: [length of way]
 extern std::unordered_map<OSMID, double> OSMWay_lengths;
 
+//Hashtable --> key: [OSMway] value: [road type]
+//Determines the road type (e.g. residential, motorway, primary) from a way's OSMID
+extern std::unordered_map<OSMID, std::string> WayRoadType;
+
 //Vector --> key: [feature ID] value: [Area]
 extern std::vector<double> FeatureAreaVector;
 

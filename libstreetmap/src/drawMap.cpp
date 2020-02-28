@@ -15,6 +15,10 @@
 /************  GLOBAL VARIABLES  *****************/
 //Vector --> key: [intersection ID] value: [intersection_data struct]
 std::vector<intersection_data> intersections;
+
+//Hashtable --> key: [OSMway] value: [road type]
+std::unordered_map<OSMID, std::string> WayRoadType;
+
 //average latitude of map, value set in draw_map_blank_canvas
 float latAvg; 
 //corners of the map, value set in draw_map())
@@ -27,6 +31,7 @@ double min_lon;
 void draw_map_blank_canvas ();
 void draw_main_canvas (ezgl::renderer *g);
 
+void populateWayRoadType();
 void draw_intersections();  
 
 //void find_map_bounds(double& max_lat, double& min_lat, double& max_lon, double& min_lon);
@@ -40,6 +45,7 @@ float x_from_lon (float lon);
 
 
 void draw_map(){
+    populateWayRoadType();
     draw_map_blank_canvas();
 }
 void draw_map_blank_canvas (){       
@@ -204,11 +210,11 @@ void draw_main_canvas (ezgl::renderer *g){
     }
     
     //Drawing Features
-//***********************************************************************************
+    //***********************************************************************************
     g->set_line_dash(ezgl::line_dash::none);
     
     //variables needed for drawing features
-    double previousPoint_x, previousPoint_y, point_x, point_y;
+//    double previousPoint_x, previousPoint_y, point_x, point_y;
     
     for(size_t featureId = 0; featureId < getNumFeatures(); ++featureId){
         //get feature type to determine colour
@@ -241,10 +247,6 @@ void draw_main_canvas (ezgl::renderer *g){
         
         //get all of the points for that particular feature
         int numOfFeaturePoints = getFeaturePointCount(featureId);
-        
-        //find first and last points and check if features is polygon or polyline
-        LatLon firstPoint = getFeaturePoint(0, featureId);  
-        LatLon lastPoint = getFeaturePoint(numOfFeaturePoints-1, featureId); 
 
         // If the first point and the last point (getFeaturePointCount-1) are NOT the same location, the feature is a polyline
         if (FeatureAreaVector[featureId] == 0) {
@@ -303,4 +305,25 @@ float x_from_lon (float lon){
 float y_from_lat (float lat){
     //convert LatLon points into x y coordinates
     return lat*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS;
+}
+
+void populateWayRoadType(){
+            
+    //Retrieves OSMNodes and calculate total distance, for each way
+    for (unsigned i = 0; i < getNumberOfWays(); i++){
+        //creates a pointer that enables accessing the node's OSMID
+        const OSMWay* wayPtr = getWayByIndex(i);
+        std::string key,value;
+        key="N/A"; //in case the way has no keys
+        for(int j=0;j<getTagCount(wayPtr); ++j){
+            std::tie(key,value) = getTagPair(wayPtr,j);
+            if (key=="highway")
+                break;
+        }
+        if (key=="highway"){ //if highway key exists
+            WayRoadType.insert({wayPtr->id(),value});
+        }
+        
+    }
+    
 }
