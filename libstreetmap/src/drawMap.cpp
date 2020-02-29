@@ -10,6 +10,8 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <iostream>
+#include <sstream>
 
 
 /************  GLOBAL VARIABLES  *****************/
@@ -37,6 +39,8 @@ void populateWayRoadType();
 void draw_intersections();  
 
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click);
+void find_button(GtkWidget *widget, ezgl::application *application);
+void initial_setup(ezgl::application *application, bool /*new_window*/);
 
 //void find_map_bounds(double& max_lat, double& min_lat, double& max_lon, double& min_lon);
 
@@ -108,7 +112,7 @@ void draw_map_blank_canvas (){
     //  ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat});
     
     application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
-    application.run(NULL,act_on_mouse_click,NULL,NULL);
+    application.run(initial_setup,act_on_mouse_click,NULL,NULL);
 }
 
 void draw_main_canvas (ezgl::renderer *g){
@@ -353,7 +357,7 @@ void draw_main_canvas (ezgl::renderer *g){
         }
     }  
 
-    //Drawing
+    //Drawing Intersections
     for(size_t i = 0; i < intersections.size(); ++i){
 
       double x = intersections[i].position.lon();
@@ -463,15 +467,78 @@ void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double 
     
     LatLon lat_lon_click = LatLon(lat_from_y (y_click), lon_from_x (x_click));
     
-    std::cout << lat_lon_click;
-    
     int closestInt_id = find_closest_intersection(lat_lon_click);
     
-    std::cout << "Clicked on intersection id\t" << closestInt_id << getIntersectionName(closestInt_id) << std::endl;
-    
     intersections[closestInt_id].highlight = true;
-    //ezgl::application->update_message (“my message”)
+    
+    app->update_message (getIntersectionName(closestInt_id));
     
     app->refresh_drawing();
             
 }
+
+void initial_setup(ezgl::application *application, bool new_window)
+{
+
+  //Create a Find button and link it with find_button callback function.
+  application->create_button("Find", 0, find_button);
+
+
+}
+
+void find_button(GtkWidget* widget, ezgl::application *application){
+    //two string variables needed to interpret input
+    std::string street1, street2;
+    std::pair<int, int> twoStreets;
+    std::vector<int> streetIntersections;
+    
+    // Get the GtkEntry object
+    GtkEntry* text_entry = (GtkEntry *) application->get_object("TextInput");
+    
+    // Get the text written in the widget
+    const char* text = gtk_entry_get_text(text_entry);
+
+    //convert string into a stream
+    std::istringstream iss(text);
+
+    //get street names to be used find function
+    iss >> street1; 
+    //std::cout << street1 << "\n";
+    std::getline(iss, street2);
+    street2 = street2.substr(street2.find("and") + 4); 
+    //std::cout << street2 << "\n";
+
+    
+    //obtains all of the possible streetIds that match the entered street names
+    std::vector<int> street_ids_1 = find_street_ids_from_partial_street_name(street1);
+    std::vector<int> street_ids_2 = find_street_ids_from_partial_street_name(street2);
+    
+    //nested for-loop which finds intersections between all streetId's returned by partial_street_name function
+    //outer for-loop looks through all matches in 
+    for(int i = 0; i < street_ids_1.size() && (streetIntersections.empty() == true); i++){
+        
+        for(int j = 0; j < street_ids_2.size() && (streetIntersections.empty() == true) ; j++){
+            
+            //load twoStreets pair
+            twoStreets.first = street_ids_1[i];
+
+            twoStreets.second = street_ids_2[j];
+
+            streetIntersections = find_intersections_of_two_streets(twoStreets);
+    
+        }
+    }
+    
+    //std::pair<int, int> twoStreets(street_ids_1[0], street_ids_2[0]);
+    
+    //std::vector<int> streetIntersections = find_intersections_of_two_streets(twoStreets);
+    
+    for(int i = 0; i < streetIntersections.size(); i++){
+        intersections[streetIntersections[i]].highlight = true;
+    //    std::cout << intersections[streetIntersections[i]].name << "\n";
+    }
+     
+    // Redraw the graphics
+    application->refresh_drawing();
+}
+
