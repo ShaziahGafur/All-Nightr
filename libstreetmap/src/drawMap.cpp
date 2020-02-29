@@ -7,8 +7,8 @@
 #include "ezgl/graphics.hpp"
 #include "ezgl/point.hpp"
 #include "intersection_data.h"
-#include "subwayStruct.h"
-#include "subwayStruct.cpp"
+#include "poiStruct.h"
+#include "poiStruct.cpp"
 #include <vector>
 #include <string>
 #include <cmath>
@@ -23,8 +23,8 @@ std::vector<intersection_data> intersections;
 //Hashtable --> key: [OSMway] value: [road type]
 std::unordered_map<OSMID, std::string> WayRoadType;
 
-//Hashtable --> key: [OSMID Node] value: [struct with xy coordinates and name]
-std::unordered_map<OSMID, subwayStruct> publicTransportation;
+//Vector --> key: [type], value = vector of names/structs
+std::vector<std::vector<poiStruct>> PointsOfInterest (4);
 
 //Vector --> key: Feature Type (e.g. 0 = Unknown, 1 = Park...) value: vector containing feature IDs
 std::vector<std::vector<int>> FeatureTypes;
@@ -46,6 +46,7 @@ double lon_from_x (double x);
 double lat_from_y (double x);
 
 void populatePointsOfInterestType();
+void populatePointsOfInterest();
 void populateWayRoadType();
 void populateFeatureTypes();
 void drawFeatures(int feature_type, ezgl::renderer *g);
@@ -68,7 +69,7 @@ double x_from_lon (double lon);
 void draw_map(){
     populateWayRoadType();
     populateFeatureTypes();
-    populatePointsOfInterestType();
+    populatePointsOfInterest();
     draw_map_blank_canvas();
 }
 void draw_map_blank_canvas (){       
@@ -378,25 +379,60 @@ void draw_main_canvas (ezgl::renderer *g){
         }
     }  
     
-    //Draw Subway Stations
+    //Draw POIs
     
-    // increment through OSMID's to draw text for each station entrance
-    std::unordered_map<OSMID, subwayStruct>::iterator it = publicTransportation.begin();
+    // increment through OSMID's to draw text and symbol for police station
+    std::vector<poiStruct> police = PointsOfInterest[0];
+    std::vector<poiStruct> hospitals = PointsOfInterest[1];
+    std::vector<poiStruct> fire_station = PointsOfInterest[2];
+    std::vector<poiStruct> subway_stations = PointsOfInterest[3];
+    std::vector<poiStruct>::iterator it = police.begin();
     
-    //variables to extract subway struct
-    subwayStruct subwayData;
+    //variables to extract poi struct
+    poiStruct poiData;
     std::pair<double,double> xyCoordinates;
-    std::string subwayName;
+    std::string poiName;
     
-    while(it != publicTransportation.end()){
-        subwayData = it->second;
-        xyCoordinates = subwayData.xyCoordinates;
-        subwayName = subwayData.subwayName;
+    while(it != police.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
         
-        //Problem: won't actually draw any text.
         g->set_color (ezgl::BLACK);
-//        std::cout << xyCoordinates.first << xyCoordinates.second << subwayName << std::endl;
-        g->draw_text({xyCoordinates.first, xyCoordinates.second}, subwayName);
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        
+        it++;
+    }
+    it = hospitals.begin();
+    while(it != hospitals.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
+        
+        g->set_color (ezgl::BLACK);
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        
+        it++;
+    }
+    it = fire_station.begin();
+    while(it != fire_station.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
+        
+        g->set_color (ezgl::BLACK);
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        
+        it++;
+    }
+    it = subway_stations.begin();
+    while(it != subway_stations.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
+        
+        g->set_color (ezgl::BLACK);
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
         
         it++;
     }
@@ -419,7 +455,7 @@ void draw_main_canvas (ezgl::renderer *g){
       else
           g->set_color(ezgl::BLUE);
       
-      //for intersectioh id, get segs. Check seg's lowest threshold value
+      //for intersection id, get segs. Check seg's lowest threshold value
       //for that threshold value, enable or disable drawing
       g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
     
@@ -455,6 +491,80 @@ double lat_from_y (double y){
     return y / (DEGREE_TO_RADIAN * EARTH_RADIUS_METERS);
 }
 
+
+void populatePointsOfInterest(){
+    
+    //store value and name of POI
+    std::string value, name;
+    poiStruct poiData;
+    LatLon latlon;
+    std::pair<double, double> xy;
+    double x, y;
+    std::vector<poiStruct> police, hospital, fire_station, subway_entrances;
+    //iterate through points of interest using layer 1
+    for (unsigned poiIterator = 0; poiIterator < getNumPointsOfInterest(); poiIterator++){
+        value = getPointOfInterestType(poiIterator);
+        
+        if (value == "police"){
+            name = getPointOfInterestName(poiIterator);
+            latlon = getPointOfInterestPosition(poiIterator);
+            
+            //conversion to cartesian
+            x = 2449241 + x_from_lon (latlon.lon());
+            y = y_from_lat (latlon.lat());
+            xy = std::make_pair(x,y);
+            poiData.addName(name);
+            poiData.addXYCoordinates(xy);
+            
+            police.push_back(poiData);
+        }
+        else if (value == "hospital"){
+            name = getPointOfInterestName(poiIterator);
+            latlon = getPointOfInterestPosition(poiIterator);
+            
+            x = 2449241 + x_from_lon (latlon.lon());
+            y = y_from_lat (latlon.lat());
+            xy = std::make_pair(x,y);
+            
+            poiData.addName(name);
+            poiData.addXYCoordinates(xy);
+            
+            hospital.push_back(poiData);
+        }
+        else if (value == "fire_station"){
+            name = getPointOfInterestName(poiIterator);
+            latlon = getPointOfInterestPosition(poiIterator);
+            
+            x = 2449241 + x_from_lon (latlon.lon());
+            y = y_from_lat (latlon.lat());
+            xy = std::make_pair(x,y);
+            
+            poiData.addName(name);
+            poiData.addXYCoordinates(xy);
+            
+            fire_station.push_back(poiData);
+        }
+        else if (value == "subway_entrance"){
+            name = getPointOfInterestName(poiIterator);
+            latlon = getPointOfInterestPosition(poiIterator);
+            
+            x = 2449241 + x_from_lon (latlon.lon());
+            y = y_from_lat (latlon.lat());
+            xy = std::make_pair(x,y);
+            
+            poiData.addName(name);
+            poiData.addXYCoordinates(xy);
+            
+            subway_entrances.push_back(poiData);
+        }
+    }
+    
+    PointsOfInterest[0] = police;
+    PointsOfInterest[1] = hospital;
+    PointsOfInterest[2] = fire_station;
+    PointsOfInterest[3] = subway_entrances;
+}
+/*
 void populatePointsOfInterestType(){
     
    //bool to check if a node has railway as key and subway_entrance as value
@@ -488,7 +598,7 @@ void populatePointsOfInterestType(){
                     //convert node coordinates to xy cartesian
                     LatLon subwayEntrance = getNodeCoords(nodePtr);
                     subwayXY = latLonToCartesian(subwayEntrance);
-                    
+                    double x = x_from_lon(subwayEntrance.lon());
                     subwayStruct subStruct;
                     subStruct.addSubwayName (value);
                     subStruct.addXYCoordinates (subwayXY);
@@ -516,7 +626,7 @@ void populatePointsOfInterestType(){
            
         }
     }
-}
+} */
 void populateWayRoadType(){
             
     //Retrieves OSMNodes and calculate total distance, for each way
@@ -654,7 +764,7 @@ void drawFeatures(int feature_type, ezgl::renderer *g){
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click){
     //x_click and y_click are the world coordinates where the mouse was clicked
     //will convert to latlon then use find_closest_intersection
-    
+    std::cout << "x: " << x_click << "y: " << y_click << std::endl;
     LatLon lat_lon_click = LatLon(lat_from_y (y_click), lon_from_x (x_click));
     
     int closestInt_id = find_closest_intersection(lat_lon_click);
