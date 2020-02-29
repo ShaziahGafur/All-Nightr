@@ -112,10 +112,23 @@ void draw_map_blank_canvas (){
 }
 
 void draw_main_canvas (ezgl::renderer *g){
+<<<<<<< HEAD
   /*  
+=======
+    
+    ezgl::rectangle zoom_rect = g->get_visible_world();
+    double zoom = zoom_rect.width();
+    double scale = max_lon - min_lon;
+    double scale_factor = zoom/scale;
+//    std::cout<<"\nscale_factor: "<<scale_factor;
+//    std::cout<<"\nmax lon: "<<max_lon<<"\tmin lon: "<<min_lon;
+//    std::cout<<"\nzoom: "<<zoom;
+//    std::cout<<"\nscale: "<<scale;
+>>>>>>> be8d7b509eeda0b35b98b7bf0b47592e13b2aa48
     //Variables
-    float segmentSlope, rotationAngle, xMiddleOfSegment, yMiddleOfSegment, segmentLength;
+    float rotationAngle, xMiddleOfSegment, yMiddleOfSegment, segmentLength;
     std::string streetName;
+    
     //Drawing Backgrounds
     //***********************************************************************************
     g->draw_rectangle({min_lon, min_lat},{max_lon, max_lat});
@@ -205,6 +218,7 @@ void draw_main_canvas (ezgl::renderer *g){
         streetName = getStreetName(streetIdx);
         
         for (int i = 0; i < segments.size(); i++ ){
+            bool enableDraw = true;
             int segmentID = segments[i];
             struct InfoStreetSegment segmentInfo = getInfoStreetSegment(segmentID);
             int numCurvePoints = segmentInfo.curvePointCount;
@@ -212,41 +226,64 @@ void draw_main_canvas (ezgl::renderer *g){
             std::string roadType = WayRoadType.at(segmentInfo.wayOSMID);
                         
             if(roadType=="motorway"){
-                g->set_color (232, 144, 160, 255);
                 g->set_line_width (20);
+                if (scale_factor >  0.3)
+                    g->set_line_width (15);
+                g->set_color (232, 144, 160, 255);
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="trunk"){
                 g->set_color (250, 178, 154, 255);
-                g->set_line_width (18);
+                g->set_line_width (16);
+                if (scale_factor >  0.18)
+                    g->set_line_width (10);
+                if (scale_factor >  0.3)
+                    g->set_line_width (8);
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="primary"){
                 g->set_color (252, 215, 162, 255);
                 g->set_line_width (16);
+                if (scale_factor >  0.18)
+                    g->set_line_width (10);
+                if (scale_factor >  0.3)
+                    g->set_line_width (8);
+                        
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="secondary"){
                 g->set_color (246, 251, 187, 255);
                 g->set_line_width (12);
+                if (scale_factor >  0.18)
+                    g->set_line_width (8);
+                if (scale_factor >  0.3)
+                    g->set_line_width (6);
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="tertiary"){
+                if (scale_factor > 0.30)
+                    enableDraw = false;
                 g->set_color (255, 255, 255, 255);
                 g->set_line_width (10);
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="residential"){
+                if (scale_factor > 0.05)
+                    enableDraw = false;
                 g->set_color (255, 255, 255, 255);
                 g->set_line_width (5);
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="unclassified"){
+                if (scale_factor > 0.05)
+                    enableDraw = false;
                 g->set_color (255, 255, 255, 255);
                 g->set_line_width (5);
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else{
+                if (scale_factor > 0.30)
+                    enableDraw = false;
                 g->set_line_width (5);
                 g->set_color (255, 255, 255, 255);
                 g->set_line_dash(ezgl::line_dash::none);
@@ -258,19 +295,26 @@ void draw_main_canvas (ezgl::renderer *g){
                 
                 std::pair <double, double> xyFrom = latLonToCartesian(intersections[fromIntersection].position);
                 std::pair <double, double> xyTo = latLonToCartesian(intersections[toIntersection].position);
-
-                g->draw_line({xyFrom.first, xyFrom.second}, {xyTo.first, xyTo.second});
                 
-                //find slope of the segment
-                segmentSlope = (xyTo.second - xyFrom.second)/(xyTo.first - xyFrom.first);
-                rotationAngle = atan(segmentSlope)/DEGREE_TO_RADIAN;
+                if (enableDraw)
+                    g->draw_line({xyFrom.first, xyFrom.second}, {xyTo.first, xyTo.second});
+                
+                
+                rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first)/DEGREE_TO_RADIAN;
                 xMiddleOfSegment = 0.5*(xyFrom.first + xyTo.first);
                 yMiddleOfSegment = 0.5*(xyFrom.second + xyTo.second);
-                        
+                
+                if (rotationAngle > 90 ){
+                    rotationAngle = rotationAngle - 180;
+                }
+                if (rotationAngle < -90){
+                    rotationAngle = rotationAngle + 180;
+                }
                 //draw text
                 g->set_color (0, 0, 0, 255);   
-                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
                 g->set_text_rotation(rotationAngle);
+                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
+                g->set_text_rotation(0);
             }
             else{//segment is curved
                 //first deal with all curves from segment's "from" intersection to the last curve point
@@ -282,7 +326,8 @@ void draw_main_canvas (ezgl::renderer *g){
                 std::pair <double, double> xyLeft = latLonToCartesian(pointsLeft);
                 std::pair <double, double> xyRight = latLonToCartesian(pointsRight);
                 
-                g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
+                if (enableDraw)
+                    g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
 
                 for (int curvePointIndex = 0; curvePointIndex < numCurvePoints - 1; curvePointIndex++){
                     pointsLeft = pointsRight;
@@ -290,23 +335,33 @@ void draw_main_canvas (ezgl::renderer *g){
                     
                     xyLeft = latLonToCartesian(pointsLeft);
                     xyRight = latLonToCartesian(pointsRight);
-
-                    g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
+                    
+                    if (enableDraw)
+                        g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
                 }
                 
                 //then, deal with the last curve point to the segment's "to" intersection
                 pointsLeft = pointsRight;
                 pointsRight = getIntersectionPosition(segmentInfo.to);
                 
+                //update segment length to length between curve points
+                std::pair <LatLon, LatLon> points (pointsLeft, pointsRight);
+                segmentLength = find_distance_between_two_points(points);
+                
                 xyLeft = latLonToCartesian(pointsLeft);
-                xyRight = latLonToCartesian(pointsRight);
-                     
-                g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
+                xyRight = latLonToCartesian(pointsRight);                
+                if (enableDraw)
+                    g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
             }
         }
     }  
+<<<<<<< HEAD
     */
        //Drawing Intersections
+=======
+
+    //Drawing Intersections
+>>>>>>> be8d7b509eeda0b35b98b7bf0b47592e13b2aa48
     //***********************************************************************************
     
     //Drawing
