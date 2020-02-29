@@ -26,7 +26,7 @@ std::unordered_map<OSMID, std::string> WayRoadType;
 std::unordered_map< int, ezgl::point2d > FeatureCentroids;
 
 //Vector --> key: [type], value = vector: [point of interest structs]
-std::vector<std::vector<poiStruct>> PointsOfInterest (4);
+std::vector<std::vector<poiStruct>> PointsOfInterest (3);
 
 //Vector --> key: Feature Type (e.g. 0 = Unknown, 1 = Park...) value: vector containing feature IDs
 std::vector<std::vector<int>> FeatureTypes;
@@ -422,7 +422,6 @@ void draw_main_canvas (ezgl::renderer *g){
     std::vector<poiStruct> police = PointsOfInterest[0];
     std::vector<poiStruct> hospitals = PointsOfInterest[1];
     std::vector<poiStruct> fire_station = PointsOfInterest[2];
-    std::vector<poiStruct> subway_stations = PointsOfInterest[3];
     
     //Declare iterator to go through each vector
     std::vector<poiStruct>::iterator it = police.begin();
@@ -470,18 +469,6 @@ void draw_main_canvas (ezgl::renderer *g){
         it++;
     }
     
-    //loop through police vector, extract data and draw names of police stations on map
-    it = subway_stations.begin();
-    while(it != subway_stations.end()){
-        poiData = *it;
-        xyCoordinates = poiData.xyCoordinates;
-        poiName = poiData.Name;
-        
-        g->set_color (ezgl::BLACK);
-        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
-        
-        it++;
-    }
      std::cout<<scale_factor<<"<-s f\n";
     //Drawing Intersections
     //***********************************************************************************
@@ -565,7 +552,7 @@ void populatePointsOfInterest(){
     LatLon latlon;
     std::pair<double, double> xy;
     double x, y;
-    std::vector<poiStruct> police, hospital, fire_station, subway_entrances;
+    std::vector<poiStruct> police, hospital, fire_station;
     //iterate through points of interest using layer 1
     for (unsigned poiIterator = 0; poiIterator < getNumPointsOfInterest(); poiIterator++){
         value = getPointOfInterestType(poiIterator);
@@ -609,25 +596,11 @@ void populatePointsOfInterest(){
             
             fire_station.push_back(poiData);
         }
-        else if (value == "subway_entrance"){
-            name = getPointOfInterestName(poiIterator);
-            latlon = getPointOfInterestPosition(poiIterator);
-            
-            x = 2449241 + x_from_lon (latlon.lon());
-            y = y_from_lat (latlon.lat());
-            xy = std::make_pair(x,y);
-            
-            poiData.addName(name);
-            poiData.addXYCoordinates(xy);
-            
-            subway_entrances.push_back(poiData);
-        }
     }
     
     PointsOfInterest[0] = police;
     PointsOfInterest[1] = hospital;
     PointsOfInterest[2] = fire_station;
-    PointsOfInterest[3] = subway_entrances;
 }
 
 void populateWayRoadType(){
