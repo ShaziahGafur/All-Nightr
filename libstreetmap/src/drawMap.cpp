@@ -112,9 +112,6 @@ void draw_map_blank_canvas (){
 }
 
 void draw_main_canvas (ezgl::renderer *g){
-<<<<<<< HEAD
-  /*  
-=======
     
     ezgl::rectangle zoom_rect = g->get_visible_world();
     double zoom = zoom_rect.width();
@@ -355,15 +352,7 @@ void draw_main_canvas (ezgl::renderer *g){
             }
         }
     }  
-<<<<<<< HEAD
-    */
-       //Drawing Intersections
-=======
 
-    //Drawing Intersections
->>>>>>> be8d7b509eeda0b35b98b7bf0b47592e13b2aa48
-    //***********************************************************************************
-    
     //Drawing
     for(size_t i = 0; i < intersections.size(); ++i){
 
