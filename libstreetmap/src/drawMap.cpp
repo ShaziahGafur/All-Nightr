@@ -110,7 +110,7 @@ void draw_map_blank_canvas (){
 void draw_main_canvas (ezgl::renderer *g){
 //    g->set_line_dash (ezgl::line_dash::asymmetric_5_3);
     //Variables
-    float segmentSlope, rotationAngle, xMiddleOfSegment, yMiddleOfSegment, segmentLength;
+    float rotationAngle, xMiddleOfSegment, yMiddleOfSegment, segmentLength;
     std::string streetName;
     //Drawing Backgrounds
     //***********************************************************************************
@@ -257,16 +257,22 @@ void draw_main_canvas (ezgl::renderer *g){
 
                 g->draw_line({xyFrom.first, xyFrom.second}, {xyTo.first, xyTo.second});
                 
-                //find slope of the segment
-                segmentSlope = (xyTo.second - xyFrom.second)/(xyTo.first - xyFrom.first);
-                rotationAngle = atan(segmentSlope)/DEGREE_TO_RADIAN;
+                
+                rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first)/DEGREE_TO_RADIAN;
                 xMiddleOfSegment = 0.5*(xyFrom.first + xyTo.first);
                 yMiddleOfSegment = 0.5*(xyFrom.second + xyTo.second);
-                        
+                
+                if (rotationAngle > 90 ){
+                    rotationAngle = rotationAngle - 180;
+                }
+                if (rotationAngle < -90){
+                    rotationAngle = rotationAngle + 180;
+                }
                 //draw text
                 g->set_color (0, 0, 0, 255);   
-                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
                 g->set_text_rotation(rotationAngle);
+                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
+                g->set_text_rotation(0);
             }
             else{//segment is curved
                 //first deal with all curves from segment's "from" intersection to the last curve point
@@ -286,18 +292,40 @@ void draw_main_canvas (ezgl::renderer *g){
                     
                     xyLeft = latLonToCartesian(pointsLeft);
                     xyRight = latLonToCartesian(pointsRight);
-
+                    
+                    g->set_color (255, 255, 255, 255);  
                     g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
-                }
+                    
+                    
                 
                 //then, deal with the last curve point to the segment's "to" intersection
                 pointsLeft = pointsRight;
                 pointsRight = getIntersectionPosition(segmentInfo.to);
                 
+                //update segment length to length between curve points
+                std::pair <LatLon, LatLon> points (pointsLeft, pointsRight);
+                segmentLength = find_distance_between_two_points(points);
+                
                 xyLeft = latLonToCartesian(pointsLeft);
                 xyRight = latLonToCartesian(pointsRight);
                      
                 g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
+//                //draw text
+//                    rotationAngle = atan2(xyLeft.second - xyRight.second, xyLeft.first - xyRight.first)/DEGREE_TO_RADIAN;
+//                    xMiddleOfSegment = 0.5*(xyLeft.first + xyRight.first);
+//                    yMiddleOfSegment = 0.5*(xyLeft.second + xyRight.second);
+//                    if (rotationAngle > 90 ){
+//                        rotationAngle = rotationAngle - 180;
+//                    }
+//                    if (rotationAngle < -90){
+//                        rotationAngle = rotationAngle + 180;
+//                    }
+//                   //draw text
+//                    g->set_color (0, 0, 0, 255);   
+//                    g->set_text_rotation(rotationAngle);
+//                    g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
+//                    g->set_text_rotation(0);
+                }
             }
         }
     }  
