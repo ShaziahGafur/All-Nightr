@@ -7,6 +7,8 @@
 #include "ezgl/graphics.hpp"
 #include "ezgl/point.hpp"
 #include "intersection_data.h"
+#include "poiStruct.h"
+#include "poiStruct.cpp"
 #include <vector>
 #include <string>
 #include <cmath>
@@ -20,11 +22,17 @@ std::vector<intersection_data> intersections;
 //Hashtable --> key: [OSMway] value: [road type]
 std::unordered_map<OSMID, std::string> WayRoadType;
 
-//Vector --> key: [Feature Type (e.g. 0 = Unknown, 1 = Park...)] value: [vector of feature IDs]]
-std::vector<std::vector<int>> FeatureTypes;
-
 //Hashtable --> key: [feature id (POLYGONS ONLY)] value: [centroid (x,y)]
 std::unordered_map< int, ezgl::point2d > FeatureCentroids;
+
+//Vector --> key: [type], value = vector of names/structs
+std::vector<std::vector<poiStruct>> PointsOfInterest (4);
+
+//Vector --> key: Feature Type (e.g. 0 = Unknown, 1 = Park...) value: vector containing feature IDs
+std::vector<std::vector<int>> FeatureTypes;
+
+double scale_factor = 1;
+
 
 //average latitude of map, value set in draw_map_blank_canvas
 float latAvg; 
@@ -40,6 +48,8 @@ void draw_main_canvas (ezgl::renderer *g);
 double lon_from_x (double x);
 double lat_from_y (double x);
 
+void populatePointsOfInterestType();
+void populatePointsOfInterest();
 void populateWayRoadType();
 void populateFeatureTypes();
 void populateFeatureCentoids();
@@ -68,6 +78,7 @@ void draw_map(){
 
     populateWayRoadType();
     populateFeatureTypes();
+    populatePointsOfInterest();
     draw_map_blank_canvas();
 }
 void draw_map_blank_canvas (){       
@@ -133,7 +144,8 @@ void draw_main_canvas (ezgl::renderer *g){
     //Determine the amount that screen is zoomed in 
     ezgl::rectangle zoom_rect = g->get_visible_world();
     double zoom = zoom_rect.width(); //width of zoom rectangle, converted into lat lon coordinates
-    double scale_factor = zoom/(max_lon - min_lon);//percentage of the full map shown in the window
+    scale_factor = zoom/(max_lon - min_lon);//percentage of the full map shown in the window
+    //Use these for creating thresholds for zooming
 //    std::cout<<"\nscale_factor: "<<scale_factor;
 //    std::cout<<"\nzoom: "<<zoom;
 
@@ -180,7 +192,6 @@ void draw_main_canvas (ezgl::renderer *g){
     //Drawing Streets
      //***********************************************************************************
     
- /*   
     for (int streetIdx = 0; streetIdx < StreetVector.size(); streetIdx++ ){ //for each street
         std::vector<int> segments = StreetVector[streetIdx].streetSegments;
         streetName = getStreetName(streetIdx);
@@ -268,66 +279,116 @@ void draw_main_canvas (ezgl::renderer *g){
                 std::pair <double, double> xyFrom = latLonToCartesian(intersections[fromIntersection].position);
                 std::pair <double, double> xyTo = latLonToCartesian(intersections[toIntersection].position);
                 
-                if (enableDraw)
+                if (enableDraw){ //if the line should be drawn
                     g->draw_line({xyFrom.first, xyFrom.second}, {xyTo.first, xyTo.second});
-                
-                
-                rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first)/DEGREE_TO_RADIAN;
-                xMiddleOfSegment = 0.5*(xyFrom.first + xyTo.first);
-                yMiddleOfSegment = 0.5*(xyFrom.second + xyTo.second);
-                
-                if (rotationAngle > 90 ){
-                    rotationAngle = rotationAngle - 180;
+                    
+                    if(streetName!="<unknown>"){ //awkward "<unknown>" street name not drawn
+                    
+                        rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first)/DEGREE_TO_RADIAN;
+                        xMiddleOfSegment = 0.5*(xyFrom.first + xyTo.first);
+                        yMiddleOfSegment = 0.5*(xyFrom.second + xyTo.second);
+
+                        if (rotationAngle > 90 ){
+                            rotationAngle = rotationAngle - 180;
+                        }
+                        if (rotationAngle < -90){
+                            rotationAngle = rotationAngle + 180;
+                        }
+                        //draw text
+                        g->set_color (0, 0, 0, 255);   
+                        g->set_text_rotation(rotationAngle);
+
+                        std::string direction_symbol = ">";
+                        if (segmentInfo.oneWay){
+                            if (xyFrom.first > xyTo.first){
+                                direction_symbol = "<";
+                            }
+                        }
+                        double segment_length = SegmentLengths[segmentID]; 
+                        double screen_ratio = segment_length/scale_factor;
+                        if (screen_ratio < 5000){
+                            if (segmentInfo.oneWay){
+                                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, direction_symbol, segmentLength, segmentLength);            
+                            }
+                        }
+                        else if (screen_ratio < 20000){
+                            g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);            
+                        }
+                        else if (screen_ratio < 30000){
+                            g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);            
+                            if (segmentInfo.oneWay){
+                                g->draw_text({(xMiddleOfSegment+xyFrom.first)/2, (yMiddleOfSegment+xyFrom.second)/2}, direction_symbol, segmentLength, segmentLength);
+                                g->draw_text({(xMiddleOfSegment+xyTo.first)/2, (yMiddleOfSegment+xyTo.second)/2}, direction_symbol, segmentLength, segmentLength);
+                            }
+                        }
+                        else if (screen_ratio < 50000){
+                            g->draw_text({ (2*xMiddleOfSegment+xyFrom.first)/3, (2*yMiddleOfSegment+xyFrom.second)/3}, streetName, segmentLength, segmentLength); 
+                            g->draw_text({ (2*xMiddleOfSegment+xyTo.first)/3, (2*yMiddleOfSegment+xyTo.second)/3}, streetName, segmentLength, segmentLength); 
+
+                            if (segmentInfo.oneWay){
+                                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, direction_symbol, segmentLength, segmentLength);         
+                                g->draw_text({ (((2*xMiddleOfSegment+xyFrom.first)/3)+xyFrom.first)/2, (((2*yMiddleOfSegment+xyFrom.second)/3)+xyFrom.second)/2}, direction_symbol, segmentLength, segmentLength); 
+                                g->draw_text({ (((2*xMiddleOfSegment+xyTo.first)/3)+xyTo.first)/2, (((2*yMiddleOfSegment+xyTo.second)/3)+xyTo.second)/2}, direction_symbol, segmentLength, segmentLength); 
+
+                            }
+                        }
+                        else{// if (screen_ratio < 70000){
+                            g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);            
+                            g->draw_text({(xMiddleOfSegment+xyFrom.first)/2, (yMiddleOfSegment+xyFrom.second)/2}, streetName, segmentLength, segmentLength);
+                            g->draw_text({(xMiddleOfSegment+xyTo.first)/2, (yMiddleOfSegment+xyTo.second)/2}, streetName, segmentLength, segmentLength);
+
+                            if (segmentInfo.oneWay){
+                              g->draw_text({(((xMiddleOfSegment+xyFrom.first)/2)+xyFrom.first)/2, (((yMiddleOfSegment+xyFrom.second)/2)+xyFrom.second)/2}, direction_symbol, segmentLength, segmentLength);         
+                              g->draw_text({(((xMiddleOfSegment+xyFrom.first)/2)+xMiddleOfSegment)/2, (((yMiddleOfSegment+xyFrom.second)/2)+yMiddleOfSegment)/2}, direction_symbol, segmentLength, segmentLength);         
+                              g->draw_text({(((xMiddleOfSegment+xyTo.first)/2)+xMiddleOfSegment)/2, (((yMiddleOfSegment+xyTo.second)/2)+yMiddleOfSegment)/2}, direction_symbol, segmentLength, segmentLength);         
+                              g->draw_text({(((xMiddleOfSegment+xyTo.first)/2)+xyTo.first)/2, (((yMiddleOfSegment+xyTo.second)/2)+xyTo.second)/2}, direction_symbol, segmentLength, segmentLength);         
+
+                            }
+                        }
+                    }
                 }
-                if (rotationAngle < -90){
-                    rotationAngle = rotationAngle + 180;
-                }
-                //draw text
-                g->set_color (0, 0, 0, 255);   
-                g->set_text_rotation(rotationAngle);
-                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
                 g->set_text_rotation(0);
             }
-            else{//segment is curved
-                //first deal with all curves from segment's "from" intersection to the last curve point
-                
-                //first curve of the segment
-                LatLon pointsLeft  = getIntersectionPosition(segmentInfo.from);
-                LatLon pointsRight = getStreetSegmentCurvePoint(0, segmentID);
-                
-                std::pair <double, double> xyLeft = latLonToCartesian(pointsLeft);
-                std::pair <double, double> xyRight = latLonToCartesian(pointsRight);
-                
-                if (enableDraw)
+            else{
+                if(enableDraw){
+                    //segment is curved
+                    //first deal with all curves from segment's "from" intersection to the last curve point
+
+                    //first curve of the segment
+                    LatLon pointsLeft  = getIntersectionPosition(segmentInfo.from);
+                    LatLon pointsRight = getStreetSegmentCurvePoint(0, segmentID);
+
+                    std::pair <double, double> xyLeft = latLonToCartesian(pointsLeft);
+                    std::pair <double, double> xyRight = latLonToCartesian(pointsRight);
+
                     g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
 
-                for (int curvePointIndex = 0; curvePointIndex < numCurvePoints - 1; curvePointIndex++){
+                    for (int curvePointIndex = 0; curvePointIndex < numCurvePoints - 1; curvePointIndex++){
+                        pointsLeft = pointsRight;
+                        pointsRight = getStreetSegmentCurvePoint(curvePointIndex + 1, segmentID);
+
+                        xyLeft = latLonToCartesian(pointsLeft);
+                        xyRight = latLonToCartesian(pointsRight);
+
+                        g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
+                    }
+
+                    //then, deal with the last curve point to the segment's "to" intersection
                     pointsLeft = pointsRight;
-                    pointsRight = getStreetSegmentCurvePoint(curvePointIndex + 1, segmentID);
-                    
+                    pointsRight = getIntersectionPosition(segmentInfo.to);
+
+                    //update segment length to length between curve points
+                    std::pair <LatLon, LatLon> points (pointsLeft, pointsRight);
+                    segmentLength = find_distance_between_two_points(points);
+
                     xyLeft = latLonToCartesian(pointsLeft);
-                    xyRight = latLonToCartesian(pointsRight);
-                    
-                    if (enableDraw)
+                    xyRight = latLonToCartesian(pointsRight);                
                         g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
                 }
-                
-                //then, deal with the last curve point to the segment's "to" intersection
-                pointsLeft = pointsRight;
-                pointsRight = getIntersectionPosition(segmentInfo.to);
-                
-                //update segment length to length between curve points
-                std::pair <LatLon, LatLon> points (pointsLeft, pointsRight);
-                segmentLength = find_distance_between_two_points(points);
-                
-                xyLeft = latLonToCartesian(pointsLeft);
-                xyRight = latLonToCartesian(pointsRight);                
-                if (enableDraw)
-                    g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
             }
         }
     }  
-  */
+
 //    //Drawing Intersections
 //    for(size_t i = 0; i < intersections.size(); ++i){
 //
@@ -350,6 +411,90 @@ void draw_main_canvas (ezgl::renderer *g){
 //    
 //    }
 //    
+
+    
+    //Draw POIs
+    
+    // increment through OSMID's to draw text and symbol for police station
+    std::vector<poiStruct> police = PointsOfInterest[0];
+    std::vector<poiStruct> hospitals = PointsOfInterest[1];
+    std::vector<poiStruct> fire_station = PointsOfInterest[2];
+    std::vector<poiStruct> subway_stations = PointsOfInterest[3];
+    std::vector<poiStruct>::iterator it = police.begin();
+    
+    //variables to extract poi struct
+    poiStruct poiData;
+    std::pair<double,double> xyCoordinates;
+    std::string poiName;
+    
+    while(it != police.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
+        
+        g->set_color (ezgl::BLACK);
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        
+        it++;
+    }
+    it = hospitals.begin();
+    while(it != hospitals.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
+        
+        g->set_color (ezgl::BLACK);
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        
+        it++;
+    }
+    it = fire_station.begin();
+    while(it != fire_station.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
+        
+        g->set_color (ezgl::BLACK);
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        
+        it++;
+    }
+    it = subway_stations.begin();
+    while(it != subway_stations.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
+        
+        g->set_color (ezgl::BLACK);
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        
+        it++;
+    }
+    
+    //Drawing Intersections
+    for(size_t i = 0; i < intersections.size(); ++i){
+
+      double x = intersections[i].position.lon();
+      double y = intersections[i].position.lat();
+
+      //must convert lat lon values to cartesian (refer to tutorial slides)
+      x = x_from_lon(x);
+      y = y_from_lat(y);
+     
+      float width = 10;
+      float height = width;
+      
+      if (intersections[i].highlight)
+          g->set_color(ezgl::RED);
+      else
+          g->set_color(ezgl::BLUE);
+      
+      //for intersection id, get segs. Check seg's lowest threshold value
+      //for that threshold value, enable or disable drawing
+      g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
+    
+    }
+
 }
 
 std::pair < double, double > latLonToCartesian (LatLon latLonPoint){
@@ -380,6 +525,142 @@ double lat_from_y (double y){
     return y / (DEGREE_TO_RADIAN * EARTH_RADIUS_METERS);
 }
 
+
+void populatePointsOfInterest(){
+    
+    //store value and name of POI
+    std::string value, name;
+    poiStruct poiData;
+    LatLon latlon;
+    std::pair<double, double> xy;
+    double x, y;
+    std::vector<poiStruct> police, hospital, fire_station, subway_entrances;
+    //iterate through points of interest using layer 1
+    for (unsigned poiIterator = 0; poiIterator < getNumPointsOfInterest(); poiIterator++){
+        value = getPointOfInterestType(poiIterator);
+        
+        if (value == "police"){
+            name = getPointOfInterestName(poiIterator);
+            latlon = getPointOfInterestPosition(poiIterator);
+            
+            //conversion to cartesian
+            x = 2449241 + x_from_lon (latlon.lon());
+            y = y_from_lat (latlon.lat());
+            xy = std::make_pair(x,y);
+            poiData.addName(name);
+            poiData.addXYCoordinates(xy);
+            
+            police.push_back(poiData);
+        }
+        else if (value == "hospital"){
+            name = getPointOfInterestName(poiIterator);
+            latlon = getPointOfInterestPosition(poiIterator);
+            
+            x = 2449241 + x_from_lon (latlon.lon());
+            y = y_from_lat (latlon.lat());
+            xy = std::make_pair(x,y);
+            
+            poiData.addName(name);
+            poiData.addXYCoordinates(xy);
+            
+            hospital.push_back(poiData);
+        }
+        else if (value == "fire_station"){
+            name = getPointOfInterestName(poiIterator);
+            latlon = getPointOfInterestPosition(poiIterator);
+            
+            x = 2449241 + x_from_lon (latlon.lon());
+            y = y_from_lat (latlon.lat());
+            xy = std::make_pair(x,y);
+            
+            poiData.addName(name);
+            poiData.addXYCoordinates(xy);
+            
+            fire_station.push_back(poiData);
+        }
+        else if (value == "subway_entrance"){
+            name = getPointOfInterestName(poiIterator);
+            latlon = getPointOfInterestPosition(poiIterator);
+            
+            x = 2449241 + x_from_lon (latlon.lon());
+            y = y_from_lat (latlon.lat());
+            xy = std::make_pair(x,y);
+            
+            poiData.addName(name);
+            poiData.addXYCoordinates(xy);
+            
+            subway_entrances.push_back(poiData);
+        }
+    }
+    
+    PointsOfInterest[0] = police;
+    PointsOfInterest[1] = hospital;
+    PointsOfInterest[2] = fire_station;
+    PointsOfInterest[3] = subway_entrances;
+}
+/*
+void populatePointsOfInterestType(){
+    
+   //bool to check if a node has railway as key and subway_entrance as value
+    bool isSubwayEntrance = false;
+    
+    // strings to store key and value of each tag while parsing
+    std::string key, value;
+    
+    // pair to store xy location of subway entrances
+    std::pair<double,double> subwayXY;
+    
+    //increment through all nodes, populate unordered map with key = OSMID and value = subway struct
+    for (unsigned i = 0; i < getNumberOfNodes(); i++){
+        
+        //make pointer to access node's OSMID
+        const OSMNode* nodePtr = getNodeByIndex(i);
+        
+        //increment through tags for each node to check if there is a tag with key = railway and value = subway_entrance. If it is, increment for loop again to get name.
+        for (unsigned tagIterator = 0; tagIterator < getTagCount(nodePtr); tagIterator++){
+            
+            //gets key and value for each tag
+            std::tie(key,value) = getTagPair(nodePtr, tagIterator);
+            
+            //if the node does represent a subway entrance, increment through tags again until name is found
+            if(isSubwayEntrance){
+                
+                //once name is found, make subway struct with information on the name, xy coordinates
+                //then insert it into the unordered map with key as OSMID
+                if (key == "name"){   
+                    
+                    //convert node coordinates to xy cartesian
+                    LatLon subwayEntrance = getNodeCoords(nodePtr);
+                    subwayXY = latLonToCartesian(subwayEntrance);
+                    double x = x_from_lon(subwayEntrance.lon());
+                    subwayStruct subStruct;
+                    subStruct.addSubwayName (value);
+                    subStruct.addXYCoordinates (subwayXY);
+                    publicTransportation.insert(std::pair<OSMID, subwayStruct> (nodePtr->id(), subStruct));
+                    isSubwayEntrance = false;
+                    break;
+                }
+                //if j is done parsing, but no name tag was found, set isSubwayEntrance to false
+                else {
+                    if (tagIterator == getTagCount(nodePtr)){
+                        isSubwayEntrance = false;
+                    }
+                }
+            }
+            // Checking if tag is a subway entrance. If it is, reset iterator to -1 so that for loop starts over, this time searching for key = name
+            else{
+                 if (key == "railway" && value == "subway_entrance"){
+                    tagIterator = -1;
+                    isSubwayEntrance = true;
+                }
+                else{
+                    isSubwayEntrance = false;
+                }
+            }
+           
+        }
+    }
+} */
 void populateWayRoadType(){
             
     //Retrieves OSMNodes and calculate total distance, for each way
@@ -548,7 +829,7 @@ void drawFeatures(int feature_type, ezgl::renderer *g){
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click){
     //x_click and y_click are the world coordinates where the mouse was clicked
     //will convert to latlon then use find_closest_intersection
-    
+    std::cout << "x: " << x_click << "y: " << y_click << std::endl;
     LatLon lat_lon_click = LatLon(lat_from_y (y_click), lon_from_x (x_click));
     
     int closestInt_id = find_closest_intersection(lat_lon_click);
@@ -697,10 +978,6 @@ void draw_feature_names(ezgl::renderer *g){
                 
         if( getFeatureName(featureidx) != "<noname>")
             g->draw_text(FeatureCentroids.at(featureidx), getFeatureName(featureidx));
-
-//        std::cout << FeatureCentroids.at(featureidx).x<< "\n";
-
-        g->fill_rectangle(FeatureCentroids.at(featureidx), {FeatureCentroids.at(featureidx).x + 10, FeatureCentroids.at(featureidx).y + 10});
 
         //float width = max_width;
 
