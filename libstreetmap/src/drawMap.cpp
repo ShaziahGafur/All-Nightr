@@ -289,7 +289,7 @@ void draw_main_canvas (ezgl::renderer *g){
                         }
                         double segment_length = SegmentLengths[segmentID]; 
                         double screen_ratio = segment_length/scale_factor;
-                        if (screen_ratio < 15000){
+                        if (screen_ratio < 5000){
                             if (segmentInfo.oneWay){
                                 g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, direction_symbol, segmentLength, segmentLength);            
                             }
