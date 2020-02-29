@@ -24,6 +24,8 @@ std::unordered_map<OSMID, std::string> WayRoadType;
 //Vector --> key: Feature Type (e.g. 0 = Unknown, 1 = Park...) value: vector containing feature IDs
 std::vector<std::vector<int>> FeatureTypes;
 
+double scale_factor = 1;
+
 //average latitude of map, value set in draw_map_blank_canvas
 float latAvg; 
 //corners of the map, value set in draw_map
@@ -126,7 +128,7 @@ void draw_main_canvas (ezgl::renderer *g){
     //Determine the amount that screen is zoomed in 
     ezgl::rectangle zoom_rect = g->get_visible_world();
     double zoom = zoom_rect.width(); //width of zoom rectangle, converted into lat lon coordinates
-    double scale_factor = zoom/(max_lon - min_lon);//percentage of the full map shown in the window
+    scale_factor = zoom/(max_lon - min_lon);//percentage of the full map shown in the window
 //    std::cout<<"\nscale_factor: "<<scale_factor;
 //    std::cout<<"\nzoom: "<<zoom;
 
@@ -259,25 +261,26 @@ void draw_main_canvas (ezgl::renderer *g){
                 std::pair <double, double> xyFrom = latLonToCartesian(intersections[fromIntersection].position);
                 std::pair <double, double> xyTo = latLonToCartesian(intersections[toIntersection].position);
                 
-                if (enableDraw)
+                if (enableDraw){
                     g->draw_line({xyFrom.first, xyFrom.second}, {xyTo.first, xyTo.second});
+                    
+                    rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first)/DEGREE_TO_RADIAN;
+                    xMiddleOfSegment = 0.5*(xyFrom.first + xyTo.first);
+                    yMiddleOfSegment = 0.5*(xyFrom.second + xyTo.second);
                 
-                
-                rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first)/DEGREE_TO_RADIAN;
-                xMiddleOfSegment = 0.5*(xyFrom.first + xyTo.first);
-                yMiddleOfSegment = 0.5*(xyFrom.second + xyTo.second);
-                
-                if (rotationAngle > 90 ){
-                    rotationAngle = rotationAngle - 180;
+                    if (rotationAngle > 90 ){
+                        rotationAngle = rotationAngle - 180;
+                    }
+                    if (rotationAngle < -90){
+                        rotationAngle = rotationAngle + 180;
+                    }
+                    //draw text
+                    g->set_color (0, 0, 0, 255);   
+                    g->set_text_rotation(rotationAngle);
+                    g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
                 }
-                if (rotationAngle < -90){
-                    rotationAngle = rotationAngle + 180;
-                }
-                //draw text
-                g->set_color (0, 0, 0, 255);   
-                g->set_text_rotation(rotationAngle);
-                g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
                 g->set_text_rotation(0);
+                
             }
             else{//segment is curved
                 //first deal with all curves from segment's "from" intersection to the last curve point
@@ -332,11 +335,13 @@ void draw_main_canvas (ezgl::renderer *g){
       float width = 10;
       float height = width;
       
-       if (intersections[i].highlight)
+      if (intersections[i].highlight)
           g->set_color(ezgl::RED);
       else
           g->set_color(ezgl::BLUE);
-
+      
+      //for intersectioh id, get segs. Check seg's lowest threshold value
+      //for that threshold value, enable or disable drawing
       g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
     
     }
