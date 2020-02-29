@@ -189,8 +189,6 @@ void draw_main_canvas (ezgl::renderer *g){
     drawFeatures(Stream, g);
     drawFeatures(Unknown, g);
     
-    draw_feature_names(g);
-    
     //Drawing Streets
      //***********************************************************************************
     
@@ -205,9 +203,11 @@ void draw_main_canvas (ezgl::renderer *g){
             int numCurvePoints = segmentInfo.curvePointCount;
             segmentLength = find_street_segment_length(segmentID);
             std::string roadType = WayRoadType.at(segmentInfo.wayOSMID);
-                        
+            
+            //scale_factor used to set a variety of line widths and displays of roads    
+            
             if(roadType=="motorway"){
-                g->set_line_width (20);
+                g->set_line_width (10);
                 if (scale_factor >  0.3)
                     g->set_line_width (8);
                 g->set_color (232, 144, 160, 255);
@@ -300,22 +300,29 @@ void draw_main_canvas (ezgl::renderer *g){
                         g->set_color (0, 0, 0, 255);   
                         g->set_text_rotation(rotationAngle);
 
-                        std::string direction_symbol = ">";
+                        std::string direction_symbol = ">"; //symbol for one way street
                         if (segmentInfo.oneWay){
                             if (xyFrom.first > xyTo.first){
-                                direction_symbol = "<";
+                                direction_symbol = "<"; //reverse direction
                             }
                         }
                         double segment_length = SegmentLengths[segmentID]; 
-                        double screen_ratio = segment_length/scale_factor;
+                        double screen_ratio = segment_length/scale_factor; //screen_ratio is the available length of the street segment on screen. 
+                        //Greater screen_ratio = more reprinting of street name and arrows: < (for oneway streets)
+                        
+                        //only enough space to draw direction
                         if (screen_ratio < 5000){
                             if (segmentInfo.oneWay){
                                 g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, direction_symbol, segmentLength, segmentLength);            
                             }
                         }
+                        
+                        //only enough space to draw name
                         else if (screen_ratio < 20000){
                             g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);            
                         }
+                        
+                        //draw:  [direction] [name] [direction]
                         else if (screen_ratio < 30000){
                             g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);            
                             if (segmentInfo.oneWay){
@@ -323,6 +330,8 @@ void draw_main_canvas (ezgl::renderer *g){
                                 g->draw_text({(xMiddleOfSegment+xyTo.first)/2, (yMiddleOfSegment+xyTo.second)/2}, direction_symbol, segmentLength, segmentLength);
                             }
                         }
+                        
+                        //draw:  [direction] [name] [direction] [name] [direction] 
                         else if (screen_ratio < 50000){
                             g->draw_text({ (2*xMiddleOfSegment+xyFrom.first)/3, (2*yMiddleOfSegment+xyFrom.second)/3}, streetName, segmentLength, segmentLength); 
                             g->draw_text({ (2*xMiddleOfSegment+xyTo.first)/3, (2*yMiddleOfSegment+xyTo.second)/3}, streetName, segmentLength, segmentLength); 
@@ -334,7 +343,9 @@ void draw_main_canvas (ezgl::renderer *g){
 
                             }
                         }
-                        else{// if (screen_ratio < 70000){
+                        
+                         //draw:  [direction] [name] [direction] [name] [direction] [name] [direction] 
+                        else{
                             g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);            
                             g->draw_text({(xMiddleOfSegment+xyFrom.first)/2, (yMiddleOfSegment+xyFrom.second)/2}, streetName, segmentLength, segmentLength);
                             g->draw_text({(xMiddleOfSegment+xyTo.first)/2, (yMiddleOfSegment+xyTo.second)/2}, streetName, segmentLength, segmentLength);
@@ -351,9 +362,9 @@ void draw_main_canvas (ezgl::renderer *g){
                 }
                 g->set_text_rotation(0);
             }
-            else{
+            else{//segment is curved
                 if(enableDraw){
-                    //segment is curved
+                    
                     //first deal with all curves from segment's "from" intersection to the last curve point
 
                     //first curve of the segment
@@ -389,34 +400,16 @@ void draw_main_canvas (ezgl::renderer *g){
                 }
             }
         }
-    }  
+    }     
 
-//    //Drawing Intersections
-//    for(size_t i = 0; i < intersections.size(); ++i){
-//
-//      double x = intersections[i].position.lon();
-//      double y = intersections[i].position.lat();
-//
-//      //must convert lat lon values to cartesian (refer to tutorial slides)
-//      x = x_from_lon(x);
-//      y = y_from_lat(y);
-//     
-//      float width = 10;
-//      float height = width;
-//      
-//       if (intersections[i].highlight)
-//          g->set_color(ezgl::RED);
-//      else
-//          g->set_color(ezgl::BLUE);
-//
-//      g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
-//    
-//    }
-//    
-
-    
+    draw_feature_names(g);
+     
     //Draw POIs
     //***********************************************************************************
+    
+    bool enable_poi = true;
+    if (scale_factor > 0.5)
+        enable_poi = false;
     
     //Extract vectors from PointsOfInterest vector to make it easier to parse through each type separately
     std::vector<poiStruct> police = PointsOfInterest[0];
@@ -438,7 +431,8 @@ void draw_main_canvas (ezgl::renderer *g){
         poiName = poiData.Name;
         
         g->set_color (ezgl::BLACK);
-        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName);
+        if (enable_poi)
+            g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName);
         
         it++;
     }
@@ -451,7 +445,8 @@ void draw_main_canvas (ezgl::renderer *g){
         poiName = poiData.Name;
         
         g->set_color (ezgl::BLACK);
-        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        if (enable_poi)
+            g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
         
         it++;
     }
@@ -464,7 +459,8 @@ void draw_main_canvas (ezgl::renderer *g){
         poiName = poiData.Name;
         
         g->set_color (ezgl::BLACK);
-        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        if (enable_poi)
+            g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
         
         it++;
     }
@@ -981,7 +977,7 @@ void draw_feature_names(ezgl::renderer *g){
 
     for( int featureidx = 0;  featureidx < getNumFeatures(); featureidx++){
                 
-        if( getFeatureName(featureidx) != "<noname>")
+        if( getFeatureName(featureidx) != "<noname>" && (scale_factor < 0.10))
             g->draw_text(FeatureCentroids.at(featureidx), getFeatureName(featureidx));
 
         //float width = max_width;
