@@ -133,7 +133,7 @@ void draw_main_canvas (ezgl::renderer *g){
 //    std::cout<<"\nzoom: "<<zoom;
 
     //Variables
-    float rotationAngle, xMiddleOfSegment, yMiddleOfSegment, segmentLength;
+    float rotationAngle, xMiddleOfSegment, yMiddleOfSegment, segmentLength, xPosition, yPosition;
     std::string streetName;
     
     //Drawing Backgrounds
@@ -277,7 +277,61 @@ void draw_main_canvas (ezgl::renderer *g){
                     //draw text
                     g->set_color (0, 0, 0, 255);   
                     g->set_text_rotation(rotationAngle);
-                    g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);
+                    xPosition =  xyFrom.first;
+                    yPosition =  xyFrom.second;
+//                    g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);            
+//                    g->draw_text({xPosition, yPosition}, streetName, segmentLength, segmentLength);
+                    
+                    std::string direction_symbol = ">";
+                    if (segmentInfo.oneWay){
+                        if (xyFrom.first > xyTo.first){
+                            direction_symbol = "<";
+                        }
+                    }
+                    double segment_length = SegmentLengths[segmentID]; 
+                    double screen_ratio = segment_length/scale_factor;
+                    if (screen_ratio < 15000){
+                        if (segmentInfo.oneWay){
+                            g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, direction_symbol, segmentLength, segmentLength);            
+
+                        }
+                    }
+                    else if (screen_ratio < 20000){
+                        g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);            
+                    }
+                    else if (screen_ratio < 30000){
+                        g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);            
+                        if (segmentInfo.oneWay){
+                            g->draw_text({(xMiddleOfSegment+xyFrom.first)/2, (yMiddleOfSegment+xyFrom.second)/2}, direction_symbol, segmentLength, segmentLength);
+                            g->draw_text({(xMiddleOfSegment+xyTo.first)/2, (yMiddleOfSegment+xyTo.second)/2}, direction_symbol, segmentLength, segmentLength);
+                        }
+                    }
+                    else if (screen_ratio < 50000){
+                        g->draw_text({ (2*xMiddleOfSegment+xyFrom.first)/3, (2*yMiddleOfSegment+xyFrom.second)/3}, streetName, segmentLength, segmentLength); 
+                        g->draw_text({ (2*xMiddleOfSegment+xyTo.first)/3, (2*yMiddleOfSegment+xyTo.second)/3}, streetName, segmentLength, segmentLength); 
+                        
+                        if (segmentInfo.oneWay){
+                            g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, direction_symbol, segmentLength, segmentLength);         
+                            g->draw_text({ (((2*xMiddleOfSegment+xyFrom.first)/3)+xyFrom.first)/2, (((2*yMiddleOfSegment+xyFrom.second)/3)+xyFrom.second)/2}, direction_symbol, segmentLength, segmentLength); 
+                            g->draw_text({ (((2*xMiddleOfSegment+xyTo.first)/3)+xyTo.first)/2, (((2*yMiddleOfSegment+xyTo.second)/3)+xyTo.second)/2}, direction_symbol, segmentLength, segmentLength); 
+
+                        }
+                    }
+                    else{// if (screen_ratio < 70000){
+                        g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);            
+                        g->draw_text({(xMiddleOfSegment+xyFrom.first)/2, (yMiddleOfSegment+xyFrom.second)/2}, streetName, segmentLength, segmentLength);
+                        g->draw_text({(xMiddleOfSegment+xyTo.first)/2, (yMiddleOfSegment+xyTo.second)/2}, streetName, segmentLength, segmentLength);
+
+                        if (segmentInfo.oneWay){
+                          g->draw_text({(((xMiddleOfSegment+xyFrom.first)/2)+xyFrom.first)/2, (((yMiddleOfSegment+xyFrom.second)/2)+xyFrom.second)/2}, direction_symbol, segmentLength, segmentLength);         
+                          g->draw_text({(((xMiddleOfSegment+xyFrom.first)/2)+xMiddleOfSegment)/2, (((yMiddleOfSegment+xyFrom.second)/2)+yMiddleOfSegment)/2}, direction_symbol, segmentLength, segmentLength);         
+                          g->draw_text({(((xMiddleOfSegment+xyTo.first)/2)+xMiddleOfSegment)/2, (((yMiddleOfSegment+xyTo.second)/2)+yMiddleOfSegment)/2}, direction_symbol, segmentLength, segmentLength);         
+                          g->draw_text({(((xMiddleOfSegment+xyTo.first)/2)+xyTo.first)/2, (((yMiddleOfSegment+xyTo.second)/2)+xyTo.second)/2}, direction_symbol, segmentLength, segmentLength);         
+
+                        }
+                    }
+//                    if (getStreetName(segmentInfo.streetID)=="McGill Street")
+//                        std::cout<<screen_ratio<<"\n";
                 }
                 g->set_text_rotation(0);
                 
