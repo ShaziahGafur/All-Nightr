@@ -117,14 +117,12 @@ void draw_map_blank_canvas (){
 
 void draw_main_canvas (ezgl::renderer *g){
     
+    //Determine the amount that screen is zoomed in 
     ezgl::rectangle zoom_rect = g->get_visible_world();
-    double zoom = zoom_rect.width();
-    double scale = max_lon - min_lon;
-    double scale_factor = zoom/scale;
+    double zoom = zoom_rect.width(); //width of zoom rectangle, converted into lat lon coordinates
+    double scale_factor = zoom/(max_lon - min_lon);//percentage of the full map shown in the window
 //    std::cout<<"\nscale_factor: "<<scale_factor;
-//    std::cout<<"\nmax lon: "<<max_lon<<"\tmin lon: "<<min_lon;
 //    std::cout<<"\nzoom: "<<zoom;
-//    std::cout<<"\nscale: "<<scale;
 
     //Variables
     float rotationAngle, xMiddleOfSegment, yMiddleOfSegment, segmentLength;
@@ -229,7 +227,7 @@ void draw_main_canvas (ezgl::renderer *g){
             if(roadType=="motorway"){
                 g->set_line_width (20);
                 if (scale_factor >  0.3)
-                    g->set_line_width (15);
+                    g->set_line_width (8);
                 g->set_color (232, 144, 160, 255);
                 g->set_line_dash(ezgl::line_dash::none);
             }
@@ -239,7 +237,7 @@ void draw_main_canvas (ezgl::renderer *g){
                 if (scale_factor >  0.18)
                     g->set_line_width (10);
                 if (scale_factor >  0.3)
-                    g->set_line_width (8);
+                    g->set_line_width (7);
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="primary"){
@@ -258,14 +256,16 @@ void draw_main_canvas (ezgl::renderer *g){
                 if (scale_factor >  0.18)
                     g->set_line_width (8);
                 if (scale_factor >  0.3)
-                    g->set_line_width (6);
+                    g->set_line_width (4);
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="tertiary"){
                 if (scale_factor > 0.30)
                     enableDraw = false;
                 g->set_color (255, 255, 255, 255);
-                g->set_line_width (10);
+                g->set_line_width (8);
+                if (scale_factor >  0.18)
+                    g->set_line_width (4);
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="residential"){
@@ -285,7 +285,9 @@ void draw_main_canvas (ezgl::renderer *g){
             else{
                 if (scale_factor > 0.30)
                     enableDraw = false;
-                g->set_line_width (5);
+                g->set_line_width (8);
+                if (scale_factor >  0.18)
+                    g->set_line_width (4);
                 g->set_color (255, 255, 255, 255);
                 g->set_line_dash(ezgl::line_dash::none);
             }     
