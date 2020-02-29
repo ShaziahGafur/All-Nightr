@@ -34,6 +34,9 @@ extern std::unordered_map<OSMID, double> OSMWay_lengths;
 //Determines the road type (e.g. residential, motorway, primary) from a way's OSMID
 extern std::unordered_map<OSMID, std::string> WayRoadType;
 
+//Vector --> key: Feature Type (e.g. 0 = Unknown, 1 = Park...) value: vector containing feature IDs
+extern std::vector<std::vector<int>> FeatureTypes;
+
 //Vector --> key: [feature ID] value: [Area]
 extern std::vector<double> FeatureAreaVector;
 
