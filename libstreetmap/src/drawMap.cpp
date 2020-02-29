@@ -899,11 +899,11 @@ int intersectionThresrhold(int interIndex){
     for (int i = 0; i < IntersectionStreetSegments[interIndex].size(); i++){
         InfoStreetSegment segInfo = getInfoStreetSegment(IntersectionStreetSegments[interIndex][i]);
         std::string roadType = WayRoadType.at(segInfo.wayOSMID);
-        if (roadType =="motorway"||roadType =="trunk"||roadType =="primary"||roadType =="secondary")
+        if (roadType =="motorway"||roadType =="trunk"||roadType =="primary"||roadType =="secondary") //significant roads always show on map
             return 1;
         else if (roadType!="residential"||roadType!="unclassified"){ //either tertiary or unknown 
             if (threshold==2)
-                threshold = 1;
+                threshold = 1; //most significant is tertiary/unknown
         }   
     }
     return threshold;
