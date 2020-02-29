@@ -395,7 +395,7 @@ void draw_main_canvas (ezgl::renderer *g){
         
         //Problem: won't actually draw any text.
         g->set_color (ezgl::BLACK);
-        std::cout << xyCoordinates.first << xyCoordinates.second << subwayName << std::endl;
+//        std::cout << xyCoordinates.first << xyCoordinates.second << subwayName << std::endl;
         g->draw_text({xyCoordinates.first, xyCoordinates.second}, subwayName);
         
         it++;

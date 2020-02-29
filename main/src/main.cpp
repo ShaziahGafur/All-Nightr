@@ -30,7 +30,9 @@ constexpr int ERROR_EXIT_CODE = 1;          //An error occured
 constexpr int BAD_ARGUMENTS_EXIT_CODE = 2;  //Invalid command-line usage
 
 //The default map to load if none is specified
-std::string default_map_path = "/cad2/ece297s/public/maps/toronto_canada.streets.bin";
+std::string default_map_path = "toronto_canada";
+std::string path_directory = "/cad2/ece297s/public/maps/";
+std::string file_type = ".streets.bin";
 
 int main(int argc, char** argv) {
     
@@ -49,13 +51,13 @@ int main(int argc, char** argv) {
     }
 
     //Load the map and related data structures
-    bool load_success = load_map(map_path);
+    bool load_success = load_map(path_directory + map_path + file_type);
     if(!load_success) {
-        std::cerr << "Failed to load map '" << map_path << "'\n";
+        std::cerr << "Failed to load map '" << path_directory<<map_path<<file_type<< "'\n";
         return ERROR_EXIT_CODE;
     }
 
-    std::cout << "Successfully loaded map '" << map_path << "'\n";
+    std::cout << "Successfully loaded map '" <<path_directory<<map_path<<file_type<< "'\n";
 
     //You can now do something with the map data
     //Clean-up the map data and related data structures
