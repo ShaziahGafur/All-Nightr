@@ -121,7 +121,7 @@ void draw_main_canvas (ezgl::renderer *g){
 //    std::cout<<"\nmax lon: "<<max_lon<<"\tmin lon: "<<min_lon;
 //    std::cout<<"\nzoom: "<<zoom;
 //    std::cout<<"\nscale: "<<scale;
->>>>>>> be8d7b509eeda0b35b98b7bf0b47592e13b2aa48
+
     //Variables
     float rotationAngle, xMiddleOfSegment, yMiddleOfSegment, segmentLength;
     std::string streetName;
