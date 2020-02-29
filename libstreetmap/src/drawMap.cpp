@@ -50,6 +50,7 @@ void populateWayRoadType();
 void populateFeatureTypes();
 void drawFeatures(int feature_type, ezgl::renderer *g);
 void draw_intersections();  
+int intersectionThresrhold(int interIndex);
 
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click);
 void find_button(GtkWidget *widget, ezgl::application *application);
@@ -400,9 +401,10 @@ void draw_main_canvas (ezgl::renderer *g){
         
         it++;
     }
-    
+     std::cout<<scale_factor<<"<-s f\n";
     //Drawing Intersections
     for(size_t i = 0; i < intersections.size(); ++i){
+      bool enableDraw = false;
 
       double x = intersections[i].position.lon();
       double y = intersections[i].position.lat();
@@ -411,7 +413,22 @@ void draw_main_canvas (ezgl::renderer *g){
       x = x_from_lon(x);
       y = y_from_lat(y);
      
-      float width = 10;
+      int threshold = intersectionThresrhold(i);
+      if (threshold==0||(threshold==1&&scale_factor <= 0.30)||(scale_factor <=0.05) )
+          enableDraw = true;
+      else 
+          enableDraw = false;
+      
+      float width;
+      if (scale_factor > 0.30)
+          width =  10;
+      else if (scale_factor > 0.20)
+          width =  6;
+      else if (scale_factor > 0.10)
+          width =  4;
+      else //if (scale_factor < 0.10)
+          width =  2;
+      
       float height = width;
       
       if (intersections[i].highlight)
@@ -421,7 +438,8 @@ void draw_main_canvas (ezgl::renderer *g){
       
       //for intersectioh id, get segs. Check seg's lowest threshold value
       //for that threshold value, enable or disable drawing
-      g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
+      if (enableDraw)
+        g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
     
     }
     
@@ -690,12 +708,24 @@ void find_button(GtkWidget* widget, ezgl::application *application){
 
     //convert string into a stream
     std::istringstream iss(text);
-
+    if (text==NULL){
+        std::cout<<"Empty Find parameters\n";
+        return;
+    }
+       
     //get street names to be used find function
     iss >> street1; 
     //std::cout << street1 << "\n";
     std::getline(iss, street2);
+    std::cout<<"street2 is: "<<street2;
     street2 = street2.substr(street2.find("and") + 4); 
+//    if (street2.find(" & ")< street2.length()){ //found an & in the string
+//        iss >> street2;  
+//        std::getline(iss, street2);
+//    }
+//    else{
+//         street2 = street2.substr(street2.find("and") + 4); //
+//    }
     //std::cout << street2 << "\n";
 
     
@@ -703,10 +733,12 @@ void find_button(GtkWidget* widget, ezgl::application *application){
     std::vector<int> street_ids_1 = find_street_ids_from_partial_street_name(street1);
     std::vector<int> street_ids_2 = find_street_ids_from_partial_street_name(street2);
     
+    int street1_remaining_id = 0;
+    int street2_remaining_id = 0;
     //nested for-loop which finds intersections between all streetId's returned by partial_street_name function
     //outer for-loop looks through all matches in 
+
     for(int i = 0; i < street_ids_1.size() && (streetIntersections.empty() == true); i++){
-        
         for(int j = 0; j < street_ids_2.size() && (streetIntersections.empty() == true) ; j++){
             
             //load twoStreets pair
@@ -715,20 +747,69 @@ void find_button(GtkWidget* widget, ezgl::application *application){
             twoStreets.second = street_ids_2[j];
 
             streetIntersections = find_intersections_of_two_streets(twoStreets);
-    
+            street2_remaining_id++;
         }
+        
+        street1_remaining_id++; //holds record of the index
     }
+    //an un empty streetIntersections vector indicates that common intersections were found for the predicted streets
     
     //std::pair<int, int> twoStreets(street_ids_1[0], street_ids_2[0]);
     
     //std::vector<int> streetIntersections = find_intersections_of_two_streets(twoStreets);
     
+    std::string intersectionNames = "";
+        
     for(int i = 0; i < streetIntersections.size(); i++){
         intersections[streetIntersections[i]].highlight = true;
+        intersectionNames+=getIntersectionName(streetIntersections[i]);
+        if (i+1!=streetIntersections.size())
+            intersectionNames+=", ";
     //    std::cout << intersections[streetIntersections[i]].name << "\n";
     }
-     
+    
+    //Suggested Street names'  
+    std::string suggested_streets = "";
+    
+    for(int i = street1_remaining_id; i < street_ids_1.size(); i++){
+        for(int j = street2_remaining_id; j < street_ids_2.size(); j++){
+
+            //load twoStreets pair
+            twoStreets.first = street_ids_1[i];
+
+            twoStreets.second = street_ids_2[j];
+            streetIntersections = find_intersections_of_two_streets(twoStreets);
+            if (streetIntersections.empty()==false){
+                
+                for(int k = 0; k < streetIntersections.size(); k++){
+                    suggested_streets+=getStreetName(twoStreets.first)+" & "+getStreetName(twoStreets.second)+"\n";
+                }
+            }
+        }
+    }
+    
+    if (suggested_streets!=""){
+        std::cout<<"\nDid you mean?\n\n";
+        std::cout<<suggested_streets;
+    }
+    
+    application->update_message (intersectionNames); 
     // Redraw the graphics
     application->refresh_drawing();
 }
 
+//Based on the segments touching the street, returns the highest zoom threshold value (0 = highest threshold, 1 = medium threshold, 2 = lowest threshold) 
+int intersectionThresrhold(int interIndex){
+    int threshold=2;
+    for (int i = 0; i < IntersectionStreetSegments[interIndex].size(); i++){
+        InfoStreetSegment segInfo = getInfoStreetSegment(IntersectionStreetSegments[interIndex][i]);
+        std::string roadType = WayRoadType.at(segInfo.wayOSMID);
+        if (roadType =="motorway"||roadType =="trunk"||roadType =="primary"||roadType =="secondary")
+            return 1;
+        else if (roadType!="residential"||roadType!="unclassified"){ //either tertiary or unknown 
+            if (threshold==2)
+                threshold = 1;
+        }   
+    }
+    return threshold;
+}
