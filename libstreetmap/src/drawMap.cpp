@@ -395,20 +395,7 @@ double lat_from_y (double y){
     //convert LatLon points into x y coordinates
     return y / (DEGREE_TO_RADIAN * EARTH_RADIUS_METERS);
 }
-void populatePointsOfInterestType(){
-    
-    //Retrieve OSMNodes
-    for (unsigned i = 0; i < getNumberOfNodes(); i++){
-        //make pointer to access node's OSMID
-        const OSMNode* nodePtr = getNodeByIndex(i);
-        
-        std::string key, value;
-        
-        for (int j = 0; j < getTagCount(nodePtr); j++){
-            std::tie(key)
-        }
-    }
-}
+
 void populateWayRoadType(){
             
     //Retrieves OSMNodes and calculate total distance, for each way
