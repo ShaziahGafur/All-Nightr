@@ -10,7 +10,7 @@
 #include <map> 
 #include <unordered_map> 
 #include "streetStruct.h"
-#include "subwayStruct.h"
+#include "poiStruct.h"
 #include <bits/stdc++.h>
 #include <iostream>
 #include <vector>
@@ -50,7 +50,7 @@ extern std::unordered_map<OSMID, std::string> WayRoadType;
 extern std::vector<std::vector<int>> FeatureTypes;
 
 //Hashtable --> key: [OSMID Node] value: [struct with xy coordinates and name]
-extern std::unordered_map<OSMID, subwayStruct> publicTransportation;
+//extern std::unordered_map<OSMID, subwayStruct> publicTransportation;
 
 //Vector --> key: [feature ID] value: [Area]
 extern std::vector<double> FeatureAreaVector;
