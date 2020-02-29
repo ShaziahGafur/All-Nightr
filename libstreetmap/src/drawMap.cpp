@@ -7,14 +7,13 @@
 #include "ezgl/graphics.hpp"
 #include "ezgl/point.hpp"
 #include "intersection_data.h"
-#include "subwayStruct.h"
-#include "subwayStruct.cpp"
+#include "poiStruct.h"
+#include "poiStruct.cpp"
 #include <vector>
 #include <string>
 #include <cmath>
 #include <iostream>
 #include <sstream>
-
 
 /************  GLOBAL VARIABLES  *****************/
 //Vector --> key: [intersection ID] value: [intersection_data struct]
@@ -23,13 +22,17 @@ std::vector<intersection_data> intersections;
 //Hashtable --> key: [OSMway] value: [road type]
 std::unordered_map<OSMID, std::string> WayRoadType;
 
-//Hashtable --> key: [OSMID Node] value: [struct with xy coordinates and name]
-std::unordered_map<OSMID, subwayStruct> publicTransportation;
+//Hashtable --> key: [feature id (POLYGONS ONLY)] value: [centroid (x,y)]
+std::unordered_map< int, ezgl::point2d > FeatureCentroids;
+
+//Vector --> key: [type], value = vector of names/structs
+std::vector<std::vector<poiStruct>> PointsOfInterest (4);
 
 //Vector --> key: Feature Type (e.g. 0 = Unknown, 1 = Park...) value: vector containing feature IDs
 std::vector<std::vector<int>> FeatureTypes;
 
 double scale_factor = 1;
+
 
 //average latitude of map, value set in draw_map_blank_canvas
 float latAvg; 
@@ -46,11 +49,19 @@ double lon_from_x (double x);
 double lat_from_y (double x);
 
 void populatePointsOfInterestType();
+void populatePointsOfInterest();
 void populateWayRoadType();
 void populateFeatureTypes();
+void populateFeatureCentoids();
 void drawFeatures(int feature_type, ezgl::renderer *g);
 void draw_intersections();  
 int intersectionThresrhold(int interIndex);
+
+void draw_feature_names(ezgl::renderer *g);
+ezgl::point2d compute2DPolygonCentroid(std::vector<ezgl::point2d> &vertices, int vertexCount, double area);
+ezgl::point2d find_PolyLine_Middle(int featureId);
+double feature_max_width (int numPoints, int featureId);
+
 
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click);
 void find_button(GtkWidget *widget, ezgl::application *application);
@@ -67,9 +78,10 @@ double x_from_lon (double lon);
 
 
 void draw_map(){
+
     populateWayRoadType();
     populateFeatureTypes();
-    populatePointsOfInterestType();
+    populatePointsOfInterest();
     draw_map_blank_canvas();
 }
 void draw_map_blank_canvas (){       
@@ -79,7 +91,7 @@ void draw_map_blank_canvas (){
     settings.canvas_identifier = "MainCanvas";
 
     ezgl::application application(settings);
-
+    
     
    //find the maximum and minimum intersections of the map
     max_lat = getIntersectionPosition(0).lat(); 
@@ -124,8 +136,7 @@ void draw_map_blank_canvas (){
     max_lon = x_from_lon(max_lon);
     max_lat = y_from_lat(max_lat);
    
-    ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat}); //keep this initial_world version (refer to tutorial slides)
-    //  ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat});
+    ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat}); 
     
     application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
     application.run(initial_setup,act_on_mouse_click,NULL,NULL);
@@ -147,10 +158,10 @@ void draw_main_canvas (ezgl::renderer *g){
     
     //Drawing Backgrounds
     //***********************************************************************************
-    g->draw_rectangle({min_lon, min_lat},{max_lon, max_lat});
-    g->set_color (225, 230, 234, 255);
-    g->fill_rectangle({min_lon,min_lat}, {max_lon, max_lat});
-    
+//    g->draw_rectangle({min_lon, min_lat},{max_lon, max_lat});
+//    g->set_color (225, 230, 234, 255);
+//    g->fill_rectangle({min_lon,min_lat}, {max_lon, max_lat});
+//    
    //Drawing Features
     //***********************************************************************************
     
@@ -178,6 +189,8 @@ void draw_main_canvas (ezgl::renderer *g){
     drawFeatures(River, g);
     drawFeatures(Stream, g);
     drawFeatures(Unknown, g);
+    
+    draw_feature_names(g);
     
     //Drawing Streets
      //***********************************************************************************
@@ -378,26 +391,85 @@ void draw_main_canvas (ezgl::renderer *g){
             }
         }
     }  
+
+//    //Drawing Intersections
+//    for(size_t i = 0; i < intersections.size(); ++i){
+//
+//      double x = intersections[i].position.lon();
+//      double y = intersections[i].position.lat();
+//
+//      //must convert lat lon values to cartesian (refer to tutorial slides)
+//      x = x_from_lon(x);
+//      y = y_from_lat(y);
+//     
+//      float width = 10;
+//      float height = width;
+//      
+//       if (intersections[i].highlight)
+//          g->set_color(ezgl::RED);
+//      else
+//          g->set_color(ezgl::BLUE);
+//
+//      g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
+//    
+//    }
+//    
+
     
-    //Draw Subway Stations
+    //Draw POIs
     
-    // increment through OSMID's to draw text for each station entrance
-    std::unordered_map<OSMID, subwayStruct>::iterator it = publicTransportation.begin();
+    // increment through OSMID's to draw text and symbol for police station
+    std::vector<poiStruct> police = PointsOfInterest[0];
+    std::vector<poiStruct> hospitals = PointsOfInterest[1];
+    std::vector<poiStruct> fire_station = PointsOfInterest[2];
+    std::vector<poiStruct> subway_stations = PointsOfInterest[3];
+    std::vector<poiStruct>::iterator it = police.begin();
     
-    //variables to extract subway struct
-    subwayStruct subwayData;
+    //variables to extract poi struct
+    poiStruct poiData;
     std::pair<double,double> xyCoordinates;
-    std::string subwayName;
+    std::string poiName;
     
-    while(it != publicTransportation.end()){
-        subwayData = it->second;
-        xyCoordinates = subwayData.xyCoordinates;
-        subwayName = subwayData.subwayName;
+    while(it != police.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
         
-        //Problem: won't actually draw any text.
         g->set_color (ezgl::BLACK);
-//        std::cout << xyCoordinates.first << xyCoordinates.second << subwayName << std::endl;
-        g->draw_text({xyCoordinates.first, xyCoordinates.second}, subwayName);
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName);
+        
+        it++;
+    }
+    it = hospitals.begin();
+    while(it != hospitals.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
+        
+        g->set_color (ezgl::BLACK);
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        
+        it++;
+    }
+    it = fire_station.begin();
+    while(it != fire_station.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
+        
+        g->set_color (ezgl::BLACK);
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        
+        it++;
+    }
+    it = subway_stations.begin();
+    while(it != subway_stations.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
+        
+        g->set_color (ezgl::BLACK);
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
         
         it++;
     }
@@ -436,13 +508,13 @@ void draw_main_canvas (ezgl::renderer *g){
       else
           g->set_color(ezgl::BLUE);
       
-      //for intersectioh id, get segs. Check seg's lowest threshold value
+      //for intersection id, get segs. Check seg's lowest threshold value
       //for that threshold value, enable or disable drawing
       if (enableDraw)
         g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
     
     }
-    
+
 }
 
 std::pair < double, double > latLonToCartesian (LatLon latLonPoint){
@@ -473,6 +545,80 @@ double lat_from_y (double y){
     return y / (DEGREE_TO_RADIAN * EARTH_RADIUS_METERS);
 }
 
+
+void populatePointsOfInterest(){
+    
+    //store value and name of POI
+    std::string value, name;
+    poiStruct poiData;
+    LatLon latlon;
+    std::pair<double, double> xy;
+    double x, y;
+    std::vector<poiStruct> police, hospital, fire_station, subway_entrances;
+    //iterate through points of interest using layer 1
+    for (unsigned poiIterator = 0; poiIterator < getNumPointsOfInterest(); poiIterator++){
+        value = getPointOfInterestType(poiIterator);
+        
+        if (value == "police"){
+            name = getPointOfInterestName(poiIterator);
+            latlon = getPointOfInterestPosition(poiIterator);
+            
+            //conversion to cartesian
+            x = 2449241 + x_from_lon (latlon.lon());
+            y = y_from_lat (latlon.lat());
+            xy = std::make_pair(x,y);
+            poiData.addName(name);
+            poiData.addXYCoordinates(xy);
+            
+            police.push_back(poiData);
+        }
+        else if (value == "hospital"){
+            name = getPointOfInterestName(poiIterator);
+            latlon = getPointOfInterestPosition(poiIterator);
+            
+            x = 2449241 + x_from_lon (latlon.lon());
+            y = y_from_lat (latlon.lat());
+            xy = std::make_pair(x,y);
+            
+            poiData.addName(name);
+            poiData.addXYCoordinates(xy);
+            
+            hospital.push_back(poiData);
+        }
+        else if (value == "fire_station"){
+            name = getPointOfInterestName(poiIterator);
+            latlon = getPointOfInterestPosition(poiIterator);
+            
+            x = 2449241 + x_from_lon (latlon.lon());
+            y = y_from_lat (latlon.lat());
+            xy = std::make_pair(x,y);
+            
+            poiData.addName(name);
+            poiData.addXYCoordinates(xy);
+            
+            fire_station.push_back(poiData);
+        }
+        else if (value == "subway_entrance"){
+            name = getPointOfInterestName(poiIterator);
+            latlon = getPointOfInterestPosition(poiIterator);
+            
+            x = 2449241 + x_from_lon (latlon.lon());
+            y = y_from_lat (latlon.lat());
+            xy = std::make_pair(x,y);
+            
+            poiData.addName(name);
+            poiData.addXYCoordinates(xy);
+            
+            subway_entrances.push_back(poiData);
+        }
+    }
+    
+    PointsOfInterest[0] = police;
+    PointsOfInterest[1] = hospital;
+    PointsOfInterest[2] = fire_station;
+    PointsOfInterest[3] = subway_entrances;
+}
+/*
 void populatePointsOfInterestType(){
     
    //bool to check if a node has railway as key and subway_entrance as value
@@ -506,7 +652,7 @@ void populatePointsOfInterestType(){
                     //convert node coordinates to xy cartesian
                     LatLon subwayEntrance = getNodeCoords(nodePtr);
                     subwayXY = latLonToCartesian(subwayEntrance);
-                    
+                    double x = x_from_lon(subwayEntrance.lon());
                     subwayStruct subStruct;
                     subStruct.addSubwayName (value);
                     subStruct.addXYCoordinates (subwayXY);
@@ -534,7 +680,7 @@ void populatePointsOfInterestType(){
            
         }
     }
-}
+} */
 void populateWayRoadType(){
             
     //Retrieves OSMNodes and calculate total distance, for each way
@@ -634,22 +780,27 @@ void drawFeatures(int feature_type, ezgl::renderer *g){
 
         // If the first point and the last point (getFeaturePointCount-1) are NOT the same location, the feature is a polyline
         if (FeatureAreaVector[featureId] == 0) {
+//            
+//            //iterate through feature points to get (x,y) coordinates  in order to draw the polyline)
+//            for (unsigned featurePointId = 1; featurePointId < numOfFeaturePoints; featurePointId++){
+//                //Declare and initialize adjacent LatLon points
+//                LatLon previousPoint = getFeaturePoint(featurePointId-1, featureId);
+//                LatLon nextPoint = getFeaturePoint(featurePointId, featureId);
+//            
+//                //convert LatLon points into x y coordinates
+//                std::pair<double,double> xyPrevious = latLonToCartesian(previousPoint);
+//                std::pair<double,double> xyNext = latLonToCartesian(nextPoint);
+//
+//                //draw line between feature points
+//                g->set_line_width(3);
+//                g->draw_line({xyPrevious.first , xyPrevious.second}, {xyNext.first, xyNext.second});
+//            }
+                  
+              //insert feature centre point into FeatureCentroids hashtable
+              FeatureCentroids.insert({featureId , find_PolyLine_Middle(featureId)});
             
-            //iterate through feature points to get (x,y) coordinates  in order to draw the polyline)
-            for (unsigned featurePointId = 1; featurePointId < numOfFeaturePoints; featurePointId++){
-                //Declare and initialize adjacent LatLon points
-                LatLon previousPoint = getFeaturePoint(featurePointId-1, featureId);
-                LatLon nextPoint = getFeaturePoint(featurePointId, featureId);
-            
-                //convert LatLon points into x y coordinates
-                std::pair<double,double> xyPrevious = latLonToCartesian(previousPoint);
-                std::pair<double,double> xyNext = latLonToCartesian(nextPoint);
-
-                //draw line between feature points
-                g->set_line_width(3);
-                g->draw_line({xyPrevious.first , xyPrevious.second}, {xyNext.first, xyNext.second});
-            }
         }
+        //otherwise, it is a polygon area
         else{
             std::vector<ezgl::point2d> points_xy_coordinates;
             
@@ -660,10 +811,36 @@ void drawFeatures(int feature_type, ezgl::renderer *g){
                 std::pair <double,double> featurePoints = latLonToCartesian(getFeaturePoint(featurePointId, featureId));
 
                 points_xy_coordinates.push_back(ezgl::point2d(featurePoints.first, featurePoints.second));
+                
+                //insert feature centre point into FeatureCentroids hashtable       
+                FeatureCentroids.insert({featureId , compute2DPolygonCentroid(points_xy_coordinates, numOfFeaturePoints, FeatureAreaVector[featureId])});
+                
             }
             
-       //     ezgl function which takes a vector<point2d> (i.e (x,y) coordinates for each point that defines the feature outline)
+            //ezgl function which takes a vector<point2d> (i.e (x,y) coordinates for each point that defines the feature outline)
             g->fill_poly(points_xy_coordinates);
+            //draw feature name in centre of polygon
+            //g->set_color (0, 0, 0, 255);   
+//            g->set_color (ezgl:: BLACK);   
+//            
+//            g->set_text_rotation(0);
+
+//            
+//            double max_width = feature_max_width (numOfFeaturePoints, featureId);
+//            
+//            //std::cout << "max_width " << max_width << "\n";
+//            
+//            //std::cout << feature_centroid.x << feature_centroid.y << "\n";
+//            
+//            if( getFeatureName(featureId) != "<noname>")
+//                g->draw_text(feature_centroid, getFeatureName(featureId), max_width, max_width);
+//            
+//  
+//            g->fill_rectangle({feature_centroid.x,feature_centroid.y}, {feature_centroid.x + 10, feature_centroid.y + 10});
+//  
+            //float width = max_width;
+
+            //g->fill_rectangle({feature_centroid.x-(width/2),feature_centroid.y-(width/2)}, {feature_centroid.x + (width/2), feature_centroid.y + (width/2)});
         }
     }
     
@@ -672,7 +849,7 @@ void drawFeatures(int feature_type, ezgl::renderer *g){
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click){
     //x_click and y_click are the world coordinates where the mouse was clicked
     //will convert to latlon then use find_closest_intersection
-    
+    std::cout << "x: " << x_click << "y: " << y_click << std::endl;
     LatLon lat_lon_click = LatLon(lat_from_y (y_click), lon_from_x (x_click));
     
     int closestInt_id = find_closest_intersection(lat_lon_click);
@@ -812,4 +989,101 @@ int intersectionThresrhold(int interIndex){
         }   
     }
     return threshold;
+}
+//vertices are the feature points in xy coordinates, vertexCount = number of feature points
+ezgl::point2d compute2DPolygonCentroid(std::vector< ezgl::point2d > & vertices, int vertexCount, double area)
+{
+    ezgl::point2d centroid(0, 0);
+    double x0 = 0.0; // Current vertex X
+    double y0 = 0.0; // Current vertex Y
+    double x1 = 0.0; // Next vertex X
+    double y1 = 0.0; // Next vertex Y
+    double a = 0.0;  //multiplication factor (xi*yi+1 - xi+1yi))
+
+    // For all vertices
+    for (int i = 0; (i+1) < vertices.size(); ++i){
+        x0 = vertices[i].x;
+        x1 = vertices[i+1].x;
+        
+        y0 = vertices[i].y;
+        y1 = vertices[i+1].y;
+        
+        a = x0*y1 - x1*y0;
+        centroid.x += (x0 + x1)*a;
+        centroid.y += (y0 + y1)*a;
+    }
+
+    centroid.x /= (6.0 * area);
+    centroid.y /= (6.0 * area);  
+    
+    return centroid;
+}
+//Finds greatest length along the centre of the polygon in which text can fit
+double feature_max_width (int numPoints, int featureId){
+    
+    //find the maximum and minimum intersections of the map
+    double feat_max_lon = getFeaturePoint(0, featureId).lon();
+    double feat_min_lon = feat_max_lon;
+    
+    for(int i = 0; i < numPoints; i++){
+
+        //get position from streetsdatabaseAPI function
+        LatLon featurePointLatLon = getFeaturePoint(i, featureId);
+        
+        //compare the lon position to update max/min
+        feat_max_lon = std::max(feat_max_lon, featurePointLatLon.lon());
+        feat_min_lon = std::min(feat_min_lon, featurePointLatLon.lon());
+    }
+    
+    LatLon firstPoint (0, feat_min_lon);
+    
+    LatLon secondPoint (0, feat_max_lon);
+    
+    std::pair<LatLon, LatLon> length(firstPoint, secondPoint);
+    
+    return find_distance_between_two_points(length);
+    
+}
+
+void draw_feature_names(ezgl::renderer *g){
+  
+    //draw feature name in centre of polygon
+    //g->set_color (0, 0, 0, 255);   
+    g->set_color (ezgl:: BLACK);   
+
+    g->set_text_rotation(0);
+
+    //std::cout << "max_width " << max_width << "\n";
+
+    //std::cout << feature_centroid.x << feature_centroid.y << "\n";
+
+    for( int featureidx = 0;  featureidx < getNumFeatures(); featureidx++){
+                
+        if( getFeatureName(featureidx) != "<noname>")
+            g->draw_text(FeatureCentroids.at(featureidx), getFeatureName(featureidx));
+
+        //float width = max_width;
+
+        //g->fill_rectangle({feature_centroid.x-(width/2),feature_centroid.y-(width/2)}, {feature_centroid.x + (width/2), feature_centroid.y + (width/2)});
+    }
+    
+}
+
+//returns approximate middle feature point of a given polyline feature in (x,y) coordinates
+ezgl::point2d find_PolyLine_Middle(int featureId){
+    
+    int numFeaturePoints = getFeaturePointCount(featureId);
+    
+    //if even, will not return meddle exactly, but close enough
+    int median =  numFeaturePoints / 2;
+    
+    //retrieve feature point using StreetsDatabase function
+    LatLon middlePoint_latlon = getFeaturePoint(median, featureId);
+    
+    //convert into x,y coordinates
+    std::pair<double, double> middlePoint_xy = latLonToCartesian(middlePoint_latlon);
+    
+    //return as ezgl::point2d
+    return ezgl::point2d(middlePoint_xy.first, middlePoint_xy.second);
+    
 }

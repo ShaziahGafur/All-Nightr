@@ -11,19 +11,19 @@
  * Created on February 29, 2020, 7:22 AM
  */
 
-#include "subwayStruct.h"
+#include "poiStruct.h"
 #include <string>
 
-subwayStruct::subwayStruct() {
+poiStruct::poiStruct() {
 }
 
-subwayStruct::~subwayStruct() {
+poiStruct::~poiStruct() {
 }
 
-void subwayStruct::addSubwayName (std::string name){
-    subwayName = name;
+void poiStruct::addName (std::string name){
+    Name = name;
 }
 
-void subwayStruct::addXYCoordinates (std::pair<double,double> coordinates){
+void poiStruct::addXYCoordinates (std::pair<double,double> coordinates){
     xyCoordinates = coordinates;
 }

@@ -13,22 +13,22 @@
 
 #include <string>
 
-#ifndef SUBWAYSTRUCT_H
-#define SUBWAYSTRUCT_H
+#ifndef POISTRUCT_H
+#define POISTRUCT_H
 
-class subwayStruct{
+class poiStruct{
     public:
-        subwayStruct();
+        poiStruct();
         
-        ~subwayStruct();
+        ~poiStruct();
         
-        void addSubwayName (std::string name);
+        void addName (std::string name);
         
         void addXYCoordinates (std::pair<double,double> coordinates);
         
         std::pair<double, double> xyCoordinates;
         
-        std::string subwayName;
+        std::string Name;
     
 };
 
