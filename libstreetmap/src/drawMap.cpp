@@ -433,7 +433,7 @@ void draw_main_canvas (ezgl::renderer *g){
         poiName = poiData.Name;
         
         g->set_color (ezgl::BLACK);
-        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName);
         
         it++;
     }
