@@ -25,7 +25,7 @@ std::unordered_map<OSMID, std::string> WayRoadType;
 //Hashtable --> key: [feature id (POLYGONS ONLY)] value: [centroid (x,y)]
 std::unordered_map< int, ezgl::point2d > FeatureCentroids;
 
-//Vector --> key: [type], value = vector of names/structs
+//Vector --> key: [type], value = vector: [point of interest structs]
 std::vector<std::vector<poiStruct>> PointsOfInterest (4);
 
 //Vector --> key: Feature Type (e.g. 0 = Unknown, 1 = Park...) value: vector containing feature IDs
@@ -48,7 +48,6 @@ void draw_main_canvas (ezgl::renderer *g);
 double lon_from_x (double x);
 double lat_from_y (double x);
 
-void populatePointsOfInterestType();
 void populatePointsOfInterest();
 void populateWayRoadType();
 void populateFeatureTypes();
@@ -417,19 +416,23 @@ void draw_main_canvas (ezgl::renderer *g){
 
     
     //Draw POIs
+    //***********************************************************************************
     
-    // increment through OSMID's to draw text and symbol for police station
+    //Extract vectors from PointsOfInterest vector to make it easier to parse through each type separately
     std::vector<poiStruct> police = PointsOfInterest[0];
     std::vector<poiStruct> hospitals = PointsOfInterest[1];
     std::vector<poiStruct> fire_station = PointsOfInterest[2];
     std::vector<poiStruct> subway_stations = PointsOfInterest[3];
+    
+    //Declare iterator to go through each vector
     std::vector<poiStruct>::iterator it = police.begin();
     
-    //variables to extract poi struct
+    //Variables to extract data from poi struct
     poiStruct poiData;
     std::pair<double,double> xyCoordinates;
     std::string poiName;
     
+    //loop through police vector, extract data and draw names of police stations on map
     while(it != police.end()){
         poiData = *it;
         xyCoordinates = poiData.xyCoordinates;
@@ -440,6 +443,8 @@ void draw_main_canvas (ezgl::renderer *g){
         
         it++;
     }
+    
+    //loop through hospital vector, extract data and draw names of police stations on map
     it = hospitals.begin();
     while(it != hospitals.end()){
         poiData = *it;
@@ -451,6 +456,8 @@ void draw_main_canvas (ezgl::renderer *g){
         
         it++;
     }
+    
+    //loop through fire_station vector, extract data and draw names of police stations on map
     it = fire_station.begin();
     while(it != fire_station.end()){
         poiData = *it;
@@ -462,6 +469,8 @@ void draw_main_canvas (ezgl::renderer *g){
         
         it++;
     }
+    
+    //loop through police vector, extract data and draw names of police stations on map
     it = subway_stations.begin();
     while(it != subway_stations.end()){
         poiData = *it;
@@ -475,6 +484,8 @@ void draw_main_canvas (ezgl::renderer *g){
     }
      std::cout<<scale_factor<<"<-s f\n";
     //Drawing Intersections
+    //***********************************************************************************
+    
     for(size_t i = 0; i < intersections.size(); ++i){
       bool enableDraw = false;
 
@@ -618,69 +629,7 @@ void populatePointsOfInterest(){
     PointsOfInterest[2] = fire_station;
     PointsOfInterest[3] = subway_entrances;
 }
-/*
-void populatePointsOfInterestType(){
-    
-   //bool to check if a node has railway as key and subway_entrance as value
-    bool isSubwayEntrance = false;
-    
-    // strings to store key and value of each tag while parsing
-    std::string key, value;
-    
-    // pair to store xy location of subway entrances
-    std::pair<double,double> subwayXY;
-    
-    //increment through all nodes, populate unordered map with key = OSMID and value = subway struct
-    for (unsigned i = 0; i < getNumberOfNodes(); i++){
-        
-        //make pointer to access node's OSMID
-        const OSMNode* nodePtr = getNodeByIndex(i);
-        
-        //increment through tags for each node to check if there is a tag with key = railway and value = subway_entrance. If it is, increment for loop again to get name.
-        for (unsigned tagIterator = 0; tagIterator < getTagCount(nodePtr); tagIterator++){
-            
-            //gets key and value for each tag
-            std::tie(key,value) = getTagPair(nodePtr, tagIterator);
-            
-            //if the node does represent a subway entrance, increment through tags again until name is found
-            if(isSubwayEntrance){
-                
-                //once name is found, make subway struct with information on the name, xy coordinates
-                //then insert it into the unordered map with key as OSMID
-                if (key == "name"){   
-                    
-                    //convert node coordinates to xy cartesian
-                    LatLon subwayEntrance = getNodeCoords(nodePtr);
-                    subwayXY = latLonToCartesian(subwayEntrance);
-                    double x = x_from_lon(subwayEntrance.lon());
-                    subwayStruct subStruct;
-                    subStruct.addSubwayName (value);
-                    subStruct.addXYCoordinates (subwayXY);
-                    publicTransportation.insert(std::pair<OSMID, subwayStruct> (nodePtr->id(), subStruct));
-                    isSubwayEntrance = false;
-                    break;
-                }
-                //if j is done parsing, but no name tag was found, set isSubwayEntrance to false
-                else {
-                    if (tagIterator == getTagCount(nodePtr)){
-                        isSubwayEntrance = false;
-                    }
-                }
-            }
-            // Checking if tag is a subway entrance. If it is, reset iterator to -1 so that for loop starts over, this time searching for key = name
-            else{
-                 if (key == "railway" && value == "subway_entrance"){
-                    tagIterator = -1;
-                    isSubwayEntrance = true;
-                }
-                else{
-                    isSubwayEntrance = false;
-                }
-            }
-           
-        }
-    }
-} */
+
 void populateWayRoadType(){
             
     //Retrieves OSMNodes and calculate total distance, for each way
