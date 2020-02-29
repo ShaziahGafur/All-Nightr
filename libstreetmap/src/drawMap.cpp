@@ -7,6 +7,8 @@
 #include "ezgl/graphics.hpp"
 #include "ezgl/point.hpp"
 #include "intersection_data.h"
+#include "subwayStruct.h"
+#include "subwayStruct.cpp"
 #include <vector>
 #include <string>
 #include <cmath>
@@ -20,6 +22,9 @@ std::vector<intersection_data> intersections;
 
 //Hashtable --> key: [OSMway] value: [road type]
 std::unordered_map<OSMID, std::string> WayRoadType;
+
+//Hashtable --> key: [OSMID Node] value: [struct with xy coordinates and name]
+std::unordered_map<OSMID, subwayStruct> publicTransportation;
 
 //Vector --> key: Feature Type (e.g. 0 = Unknown, 1 = Park...) value: vector containing feature IDs
 std::vector<std::vector<int>> FeatureTypes;
@@ -40,6 +45,7 @@ void draw_main_canvas (ezgl::renderer *g);
 double lon_from_x (double x);
 double lat_from_y (double x);
 
+void populatePointsOfInterestType();
 void populateWayRoadType();
 void populateFeatureTypes();
 void drawFeatures(int feature_type, ezgl::renderer *g);
@@ -62,6 +68,7 @@ double x_from_lon (double lon);
 void draw_map(){
     populateWayRoadType();
     populateFeatureTypes();
+    populatePointsOfInterestType();
     draw_map_blank_canvas();
 }
 void draw_map_blank_canvas (){       
@@ -173,7 +180,6 @@ void draw_main_canvas (ezgl::renderer *g){
     
     //Drawing Streets
      //***********************************************************************************
-    
     
     for (int streetIdx = 0; streetIdx < StreetVector.size(); streetIdx++ ){ //for each street
         std::vector<int> segments = StreetVector[streetIdx].streetSegments;
@@ -371,7 +377,30 @@ void draw_main_canvas (ezgl::renderer *g){
             }
         }
     }  
-
+    
+    //Draw Subway Stations
+    
+    // increment through OSMID's to draw text for each station entrance
+    std::unordered_map<OSMID, subwayStruct>::iterator it = publicTransportation.begin();
+    
+    //variables to extract subway struct
+    subwayStruct subwayData;
+    std::pair<double,double> xyCoordinates;
+    std::string subwayName;
+    
+    while(it != publicTransportation.end()){
+        subwayData = it->second;
+        xyCoordinates = subwayData.xyCoordinates;
+        subwayName = subwayData.subwayName;
+        
+        //Problem: won't actually draw any text.
+        g->set_color (ezgl::BLACK);
+        std::cout << xyCoordinates.first << xyCoordinates.second << subwayName << std::endl;
+        g->draw_text({xyCoordinates.first, xyCoordinates.second}, subwayName);
+        
+        it++;
+    }
+    
     //Drawing Intersections
     for(size_t i = 0; i < intersections.size(); ++i){
 
@@ -426,6 +455,68 @@ double lat_from_y (double y){
     return y / (DEGREE_TO_RADIAN * EARTH_RADIUS_METERS);
 }
 
+void populatePointsOfInterestType(){
+    
+   //bool to check if a node has railway as key and subway_entrance as value
+    bool isSubwayEntrance = false;
+    
+    // strings to store key and value of each tag while parsing
+    std::string key, value;
+    
+    // pair to store xy location of subway entrances
+    std::pair<double,double> subwayXY;
+    
+    //increment through all nodes, populate unordered map with key = OSMID and value = subway struct
+    for (unsigned i = 0; i < getNumberOfNodes(); i++){
+        
+        //make pointer to access node's OSMID
+        const OSMNode* nodePtr = getNodeByIndex(i);
+        
+        //increment through tags for each node to check if there is a tag with key = railway and value = subway_entrance. If it is, increment for loop again to get name.
+        for (unsigned tagIterator = 0; tagIterator < getTagCount(nodePtr); tagIterator++){
+            
+            //gets key and value for each tag
+            std::tie(key,value) = getTagPair(nodePtr, tagIterator);
+            
+            //if the node does represent a subway entrance, increment through tags again until name is found
+            if(isSubwayEntrance){
+                
+                //once name is found, make subway struct with information on the name, xy coordinates
+                //then insert it into the unordered map with key as OSMID
+                if (key == "name"){   
+                    
+                    //convert node coordinates to xy cartesian
+                    LatLon subwayEntrance = getNodeCoords(nodePtr);
+                    subwayXY = latLonToCartesian(subwayEntrance);
+                    
+                    subwayStruct subStruct;
+                    subStruct.addSubwayName (value);
+                    subStruct.addXYCoordinates (subwayXY);
+                    publicTransportation.insert(std::pair<OSMID, subwayStruct> (nodePtr->id(), subStruct));
+                    isSubwayEntrance = false;
+                    break;
+                }
+                //if j is done parsing, but no name tag was found, set isSubwayEntrance to false
+                else {
+                    if (tagIterator == getTagCount(nodePtr)){
+                        isSubwayEntrance = false;
+                    }
+                }
+            }
+            // Checking if tag is a subway entrance. If it is, reset iterator to -1 so that for loop starts over, this time searching for key = name
+            else{
+                 if (key == "railway" && value == "subway_entrance"){
+                    tagIterator = -1;
+                    isSubwayEntrance = true;
+                }
+                else{
+                    isSubwayEntrance = false;
+                }
+            }
+           
+        }
+    }
+}
 void populateWayRoadType(){
             
     //Retrieves OSMNodes and calculate total distance, for each way
