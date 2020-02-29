@@ -30,9 +30,13 @@ double min_lon;
 /************  FUNCTION DECLARATIONS  ***********/
 void draw_map_blank_canvas ();
 void draw_main_canvas (ezgl::renderer *g);
+double lon_from_x (double x);
+double lat_from_y (double x);
 
 void populateWayRoadType();
 void draw_intersections();  
+
+void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click);
 
 //void find_map_bounds(double& max_lat, double& min_lat, double& max_lon, double& min_lon);
 
@@ -104,11 +108,11 @@ void draw_map_blank_canvas (){
     //  ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat});
     
     application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
-    application.run(NULL,NULL,NULL,NULL);
+    application.run(NULL,act_on_mouse_click,NULL,NULL);
 }
 
 void draw_main_canvas (ezgl::renderer *g){
-//    g->set_line_dash (ezgl::line_dash::asymmetric_5_3);
+  /*  
     //Variables
     float segmentSlope, rotationAngle, xMiddleOfSegment, yMiddleOfSegment, segmentLength;
     std::string streetName;
@@ -301,25 +305,27 @@ void draw_main_canvas (ezgl::renderer *g){
             }
         }
     }  
-    
-    //Drawing Intersections
+    */
+       //Drawing Intersections
     //***********************************************************************************
-    
-    //Primitives
-    g->set_color (200, 200, 200, 255);
     
     //Drawing
     for(size_t i = 0; i < intersections.size(); ++i){
 
-      float x = intersections[i].position.lon();
-      float y = intersections[i].position.lat();
+      double x = intersections[i].position.lon();
+      double y = intersections[i].position.lat();
 
       //must convert lat lon values to cartesian (refer to tutorial slides)
       x = x_from_lon(x);
       y = y_from_lat(y);
      
-      float width = 0.0001;
+      float width = 10;
       float height = width;
+      
+       if (intersections[i].highlight)
+          g->set_color(ezgl::RED);
+      else
+          g->set_color(ezgl::BLUE);
 
       g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
     
@@ -337,13 +343,22 @@ std::pair < double, double > latLonToCartesian (LatLon latLonPoint){
 
 double x_from_lon (double lon){
     //convert Lon into x coordinate, return x 
-    double x = lon*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS*cos(latAvg);
-    return x;
+    return lon*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS*cos(latAvg);
 }
 
 double y_from_lat (double lat){
     //convert LatLon points into x y coordinates
     return lat*DEGREE_TO_RADIAN *EARTH_RADIUS_METERS;
+}
+
+double lon_from_x (double x){
+    //convert Lon into x coordinate, return x 
+    return x / (DEGREE_TO_RADIAN * EARTH_RADIUS_METERS * cos(latAvg));
+}
+
+double lat_from_y (double y){
+    //convert LatLon points into x y coordinates
+    return y / (DEGREE_TO_RADIAN * EARTH_RADIUS_METERS);
 }
 
 void populateWayRoadType(){
@@ -396,4 +411,23 @@ void populateWayRoadType(){
         }
         
     }  
+}
+
+void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click){
+    //x_click and y_click are the world coordinates where the mouse was clicked
+    //will convert to latlon then use find_closest_intersection
+    
+    LatLon lat_lon_click = LatLon(lat_from_y (y_click), lon_from_x (x_click));
+    
+    std::cout << lat_lon_click;
+    
+    int closestInt_id = find_closest_intersection(lat_lon_click);
+    
+    std::cout << "Clicked on intersection id\t" << closestInt_id << getIntersectionName(closestInt_id) << std::endl;
+    
+    intersections[closestInt_id].highlight = true;
+    //ezgl::application->update_message (“my message”)
+    
+    app->refresh_drawing();
+            
 }
