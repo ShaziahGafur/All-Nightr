@@ -77,22 +77,7 @@ double x_from_lon (double lon);
 
 
 void draw_map(){
-
-    populateWayRoadType();
-    populateFeatureTypes();
-    populatePointsOfInterest();
-    draw_map_blank_canvas();
-}
-void draw_map_blank_canvas (){       
-    ezgl::application::settings settings;
-    settings.main_ui_resource = "libstreetmap/resources/main.ui";
-    settings.window_identifier = "MainWindow";
-    settings.canvas_identifier = "MainCanvas";
-
-    ezgl::application application(settings);
-    
-    
-   //find the maximum and minimum intersections of the map
+    //find the maximum and minimum intersections of the map
     max_lat = getIntersectionPosition(0).lat(); 
     min_lat = max_lat;
     max_lon = getIntersectionPosition(0).lon();
@@ -134,6 +119,21 @@ void draw_map_blank_canvas (){
     min_lat = y_from_lat(min_lat);
     max_lon = x_from_lon(max_lon);
     max_lat = y_from_lat(max_lat);
+    
+    //populate
+    populateWayRoadType();
+    populateFeatureTypes();
+    populatePointsOfInterest();
+    draw_map_blank_canvas();
+}
+void draw_map_blank_canvas (){       
+    ezgl::application::settings settings;
+    settings.main_ui_resource = "libstreetmap/resources/main.ui";
+    settings.window_identifier = "MainWindow";
+    settings.canvas_identifier = "MainCanvas";
+
+    ezgl::application application(settings);
+    
    
     ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat}); 
     
