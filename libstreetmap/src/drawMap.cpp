@@ -558,7 +558,7 @@ void populatePointsOfInterest(){
             latlon = getPointOfInterestPosition(poiIterator);
             
             //conversion to cartesian
-            x = 2449241 + x_from_lon (latlon.lon());
+            x = x_from_lon (latlon.lon());
             y = y_from_lat (latlon.lat());
             xy = std::make_pair(x,y);
             poiData.addName(name);
@@ -570,7 +570,7 @@ void populatePointsOfInterest(){
             name = getPointOfInterestName(poiIterator);
             latlon = getPointOfInterestPosition(poiIterator);
             
-            x = 2449241 + x_from_lon (latlon.lon());
+            x = x_from_lon (latlon.lon());
             y = y_from_lat (latlon.lat());
             xy = std::make_pair(x,y);
             
@@ -583,7 +583,7 @@ void populatePointsOfInterest(){
             name = getPointOfInterestName(poiIterator);
             latlon = getPointOfInterestPosition(poiIterator);
             
-            x = 2449241 + x_from_lon (latlon.lon());
+            x = x_from_lon (latlon.lon());
             y = y_from_lat (latlon.lat());
             xy = std::make_pair(x,y);
             
@@ -767,7 +767,7 @@ void drawFeatures(int feature_type, ezgl::renderer *g){
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click){
     //x_click and y_click are the world coordinates where the mouse was clicked
     //will convert to latlon then use find_closest_intersection
-    std::cout << "x: " << x_click << "y: " << y_click << std::endl;
+    //std::cout << "x: " << x_click << "y: " << y_click << std::endl;
     LatLon lat_lon_click = LatLon(lat_from_y (y_click), lon_from_x (x_click));
     
     int closestInt_id = find_closest_intersection(lat_lon_click);
@@ -784,6 +784,7 @@ void initial_setup(ezgl::application *application, bool new_window)
 {
 
   //Create a Find button and link it with find_button callback function.
+    //number indicates the order of the button (0->top)
   application->create_button("Find", 0, find_button);
 
 
