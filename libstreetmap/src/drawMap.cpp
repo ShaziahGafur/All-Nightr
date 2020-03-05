@@ -28,8 +28,8 @@ std::unordered_map< int, ezgl::point2d > FeatureCentroids;
 //Vector --> key: [type], value = vector: [point of interest structs]
 std::vector<std::vector<poiStruct>> PointsOfInterest (3);
 
-//Vector --> key: Feature Type (e.g. 0 = Unknown, 1 = Park...) value: vector containing feature IDs
-std::vector<std::vector<int>> FeatureTypes;
+//Vector --> key: [Feature Type (e.g. 0 = Unknown, 1 = Park...)] value: [std::vector<int> feature IDs]
+std::vector<std::vector<int>> FeatureIds_byType;
 
 double scale_factor = 1;
 
@@ -50,9 +50,10 @@ double lat_from_y (double x);
 
 void populatePointsOfInterest();
 void populateWayRoadType();
-void populateFeatureTypes();
+void populateFeatureIds_byType();
 void populateFeatureCentoids();
-void drawFeatures(int feature_type, ezgl::renderer *g);
+void drawFeature_byType(int feature_type, ezgl::renderer *g);
+void drawFeatures(ezgl::renderer *g);
 void draw_intersections();  
 int intersectionThresrhold(int interIndex);
 
@@ -122,7 +123,7 @@ void draw_map(){
     
     //populate
     populateWayRoadType();
-    populateFeatureTypes();
+    populateFeatureIds_byType();
     populatePointsOfInterest();
     draw_map_blank_canvas();
 }
@@ -157,39 +158,14 @@ void draw_main_canvas (ezgl::renderer *g){
     
     //Drawing Backgrounds
     //***********************************************************************************
-//    g->draw_rectangle({min_lon, min_lat},{max_lon, max_lat});
-//    g->set_color (225, 230, 234, 255);
-//    g->fill_rectangle({min_lon,min_lat}, {max_lon, max_lat});
-//    
-   //Drawing Features
-    //***********************************************************************************
+    g->draw_rectangle({min_lon, min_lat},{max_lon, max_lat});
+    g->set_color (225, 230, 234, 255);
+    g->fill_rectangle({min_lon,min_lat}, {max_lon, max_lat});
     
-    //Draws features based on increasing order importance of feature types
+//  Draw Features  
+    drawFeatures(g);
     
-    //  Lake (Least important, drawn first)
-    //  Island,
-    //  Park,
-    //  Greenspace
-    //  Beach
-    //  Golfcourse,
-    //  Building
-    //  River
-    //  Stream
-    //  Unknown = 0,(Most important, drawn last)
-    
-    g->set_line_dash(ezgl::line_dash::none);
-    drawFeatures(Lake, g);
-    drawFeatures(Island, g);
-    drawFeatures(Park, g);
-    drawFeatures(Greenspace, g);
-    drawFeatures(Beach, g);
-    drawFeatures(Golfcourse, g);
-    drawFeatures(Building, g);
-    drawFeatures(River, g);
-    drawFeatures(Stream, g);
-    drawFeatures(Unknown, g);
-    
-    //Drawing Streets
+//    //Drawing Streets
      //***********************************************************************************
     
     for (int streetIdx = 0; streetIdx < StreetVector.size(); streetIdx++ ){ //for each street
@@ -651,24 +627,28 @@ void populateWayRoadType(){
     }  
 }
 
-void populateFeatureTypes(){
-    FeatureTypes.resize(10);
+void populateFeatureIds_byType(){
+    FeatureIds_byType.resize(10);
         for(size_t featureId = 0; featureId < getNumFeatures(); ++featureId){
 
             FeatureType feature_type = getFeatureType(featureId);
             if (feature_type>9||feature_type<0)
                 std::cout<<"Error: Invalid Feature Type detected\n";
             else{
-                FeatureTypes[feature_type].push_back(featureId);
+                FeatureIds_byType[feature_type].push_back(featureId);
             }
         }  
 }
 
-    //Draws features of a specifc type (e.g. all Beaches)
-void drawFeatures(int feature_type, ezgl::renderer *g){        
-    for(size_t idx = 0; idx < FeatureTypes[feature_type].size(); ++idx){
-        int featureId = FeatureTypes[feature_type][idx];
-        switch(feature_type){
+//Helper function called by DrawFeatures()
+//Draws all features of a specifc type
+void drawFeature_byType(int feature_type, ezgl::renderer *g){   
+    //needed to loop through FeatureIds_byType vector
+    int featureId, numOfFeaturePoints;
+    
+    //before drawing, sets colour appropriate to the feature
+    switch(feature_type){
+            
             case Unknown: g->set_color (224,224,224, 255);
                                  break;
             case     Park      : g->set_color (204,255,204, 255);
@@ -692,29 +672,32 @@ void drawFeatures(int feature_type, ezgl::renderer *g){
             
             default: g->set_color (224,224,224, 255);
         }
-        
-        //get all of the points for that particular feature
-        int numOfFeaturePoints = getFeaturePointCount(featureId);
+    
+    //goes through FeatureIds_byType vector, and draws features as either polylines or polygons
+    for(size_t idx = 0; idx < FeatureIds_byType[feature_type].size(); ++idx){
 
-        // If the first point and the last point (getFeaturePointCount-1) are NOT the same location, the feature is a polyline
+        featureId = FeatureIds_byType[feature_type][idx];
+        numOfFeaturePoints = getFeaturePointCount(featureId);
+
+        // If the feature area is 0, feature is a polyline (uses FEatureAReaVector from m1)
         if (FeatureAreaVector[featureId] == 0) {
-//            
-//            //iterate through feature points to get (x,y) coordinates  in order to draw the polyline)
-//            for (unsigned featurePointId = 1; featurePointId < numOfFeaturePoints; featurePointId++){
-//                //Declare and initialize adjacent LatLon points
-//                LatLon previousPoint = getFeaturePoint(featurePointId-1, featureId);
-//                LatLon nextPoint = getFeaturePoint(featurePointId, featureId);
-//            
-//                //convert LatLon points into x y coordinates
-//                std::pair<double,double> xyPrevious = latLonToCartesian(previousPoint);
-//                std::pair<double,double> xyNext = latLonToCartesian(nextPoint);
-//
-//                //draw line between feature points
-//                g->set_line_width(3);
-//                g->draw_line({xyPrevious.first , xyPrevious.second}, {xyNext.first, xyNext.second});
-//            }
+            
+            //iterate through feature points to get (x,y) coordinates  in order to draw the polyline)
+            for (unsigned featurePointId = 1; featurePointId < numOfFeaturePoints; featurePointId++){
+                //Declare and initialize adjacent LatLon points
+                LatLon previousPoint = getFeaturePoint(featurePointId-1, featureId);
+                LatLon nextPoint = getFeaturePoint(featurePointId, featureId);
+            
+                //convert LatLon points into x y coordinates
+                std::pair<double,double> xyPrevious = latLonToCartesian(previousPoint);
+                std::pair<double,double> xyNext = latLonToCartesian(nextPoint);
+
+                //draw line between feature points
+                g->set_line_width(3);
+                g->draw_line({xyPrevious.first , xyPrevious.second}, {xyNext.first, xyNext.second});
+            }
                   
-              //insert feature centre point into FeatureCentroids hashtable
+              //insert feature middle point into FeatureCentroids hashtable
               FeatureCentroids.insert({featureId , find_PolyLine_Middle(featureId)});
             
         }
@@ -965,21 +948,47 @@ double feature_max_width (int numPoints, int featureId){
 }
 
 void draw_feature_names(ezgl::renderer *g){
-  
-    //draw feature name in centre of polygon
-    //g->set_color (0, 0, 0, 255);   
-    g->set_color (ezgl:: BLACK);   
+    int feature_type;
 
     g->set_text_rotation(0);
 
+    //helpful for debugging
     //std::cout << "max_width " << max_width << "\n";
-
     //std::cout << feature_centroid.x << feature_centroid.y << "\n";
 
+    //loops through featureIds to retrieve name and correlates it with FeatureCentroids hashtable to get position
     for( int featureidx = 0;  featureidx < getNumFeatures(); featureidx++){
+        
+        feature_type = getFeatureType(featureidx);
                 
-        if( getFeatureName(featureidx) != "<noname>" && (scale_factor < 0.10))
+        if( (feature_type != Unknown) && (getFeatureName(featureidx) != "<noname>") && (scale_factor < 0.10) ){
+                
+            switch(feature_type){
+
+                case     Park      : g->set_color (63,117,63, 255);
+                                     break;
+                case     Beach     : g->set_color (162,154,135, 255);
+                                     break;       
+                case     Lake      : g->set_color (124,145,125, 255);
+                                     break;
+                case     River     : g->set_color (36,65,65, 255);
+                                     break;
+                case     Island    : g->set_color (84,137,95, 255);
+                                     break;
+                case     Building  : g->set_color (64,64,64, 255);
+                                     break;
+                case     Greenspace: g->set_color (63,117,63, 255);
+                                     break;
+                case     Golfcourse: g->set_color (4,91,48, 255);
+                                     break;
+                case     Stream    : g->set_color (36,65,65, 255);
+                                     break;
+
+                default: g->set_color (224,224,224, 255);
+            } 
+            //draw feature name in centre of polygon
             g->draw_text(FeatureCentroids.at(featureidx), getFeatureName(featureidx));
+        }
 
         //float width = max_width;
 
@@ -1005,4 +1014,33 @@ ezgl::point2d find_PolyLine_Middle(int featureId){
     //return as ezgl::point2d
     return ezgl::point2d(middlePoint_xy.first, middlePoint_xy.second);
     
+}
+
+//function called in darw_main_canvas(), which draws all features in pre-determined order using helper function: drawFeatrues_byType)
+void drawFeatures(ezgl::renderer *g){
+    //Draws in the following order:
+        //  Lake (Least important, drawn first)
+        //  Island,
+        //  Park,
+        //  Greenspace
+        //  Beach
+        //  Golfcourse,
+        //  Building
+        //  River
+        //  Stream
+        //  Unknown = 0,(Most important, drawn last)
+
+    g->set_line_dash(ezgl::line_dash::none);
+    
+    //color set in sub_function
+    drawFeature_byType(Lake, g);
+    drawFeature_byType(Island, g);
+    drawFeature_byType(Park, g);
+    drawFeature_byType(Greenspace, g);
+    drawFeature_byType(Beach, g);
+    drawFeature_byType(Golfcourse, g);
+    drawFeature_byType(Building, g);
+    drawFeature_byType(River, g);
+    drawFeature_byType(Stream, g);
+    drawFeature_byType(Unknown, g);
 }
