@@ -33,6 +33,8 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
     return os;
 }
 
+
+#ifdef TURN_TYPE
 // overloading ostream << to print enum class TurnType
 inline std::ostream& operator<<(std::ostream& os, const TurnType& turn) {
     if (turn == TurnType::STRAIGHT)
@@ -46,6 +48,7 @@ inline std::ostream& operator<<(std::ostream& os, const TurnType& turn) {
 
     return os;
 }
+#endif
 
 namespace ece297test {
 
