@@ -77,21 +77,29 @@ double x_from_lon (double lon);
 /************************************************/
 
 
+/**
+ * This function sets up fundamental variables for drawing the map, 
+ * such as max & min lat and lons of the map for developing a scale for the map and 
+ * populating global variables.
+ * After, this function calls draw_map_blank_canvas(), which manages setting up the application & environment for the map to function
+ */
+
 void draw_map(){
-    //find the maximum and minimum intersections of the map
+    
+    //find the maximum and minimum lat & lons of the map based on intersections 
     max_lat = getIntersectionPosition(0).lat(); 
     min_lat = max_lat;
     max_lon = getIntersectionPosition(0).lon();
     min_lon = max_lon;
     
-    //populate the intersections vector
+    //initialize global intersections vector
     int numIntersections = getNumIntersections();
     intersections.resize(numIntersections);
     
-    //variable used in (long,lat) -> (x,y) conversion
+    //variable used in (long,lat) -> (x,y) conversion,  required for finding latAvg
     double sumLat = 0;
     
-    //for-loop which populates the intersections vector and keeps track of the min and max lat/lon positions
+    //populate the intersections vector, calculates min and max lat/lon positions, and determines total sum of lats for latAvg
     for(int i = 0; i < numIntersections; i++){
 
         //get position from streetsdatabaseAPI function
@@ -115,18 +123,23 @@ void draw_map(){
     
     //update the global variable with calculated lat average
     latAvg = sumLat/(numIntersections);
-            
+    
+    //convert min & max lat/lons
     min_lon = x_from_lon(min_lon);
     min_lat = y_from_lat(min_lat);
     max_lon = x_from_lon(max_lon);
     max_lat = y_from_lat(max_lat);
     
-    //populate
+    //populate all global variables
     populateWayRoadType();
     populateFeatureIds_byType();
     populatePointsOfInterest();
     draw_map_blank_canvas();
 }
+
+/*
+ * Sets up environment of application for map to reside in
+ */
 void draw_map_blank_canvas (){       
     ezgl::application::settings settings;
     settings.main_ui_resource = "libstreetmap/resources/main.ui";
@@ -142,17 +155,28 @@ void draw_map_blank_canvas (){
     application.run(initial_setup,act_on_mouse_click,NULL,NULL);
 }
 
+/*
+ * Develops mechanisms for drawing (such as zoom information) and
+ * Draws each major map components in the following order:
+ * (1) Features
+ * (2) Streets
+ * (3) Points of Interest
+ * (4) Intersections
+ * 
+ */
 void draw_main_canvas (ezgl::renderer *g){
     
     //Determine the amount that screen is zoomed in 
-    ezgl::rectangle zoom_rect = g->get_visible_world();
-    double zoom = zoom_rect.width(); //width of zoom rectangle, converted into lat lon coordinates
-    scale_factor = zoom/(max_lon - min_lon);//percentage of the full map shown in the window
+    ezgl::rectangle zoom_rect = g->get_visible_world(); //retrieves in xy, the coordinates of the visible screen
+    double zoom = zoom_rect.width(); //width of zoom rectangle
+    //determine ratio of zoom rectangle  width with map scale's width to develo percentage of the full map shown in the window
+    scale_factor = zoom/(max_lon - min_lon); //Percentage. 1 = 100% (Auto fit). 0.05 = very zoomed in
+    
     //Use these for creating thresholds for zooming
 //    std::cout<<"\nscale_factor: "<<scale_factor;
 //    std::cout<<"\nzoom: "<<zoom;
 
-    //Variables
+    //Variables for drawing text of street segments
     float rotationAngle, xMiddleOfSegment, yMiddleOfSegment, segmentLength;
     std::string streetName;
     
@@ -162,7 +186,7 @@ void draw_main_canvas (ezgl::renderer *g){
     g->set_color (225, 230, 234, 255);
     g->fill_rectangle({min_lon,min_lat}, {max_lon, max_lat});
     
-//  Draw Features  
+//  Draw all types of features  
     drawFeatures(g);
     
 //    //Drawing Streets
@@ -172,39 +196,42 @@ void draw_main_canvas (ezgl::renderer *g){
         std::vector<int> segments = StreetVector[streetIdx].streetSegments;
         streetName = getStreetName(streetIdx);
         
+        //Draw each segment of each street
         for (int i = 0; i < segments.size(); i++ ){
-            bool enableDraw = true;
+            bool enableDraw = true; //enabler for drawing the street segment
             int segmentID = segments[i];
-            struct InfoStreetSegment segmentInfo = getInfoStreetSegment(segmentID);
+            struct InfoStreetSegment segmentInfo = getInfoStreetSegment(segmentID); //retrieve all info of segment
             int numCurvePoints = segmentInfo.curvePointCount;
             segmentLength = find_street_segment_length(segmentID);
-            std::string roadType = WayRoadType.at(segmentInfo.wayOSMID);
+            std::string roadType = WayRoadType.at(segmentInfo.wayOSMID); //retrieve segment road type
             
             //scale_factor used to set a variety of line widths and displays of roads    
             
+            //Motorways are always drawn, regardless of zoom level
             if(roadType=="motorway"){
                 g->set_line_width (10);
                 if (scale_factor >  0.3)
                     g->set_line_width (8);
-                g->set_color (232, 144, 160, 255);
+                g->set_color (232, 144, 160, 255); //red
                 g->set_line_dash(ezgl::line_dash::none);
             }
+            
             else if(roadType=="trunk"){
-                g->set_color (250, 178, 154, 255);
+                g->set_color (250, 178, 154, 255); //orage
                 g->set_line_width (16);
-                if (scale_factor >  0.18)
-                    g->set_line_width (10);
+                if (scale_factor >  0.18) 
+                    g->set_line_width (10); //change thickness of road drawn depending on zoom level
                 if (scale_factor >  0.3)
-                    g->set_line_width (7);
+                    g->set_line_width (7);//change thickness of road drawn depending on zoom level
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="primary"){
                 g->set_color (252, 215, 162, 255);
                 g->set_line_width (16);
                 if (scale_factor >  0.18)
-                    g->set_line_width (10);
+                    g->set_line_width (10);//change thickness of road drawn depending on zoom level
                 if (scale_factor >  0.3)
-                    g->set_line_width (8);
+                    g->set_line_width (8);//change thickness of road drawn depending on zoom level
                         
                 g->set_line_dash(ezgl::line_dash::none);
             }
@@ -212,29 +239,29 @@ void draw_main_canvas (ezgl::renderer *g){
                 g->set_color (246, 251, 187, 255);
                 g->set_line_width (12);
                 if (scale_factor >  0.18)
-                    g->set_line_width (8);
+                    g->set_line_width (8);//change thickness of road drawn depending on zoom level
                 if (scale_factor >  0.3)
-                    g->set_line_width (4);
+                    g->set_line_width (4);//change thickness of road drawn depending on zoom level
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="tertiary"){
-                if (scale_factor > 0.30)
+                if (scale_factor > 0.30) //only enable drawing these streets if zoomed in enough
                     enableDraw = false;
                 g->set_color (255, 255, 255, 255);
                 g->set_line_width (8);
                 if (scale_factor >  0.18)
-                    g->set_line_width (4);
+                    g->set_line_width (4);//change thickness of road drawn depending on zoom level
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="residential"){
-                if (scale_factor > 0.05)
+                if (scale_factor > 0.05)//only enable drawing these streets if zoomed in enough
                     enableDraw = false;
                 g->set_color (255, 255, 255, 255);
                 g->set_line_width (5);
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="unclassified"){
-                if (scale_factor > 0.05)
+                if (scale_factor > 0.05)//only enable drawing these streets if zoomed in enough
                     enableDraw = false;
                 g->set_color (255, 255, 255, 255);
                 g->set_line_width (5);
@@ -242,7 +269,7 @@ void draw_main_canvas (ezgl::renderer *g){
             }
             else{
                 if (scale_factor > 0.30)
-                    enableDraw = false;
+                    enableDraw = false;//only enable drawing these streets if zoomed in enough
                 g->set_line_width (8);
                 if (scale_factor >  0.18)
                     g->set_line_width (4);
@@ -575,11 +602,16 @@ void populatePointsOfInterest(){
     PointsOfInterest[2] = fire_station;
 }
 
+/*
+ * Searches through all OSM Entities and their tags to match OSMIDs with RoadType (e.g. motorway, primary roads, residential, etc.)
+ * Populates global variable WayRoadType
+ * The "highway" OSM key is used to access the road type
+ */
 void populateWayRoadType(){
             
-    //Retrieves OSMNodes and calculate total distance, for each way
+    //Searches through all OSM Ways and their keys to determine road types
     for (unsigned i = 0; i < getNumberOfWays(); i++){
-        //creates a pointer that enables accessing the node's OSMID
+        //creates a pointer that enables accessing the way's OSMID
         const OSMWay* wayPtr = getWayByIndex(i);
         std::string key,value;
         key="N/A"; //in case the way has no keys
@@ -589,13 +621,15 @@ void populateWayRoadType(){
                 break;
         }
         if (key=="highway"){ //if highway key exists
-            WayRoadType.insert({wayPtr->id(),value});
+            WayRoadType.insert({wayPtr->id(),value}); //take the value of key and store it in global variable with OSMID
         }
         
     }
     
+    //Searches through all OSM Relations and their keys to determine road types
+    //Repeats same process as above with Ways, except searches through relations
     for (unsigned i = 0; i < getNumberOfRelations(); i++){
-        //creates a pointer that enables accessing the node's OSMID
+        //creates a pointer that enables accessing the relation's OSMID
         const OSMRelation* relationPtr = getRelationByIndex(i);
         std::string key,value;
         key="N/A"; //in case the way has no keys
@@ -605,11 +639,13 @@ void populateWayRoadType(){
                 break;
         }
         if (key=="highway"){ //if highway key exists
-            WayRoadType.insert({relationPtr->id(),value});
+            WayRoadType.insert({relationPtr->id(),value});//take the value of key and store it in global variable with OSMID
         }
         
     }
     
+    //Searches through all OSM Nodes and their keys to determine road types
+    //Repeats same process for node 
     for (unsigned i = 0; i < getNumberOfNodes(); i++){
         //creates a pointer that enables accessing the node's OSMID
         const OSMNode* nodePtr = getNodeByIndex(i);
@@ -621,7 +657,7 @@ void populateWayRoadType(){
                 break;
         }
         if (key=="highway"){ //if highway key exists
-            WayRoadType.insert({nodePtr->id(),value});
+            WayRoadType.insert({nodePtr->id(),value});//take the value of key and store it in global variable with OSMID
         }
         
     }  
@@ -641,7 +677,7 @@ void populateFeatureIds_byType(){
 }
 
 //Helper function called by DrawFeatures()
-//Draws all features of a specifc type
+//Draws all features of a specifc type (e.g Park, Beach, Lake, etc.)
 void drawFeature_byType(int feature_type, ezgl::renderer *g){   
     //needed to loop through FeatureIds_byType vector
     int featureId, numOfFeaturePoints;
