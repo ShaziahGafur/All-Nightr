@@ -955,6 +955,8 @@ void draw_feature_names(ezgl::renderer *g){
     //helpful for debugging
     //std::cout << "max_width " << max_width << "\n";
     //std::cout << feature_centroid.x << feature_centroid.y << "\n";
+    //float width = max_width;
+    //g->fill_rectangle({feature_centroid.x-(width/2),feature_centroid.y-(width/2)}, {feature_centroid.x + (width/2), feature_centroid.y + (width/2)});
 
     //loops through featureIds to retrieve name and correlates it with FeatureCentroids hashtable to get position
     for( int featureidx = 0;  featureidx < getNumFeatures(); featureidx++){
@@ -965,13 +967,13 @@ void draw_feature_names(ezgl::renderer *g){
                 
             switch(feature_type){
 
-                case     Park      : g->set_color (63,117,63, 255);
+                case     Park      : g->set_color (76,153,0, 255);
                                      break;
-                case     Beach     : g->set_color (162,154,135, 255);
+                case     Beach     : g->set_color (160,160,160, 255);
                                      break;       
-                case     Lake      : g->set_color (124,145,125, 255);
+                case     Lake      : g->set_color (0,128,255, 255);
                                      break;
-                case     River     : g->set_color (36,65,65, 255);
+                case     River     : g->set_color (0,128,255, 255);
                                      break;
                 case     Island    : g->set_color (84,137,95, 255);
                                      break;
@@ -989,12 +991,7 @@ void draw_feature_names(ezgl::renderer *g){
             //draw feature name in centre of polygon
             g->draw_text(FeatureCentroids.at(featureidx), getFeatureName(featureidx));
         }
-
-        //float width = max_width;
-
-        //g->fill_rectangle({feature_centroid.x-(width/2),feature_centroid.y-(width/2)}, {feature_centroid.x + (width/2), feature_centroid.y + (width/2)});
     }
-    
 }
 
 //returns approximate middle feature point of a given polyline feature in (x,y) coordinates
@@ -1020,6 +1017,7 @@ ezgl::point2d find_PolyLine_Middle(int featureId){
 void drawFeatures(ezgl::renderer *g){
     //Draws in the following order:
         //  Lake (Least important, drawn first)
+        //  Park
         //  Island,
         //  Park,
         //  Greenspace
@@ -1034,8 +1032,9 @@ void drawFeatures(ezgl::renderer *g){
     
     //color set in sub_function
     drawFeature_byType(Lake, g);
-    drawFeature_byType(Island, g);
+
     drawFeature_byType(Park, g);
+    drawFeature_byType(Island, g);
     drawFeature_byType(Greenspace, g);
     drawFeature_byType(Beach, g);
     drawFeature_byType(Golfcourse, g);
