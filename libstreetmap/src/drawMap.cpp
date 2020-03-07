@@ -468,10 +468,11 @@ void draw_main_canvas (ezgl::renderer *g){
         it++;
     }
     
-     std::cout<<scale_factor<<"<-s f\n";
+//     std::cout<<scale_factor<<"<-s f\n";
     //Drawing Intersections
     //***********************************************************************************
     
+    if (scale_factor <=0.01) {
     for(size_t i = 0; i < intersections.size(); ++i){
       bool enableDraw = false;
 
@@ -482,21 +483,21 @@ void draw_main_canvas (ezgl::renderer *g){
       x = x_from_lon(x);
       y = y_from_lat(y);
      
-      int threshold = intersectionThresrhold(i);
-      if (threshold==0||(threshold==1&&scale_factor <= 0.30)||(scale_factor <=0.05) )
-          enableDraw = true;
-      else 
-          enableDraw = false;
+//      int threshold = intersectionThresrhold(i);
+//      if (threshold==0||(threshold==1&&scale_factor <= 0.30)||(scale_factor <=0.01) )
+//          enableDraw = true;
+//      else 
+//          enableDraw = false;
       
       float width;
-      if (scale_factor > 0.30)
-          width =  10;
-      else if (scale_factor > 0.20)
-          width =  6;
-      else if (scale_factor > 0.10)
-          width =  4;
-      else //if (scale_factor < 0.10)
+      if (scale_factor > 0.005)
           width =  2;
+      else if (scale_factor > 0.001)
+          width =  1;
+//      else if (scale_factor > 0.0001)
+//          width =  0.;
+      else //if (scale_factor < 0.10)
+          width =  0.5;
       
       float height = width;
       
@@ -507,10 +508,10 @@ void draw_main_canvas (ezgl::renderer *g){
       
       //for intersection id, get segs. Check seg's lowest threshold value
       //for that threshold value, enable or disable drawing
-      if (enableDraw)
         g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
     
     }
+}
 
 }
 
