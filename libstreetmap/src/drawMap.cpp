@@ -183,7 +183,7 @@ void draw_main_canvas (ezgl::renderer *g){
     //Drawing Backgrounds
     //***********************************************************************************
     g->draw_rectangle({min_lon, min_lat},{max_lon, max_lat});
-    g->set_color (225, 230, 234, 255);
+    g->set_color (32, 32, 32, 255);
     g->fill_rectangle({min_lon,min_lat}, {max_lon, max_lat});
     
 //  Draw all types of features  
@@ -209,71 +209,71 @@ void draw_main_canvas (ezgl::renderer *g){
             
             //Motorways are always drawn, regardless of zoom level
             if(roadType=="motorway"){
-                g->set_line_width (10);
+                g->set_line_width (8);
                 if (scale_factor >  0.3)
-                    g->set_line_width (8);
-                g->set_color (232, 144, 160, 255); //red
+                    g->set_line_width (6);
+                g->set_color (255, 128, 0, 255); //red
                 g->set_line_dash(ezgl::line_dash::none);
             }
             
             else if(roadType=="trunk"){
-                g->set_color (250, 178, 154, 255); //orage
-                g->set_line_width (16);
+                g->set_color (204, 102, 0, 255); //orange
+                g->set_line_width (8);
                 if (scale_factor >  0.18) 
-                    g->set_line_width (10); //change thickness of road drawn depending on zoom level
+                    g->set_line_width (6); //change thickness of road drawn depending on zoom level
                 if (scale_factor >  0.3)
-                    g->set_line_width (7);//change thickness of road drawn depending on zoom level
+                    g->set_line_width (5);//change thickness of road drawn depending on zoom level
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="primary"){
-                g->set_color (252, 215, 162, 255);
-                g->set_line_width (16);
+                g->set_color (153, 76, 0, 255);
+                g->set_line_width (10);
                 if (scale_factor >  0.18)
-                    g->set_line_width (10);//change thickness of road drawn depending on zoom level
-                if (scale_factor >  0.3)
                     g->set_line_width (8);//change thickness of road drawn depending on zoom level
+                if (scale_factor >  0.3)
+                    g->set_line_width (6);//change thickness of road drawn depending on zoom level
                         
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="secondary"){
-                g->set_color (246, 251, 187, 255);
-                g->set_line_width (12);
+                g->set_color (255, 255, 143, 255);
+                g->set_line_width (10);
                 if (scale_factor >  0.18)
-                    g->set_line_width (8);//change thickness of road drawn depending on zoom level
+                    g->set_line_width (6);//change thickness of road drawn depending on zoom level
                 if (scale_factor >  0.3)
-                    g->set_line_width (4);//change thickness of road drawn depending on zoom level
+                    g->set_line_width (2);//change thickness of road drawn depending on zoom level
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="tertiary"){
                 if (scale_factor > 0.30) //only enable drawing these streets if zoomed in enough
                     enableDraw = false;
-                g->set_color (255, 255, 255, 255);
-                g->set_line_width (8);
+                g->set_color (255, 255, 143, 255);
+                g->set_line_width (6);
                 if (scale_factor >  0.18)
-                    g->set_line_width (4);//change thickness of road drawn depending on zoom level
+                    g->set_line_width (2);//change thickness of road drawn depending on zoom level
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="residential"){
                 if (scale_factor > 0.05)//only enable drawing these streets if zoomed in enough
                     enableDraw = false;
-                g->set_color (255, 255, 255, 255);
+                g->set_color (255, 255, 143, 255);
                 g->set_line_width (5);
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else if(roadType=="unclassified"){
                 if (scale_factor > 0.05)//only enable drawing these streets if zoomed in enough
                     enableDraw = false;
-                g->set_color (255, 255, 255, 255);
-                g->set_line_width (5);
+                g->set_color (255, 255, 143, 255);
+                g->set_line_width (3);
                 g->set_line_dash(ezgl::line_dash::none);
             }
             else{
                 if (scale_factor > 0.30)
                     enableDraw = false;//only enable drawing these streets if zoomed in enough
-                g->set_line_width (8);
+                g->set_line_width (6);
                 if (scale_factor >  0.18)
-                    g->set_line_width (4);
-                g->set_color (255, 255, 255, 255);
+                    g->set_line_width (2);
+                g->set_color (255, 255, 143, 255);
                 g->set_line_dash(ezgl::line_dash::none);
             }     
             
@@ -385,7 +385,7 @@ void draw_main_canvas (ezgl::renderer *g){
 
                         xyLeft = latLonToCartesian(pointsLeft);
                         xyRight = latLonToCartesian(pointsRight);
-
+                        
                         g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
                     }
 
@@ -685,28 +685,28 @@ void drawFeature_byType(int feature_type, ezgl::renderer *g){
     //before drawing, sets colour appropriate to the feature
     switch(feature_type){
             
-            case Unknown: g->set_color (224,224,224, 255);
+            case Unknown: g->set_color (64,64,64, 255);
                                  break;
-            case     Park      : g->set_color (204,255,204, 255);
+            case     Park      : g->set_color (25,51,0, 255);
                                  break;
-            case     Beach     : g->set_color (245,230,194, 255);
+            case     Beach     : g->set_color (102,51,0, 255);
                                  break;       
-            case     Lake      : g->set_color (204,255,255, 255);
+            case     Lake      : g->set_color (0,0,51, 255);
                                  break;
-            case     River     : g->set_color (177,229,229, 255);
+            case     River     : g->set_color (0,0,102, 255);
                                  break;
-            case     Island    : g->set_color (128,243,151, 255);
+            case     Island    : g->set_color (25,51,0, 255);
                                  break;
-            case     Building  : g->set_color (220,220,220, 255);
+            case     Building  : g->set_color (64,64,64, 255);
                                  break;
-            case     Greenspace: g->set_color (128,243,151, 255);
+            case     Greenspace: g->set_color (25,51,0, 255);
                                  break;
-            case     Golfcourse: g->set_color (0,255,128, 255);
+            case     Golfcourse: g->set_color (25,51,0, 255);
                                  break;
-            case     Stream    : g->set_color (177,229,229, 255);
+            case     Stream    : g->set_color (0,0,102, 255);
                                  break;
             
-            default: g->set_color (224,224,224, 255);
+            default: g->set_color (64,64,64, 255);
         }
     
     //goes through FeatureIds_byType vector, and draws features as either polylines or polygons
@@ -1011,15 +1011,15 @@ void draw_feature_names(ezgl::renderer *g){
                                      break;
                 case     River     : g->set_color (0,128,255, 255);
                                      break;
-                case     Island    : g->set_color (84,137,95, 255);
+                case     Island    : g->set_color (255,255,255, 255);
                                      break;
-                case     Building  : g->set_color (64,64,64, 255);
+                case     Building  : g->set_color (255,255,255, 255);
                                      break;
-                case     Greenspace: g->set_color (63,117,63, 255);
+                case     Greenspace: g->set_color (76,153,0, 255);
                                      break;
-                case     Golfcourse: g->set_color (4,91,48, 255);
+                case     Golfcourse: g->set_color (76,153,0, 255);
                                      break;
-                case     Stream    : g->set_color (36,65,65, 255);
+                case     Stream    : g->set_color (0,128,255, 255);
                                      break;
 
                 default: g->set_color (224,224,224, 255);
@@ -1067,7 +1067,8 @@ void drawFeatures(ezgl::renderer *g){
     g->set_line_dash(ezgl::line_dash::none);
     
     //color set in sub_function
-    drawFeature_byType(Lake, g);
+    
+
 
     drawFeature_byType(Park, g);
     drawFeature_byType(Island, g);
@@ -1077,5 +1078,6 @@ void drawFeatures(ezgl::renderer *g){
     drawFeature_byType(Building, g);
     drawFeature_byType(River, g);
     drawFeature_byType(Stream, g);
+    drawFeature_byType(Lake, g);
     drawFeature_byType(Unknown, g);
 }
