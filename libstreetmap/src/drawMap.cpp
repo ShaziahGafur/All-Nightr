@@ -43,6 +43,9 @@ std::unordered_map<OSMID, RoadType> WaybyRoadType;
 //Hashtable --> key: [feature id (POLYGONS ONLY)] value: [centroid (x,y)]
 std::unordered_map< int, ezgl::point2d > FeatureCentroids;
 
+//Vector --> key: [feature id] value: [vector of featurepoints in (x,y) coordinates --> std::vector<ezgl::point2d>]
+std::vector<std::vector<ezgl::point2d>> Featurepoints_xy;
+
 //Vector --> key: [type], value = vector: [point of interest structs]
 std::vector<std::vector<poiStruct>> PointsOfInterest (3);
 
@@ -72,7 +75,8 @@ double lat_from_y (double x);
 void populatePointsOfInterest();
 void populateWaybyRoadType();
 void populateFeatureIds_byType();
-void populateFeatureCentoids();
+void populateFeaturepoints_xy();
+void populateFeatureCentroids();
 
 void clearIntersection_highlights();
 void drawFeature_byType(int feature_type, ezgl::renderer *g);
@@ -159,6 +163,7 @@ void draw_map(){
     populateWaybyRoadType();
     populateFeatureIds_byType();
     populatePointsOfInterest();
+    populateFeaturepoints_xy();
     draw_map_blank_canvas();
 }
 
@@ -531,9 +536,7 @@ void populateFeatureIds_byType(){
 
 //Helper function called by DrawFeatures()
 //Draws all features of a specifc type (e.g Park, Beach, Lake, etc.)
-void drawFeature_byType(int feature_type, ezgl::renderer *g){   
-    //needed to loop through FeatureIds_byType vector
-    int featureId, numOfFeaturePoints;
+void drawFeature_byType(int feature_type, ezgl::renderer *g){  
     
     g->set_line_width(3);
     //before drawing, sets colour appropriate to the feature
@@ -562,60 +565,38 @@ void drawFeature_byType(int feature_type, ezgl::renderer *g){
             
             default: g->set_color (64,64,64, 255);
         }
-    
-    //goes through FeatureIds_byType vector, and draws features as either polylines or polygons
+    int featureId, numOfFeaturePoints;
+    //goes through FeatureIds_byType vector, retrieves all featureIds of a certain type
+    //draws features as either polylines or polygons
+    //uses Featurepoints_xy vector
     for(size_t idx = 0; idx < FeatureIds_byType[feature_type].size(); ++idx){
 
         featureId = FeatureIds_byType[feature_type][idx];
         numOfFeaturePoints = getFeaturePointCount(featureId);
+        //point2d has no default constructor
+        ezgl::point2d xyPrevious(0,0);
+        ezgl::point2d xyNext(0,0);
 
-        // If the feature area is 0, feature is a polyline (uses FEatureAReaVector from m1)
+        // If the feature area is 0, feature is a polyline (uses FeatureAReaVector from m1)
         if (FeatureAreaVector[featureId] == 0) {
             
             //iterate through feature points to get (x,y) coordinates  in order to draw the polyline)
-            for (unsigned featurePointId = 1; featurePointId < numOfFeaturePoints; featurePointId++){
-                //Declare and initialize adjacent LatLon points
-                LatLon previousPoint = getFeaturePoint(featurePointId-1, featureId);
-                LatLon nextPoint = getFeaturePoint(featurePointId, featureId);
-            
-                //convert LatLon points into x y coordinates
-                std::pair<double,double> xyPrevious = latLonToCartesian(previousPoint);
-                std::pair<double,double> xyNext = latLonToCartesian(nextPoint);
+            for (unsigned featurePointId = 0; featurePointId < (numOfFeaturePoints - 1); featurePointId++){
+
+                xyPrevious = Featurepoints_xy[featureId][featurePointId];
+                xyNext = Featurepoints_xy[featureId][featurePointId + 1];
 
                 //draw line between feature points
-                g->draw_line({xyPrevious.first , xyPrevious.second}, {xyNext.first, xyNext.second});
-            }
-                  
-              //insert feature middle point into FeatureCentroids hashtable
-              FeatureCentroids.insert({featureId , find_PolyLine_Middle(featureId)});
-            
+                g->draw_line({xyPrevious.x , xyPrevious.y}, {xyNext.x, xyNext.y});
+            }   
         }
         //otherwise, it is a polygon area
         else{
-            std::vector<ezgl::point2d> points_xy_coordinates;
-            
-            //iterate through feature points to get (x,y) coordinates  in order to draw the polygon
-            for (unsigned featurePointId = 0; featurePointId < numOfFeaturePoints; featurePointId++){
-
-                //convert LatLon points into (x, y) coordinate pairs
-                std::pair <double,double> featurePoints = latLonToCartesian(getFeaturePoint(featurePointId, featureId));
-
-                points_xy_coordinates.push_back(ezgl::point2d(featurePoints.first, featurePoints.second));
-                
-                //insert feature centre point into FeatureCentroids hashtable       
-                FeatureCentroids.insert({featureId , compute2DPolygonCentroid(points_xy_coordinates, FeatureAreaVector[featureId])});
-                
-            }
-            
             //ezgl function which takes a vector<point2d> (i.e (x,y) coordinates for each point that defines the feature outline)
-            g->fill_poly(points_xy_coordinates);
-            //draw feature name in centre of polygon
-            //g->set_color (0, 0, 0, 255);   
-//            g->set_color (ezgl:: BLACK);   
-//            
-//            g->set_text_rotation(0);
-
-//            
+            g->fill_poly(Featurepoints_xy[featureId]);
+        }
+            
+  
 //            double max_width = feature_max_width (numOfFeaturePoints, featureId);
 //            
 //            //std::cout << "max_width " << max_width << "\n";
@@ -631,9 +612,7 @@ void drawFeature_byType(int feature_type, ezgl::renderer *g){
             //float width = max_width;
 
             //g->fill_rectangle({feature_centroid.x-(width/2),feature_centroid.y-(width/2)}, {feature_centroid.x + (width/2), feature_centroid.y + (width/2)});
-        }
     }
-    
 }
 
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click){
@@ -851,10 +830,11 @@ void draw_feature_names(ezgl::renderer *g){
     //g->fill_rectangle({feature_centroid.x-(width/2),feature_centroid.y-(width/2)}, {feature_centroid.x + (width/2), feature_centroid.y + (width/2)});
 
     //loops through featureIds to retrieve name and correlates it with FeatureCentroids hashtable to get position
-    for( int featureidx = 0;  featureidx < getNumFeatures(); featureidx++){
-        
+//    for( std::unordered_map< int, ezgl::point2d >::iterator it = FeatureCentroids.begin();  it != FeatureCentroids.begin(); it++){
+      for( int featureidx = 0;  featureidx < getNumFeatures(); featureidx++){      
         feature_type = getFeatureType(featureidx);
                 
+        
         if( (feature_type != Unknown) && (getFeatureName(featureidx) != "<noname>") && (scale_factor < 0.10) ){
                 
             switch(feature_type){
@@ -1003,8 +983,6 @@ void draw_streets(ezgl::renderer *g){
                                     if (scale_factor > 0.60) //only enable drawing these streets if zoomed in enough
                                         enableDraw = false;
                                     g->set_line_width (2.75);
-//                                    if (scale_factor >  0.18)
-//                                        g->set_line_width (4);//change thickness of road drawn depending on zoom level
                                     if (scale_factor <  0.2)
                                         g->set_line_width (3.5);//change thickness of road drawn depending on zoom level
                                     break;
@@ -1013,9 +991,7 @@ void draw_streets(ezgl::renderer *g){
                                     g->set_line_width (2.6);
                                     if (scale_factor > 0.40) //only enable drawing these streets if zoomed in enough
                                         enableDraw = false;
-//                                    if (scale_factor >  0.18)
-//                                        g->set_line_width (3);//change thickness of road drawn depending on zoom level
-                                    if (scale_factor <  0.0)
+                                    if (scale_factor <  0.02)
                                         g->set_line_width (3);//change thickness of road drawn depending on zoom level
                                     break;
                                     
@@ -1199,4 +1175,45 @@ void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std
          //segment is curved
          //currently no street names
     }
+}
+
+void populateFeatureCentroids(){
+    
+}
+//populates Featurepoints_xy vector needed to draw features and feature names
+void populateFeaturepoints_xy(){
+    //uses StreetsDatabase function
+    Featurepoints_xy.resize(getNumFeatures());
+    
+    int numOfFeaturePoints;
+    
+    for(int featureId = 0; featureId < getNumFeatures(); ++featureId){
+
+        numOfFeaturePoints = getFeaturePointCount(featureId);
+
+        //iterate through feature points then convert to (x,y) coordinates
+        for (unsigned featurePointId = 0; featurePointId < numOfFeaturePoints; featurePointId++){
+            //1) retrieves the featurepoint in lat lon
+            //2) LatLonToCartesian is called to return an (x,y) pair
+            //3)the pair is converted to point2d (needed by ezgl to draw))
+            //4) the point2d is inserted into the featurepioints vector of the appropriate Featurepoints_xy element
+            //does not matter that feature points will be in reverse order, as long as they are consecutive
+
+            std::pair<double, double> featurePoint_xy = latLonToCartesian(getFeaturePoint(featurePointId, featureId));
+            
+            ezgl::point2d featurePoint_point2d(featurePoint_xy.first, featurePoint_xy.second);
+            
+            Featurepoints_xy[featureId].push_back(featurePoint_point2d);
+        }
+        
+        if(FeatureAreaVector[featureId] == 0){
+            //insert feature middle point into FeatureCentroids hashtable
+            FeatureCentroids.insert({featureId , find_PolyLine_Middle(featureId)});
+        }
+        else{
+            //insertfeature area centre point into FeatureCentroids hashtable       
+            FeatureCentroids.insert({featureId , compute2DPolygonCentroid(Featurepoints_xy[featureId], FeatureAreaVector[featureId])});
+
+        }
+    } 
 }
