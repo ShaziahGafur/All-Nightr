@@ -25,6 +25,15 @@ enum RoadType {
     tertiary, 
     residential
 };
+//nightmode street color scheme
+ezgl::color Colour_unclassified(114, 111, 85, 255); //yellow (1 = least opaque)
+ezgl::color Colour_motorway(100, 38, 7); // orange (3 = lightest)
+ezgl::color Colour_trunk(129, 68, 6, 255); // orange (2)
+ezgl::color Colour_primary(174, 133, 40, 255); // orange (1 = darkest)
+ezgl::color Colour_secondary(154, 92, 0, 255); //yellow (3 = lightest)
+ezgl::color Colour_tertiary(152, 122, 0, 255); // yellow (2 )
+ezgl::color Colour_residential(114, 111, 85, 255); // yellow (1 = darkest)
+
 //Vector --> key: [intersection ID] value: [intersection_data struct]
 std::vector<intersection_data> intersections;
 
@@ -70,11 +79,11 @@ void drawFeature_byType(int feature_type, ezgl::renderer *g);
 void drawFeatures(ezgl::renderer *g);
 void draw_intersections();  
 void draw_streets(ezgl::renderer *g);
-void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, int& numCurvePoints, int& segmentID, double& segmentLength, std::string& streetName, bool oneWay);
+void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay);
 int intersectionThreshold(int interIndex);
 
 void draw_feature_names(ezgl::renderer *g);
-ezgl::point2d compute2DPolygonCentroid(std::vector<ezgl::point2d> &vertices, int vertexCount, double area);
+ezgl::point2d compute2DPolygonCentroid(std::vector<ezgl::point2d> &vertices, double& area);
 ezgl::point2d find_PolyLine_Middle(int featureId);
 double feature_max_width (int numPoints, int featureId);
 
@@ -526,12 +535,13 @@ void drawFeature_byType(int feature_type, ezgl::renderer *g){
     //needed to loop through FeatureIds_byType vector
     int featureId, numOfFeaturePoints;
     
+    g->set_line_width(3);
     //before drawing, sets colour appropriate to the feature
     switch(feature_type){
             
-            case Unknown       : g->set_color (64,64,64, 255);
+            case     Unknown   : g->set_color (64,64,64, 255);
                                  break;
-            case     Park      : g->set_color (25,51,0, 255);
+            case     Park      : g->set_color (0,51,25, 255);
                                  break;
             case     Beach     : g->set_color (102,51,0, 255);
                                  break;       
@@ -539,13 +549,13 @@ void drawFeature_byType(int feature_type, ezgl::renderer *g){
                                  break;
             case     River     : g->set_color (0,0,102, 255);
                                  break;
-            case     Island    : g->set_color (25,51,0, 255);
+            case     Island    : g->set_color (0,51,25, 255);
                                  break;
             case     Building  : g->set_color (64,64,64, 255);
                                  break;
-            case     Greenspace: g->set_color (25,51,0, 255);
+            case     Greenspace: g->set_color (0,51,25, 255);
                                  break;
-            case     Golfcourse: g->set_color (25,51,0, 255);
+            case     Golfcourse: g->set_color (0,51,25, 255);
                                  break;
             case     Stream    : g->set_color (0,0,102, 255);
                                  break;
@@ -573,7 +583,6 @@ void drawFeature_byType(int feature_type, ezgl::renderer *g){
                 std::pair<double,double> xyNext = latLonToCartesian(nextPoint);
 
                 //draw line between feature points
-                g->set_line_width(3);
                 g->draw_line({xyPrevious.first , xyPrevious.second}, {xyNext.first, xyNext.second});
             }
                   
@@ -594,7 +603,7 @@ void drawFeature_byType(int feature_type, ezgl::renderer *g){
                 points_xy_coordinates.push_back(ezgl::point2d(featurePoints.first, featurePoints.second));
                 
                 //insert feature centre point into FeatureCentroids hashtable       
-                FeatureCentroids.insert({featureId , compute2DPolygonCentroid(points_xy_coordinates, numOfFeaturePoints, FeatureAreaVector[featureId])});
+                FeatureCentroids.insert({featureId , compute2DPolygonCentroid(points_xy_coordinates, FeatureAreaVector[featureId])});
                 
             }
             
@@ -776,7 +785,7 @@ int intersectionThreshold(int interIndex){
     return threshold;
 }
 //vertices are the feature points in xy coordinates, vertexCount = number of feature points
-ezgl::point2d compute2DPolygonCentroid(std::vector< ezgl::point2d > & vertices, int vertexCount, double area)
+ezgl::point2d compute2DPolygonCentroid(std::vector< ezgl::point2d > & vertices, double& area)
 {
     ezgl::point2d centroid(0, 0);
     double x0 = 0.0; // Current vertex X
@@ -919,28 +928,37 @@ void drawFeatures(ezgl::renderer *g){
     drawFeature_byType(Greenspace, g);
     drawFeature_byType(Beach, g);
     drawFeature_byType(Golfcourse, g);
-    drawFeature_byType(Building, g);
     drawFeature_byType(River, g);
     drawFeature_byType(Stream, g);
     drawFeature_byType(Lake, g);
-    drawFeature_byType(Unknown, g);
+    if(scale_factor <  0.1){    
+        drawFeature_byType(Building, g);
+        drawFeature_byType(Unknown, g);
+    }
 }
 
 //function draws all streets on map
 //uses StreetVector from m1.cpp
 
 void draw_streets(ezgl::renderer *g){
-    std::string streetName;
-    RoadType roadType;
-    bool enableDraw = true;  //enabler for drawing the street segment
+    
+    //variables needed to draw streets
     int segmentID;
+    RoadType roadType;
+    //enabler based on zoom
+    bool enableDraw = true;
     std::vector<int> segments;
     int numCurvePoints;
     struct InfoStreetSegment segmentInfo;
+    
+    //variables needed to draw street names
+    std::string streetName;
     double segmentLength;
     std::pair <double, double> xyFrom;
     std::pair <double, double> xyTo;
     
+    
+    g->set_line_cap(ezgl::line_cap::round);
     //loops through StreetVector to retrieve street segments of each street
     for (int streetIdx = 0; streetIdx < StreetVector.size(); streetIdx++ ){ 
         //retrieve streetSegements vector from StreetVector struct (defined in m1)
@@ -969,62 +987,66 @@ void draw_streets(ezgl::renderer *g){
             switch(roadType){
 
               //Motorways are always drawn, regardless of zoom level
-                case   motorway : g->set_line_width (5);
-                                    if (scale_factor >  0.3)
-                                        g->set_line_width (4);
-                                    g->set_color (255, 128, 0, 255); 
+                case motorway     : g->set_line_width (2.9);
+                                    if (scale_factor <  0.2)
+                                        g->set_line_width (3.5);//change thickness of road drawn depending on zoom level
+                                    g->set_color(Colour_motorway);
                                     break;
             
-                case   trunk     : g->set_color (204, 102, 0, 255);
-                                    g->set_line_width (5);
-                                    if (scale_factor >  0.18) 
-                                        g->set_line_width (4); //change thickness of road drawn depending on zoom level
-                                    if (scale_factor >  0.3)
-                                        g->set_line_width (3);//change thickness of road drawn depending on zoom level
+                case trunk        : g->set_color (Colour_trunk);
+                                    g->set_line_width (2.8);
+                                    if (scale_factor <  0.2)
+                                        g->set_line_width (3.5);//change thickness of road drawn depending on zoom level
                                     break;
      
-                case primary      : g->set_color (153, 76, 0, 255);
-                                    g->set_line_width (5);
-                                    if (scale_factor >  0.18)
-                                        g->set_line_width (4);//change thickness of road drawn depending on zoom level
-                                    if (scale_factor >  0.3)
-                                        g->set_line_width (3);//change thickness of road drawn depending on zoom level
+                case primary      : g->set_color (Colour_primary);
+                                    if (scale_factor > 0.60) //only enable drawing these streets if zoomed in enough
+                                        enableDraw = false;
+                                    g->set_line_width (2.75);
+//                                    if (scale_factor >  0.18)
+//                                        g->set_line_width (4);//change thickness of road drawn depending on zoom level
+                                    if (scale_factor <  0.2)
+                                        g->set_line_width (3.5);//change thickness of road drawn depending on zoom level
                                     break;
                                     
-                case secondary    : g->set_color (255, 255, 143, 255);
-                                    g->set_line_width (4);
-                                    if (scale_factor >  0.18)
+                case secondary    : g->set_color (Colour_secondary);
+                                    g->set_line_width (2.6);
+                                    if (scale_factor > 0.40) //only enable drawing these streets if zoomed in enough
+                                        enableDraw = false;
+//                                    if (scale_factor >  0.18)
+//                                        g->set_line_width (3);//change thickness of road drawn depending on zoom level
+                                    if (scale_factor <  0.0)
                                         g->set_line_width (3);//change thickness of road drawn depending on zoom level
-                                    if (scale_factor >  0.3)
-                                        g->set_line_width (2);//change thickness of road drawn depending on zoom level
                                     break;
                                     
                 case tertiary     : if (scale_factor > 0.30) //only enable drawing these streets if zoomed in enough
                                         enableDraw = false;
-                                    g->set_color (255, 255, 143, 255);
-                                    g->set_line_width (3);
-                                    if (scale_factor >  0.18)
-                                      g->set_line_width (2);//change thickness of road drawn depending on zoom level
+                                    g->set_color (Colour_tertiary);
+                                    g->set_line_width (2.25);
+                                    if (scale_factor <  0.02)
+                                      g->set_line_width (3);//change thickness of road drawn depending on zoom level
                                     break;
             
-                case residential   : if (scale_factor > 0.05)//only enable drawing these streets if zoomed in enough
+                case residential  : if (scale_factor > 0.05)//only enable drawing these streets if zoomed in enough
                                         enableDraw = false;
-                                    g->set_color (255, 255, 143, 255);
+                                    g->set_color (Colour_residential);
                                     g->set_line_width (2);
-                                    g->set_line_dash(ezgl::line_dash::none);
+                                    if (scale_factor <  0.02)
+                                        g->set_line_width (3);//change thickness of road drawn depending on zoom level
                                     break;
                                     
-                case unclassified   : if (scale_factor > 0.05)//only enable drawing these streets if zoomed in enough
+                case unclassified : if (scale_factor > 0.05)//only enable drawing these streets if zoomed in enough
                                         enableDraw = false;
-                                    g->set_color (255, 255, 143, 255);
+                                    g->set_color (Colour_unclassified);
                                     g->set_line_width (2);
+                                    if (scale_factor <  0.02)
+                                        g->set_line_width (3);//change thickness of road drawn depending on zoom level
                                     break;
-                default             : if (scale_factor > 0.30)
+                                    
+                default           : if (scale_factor > 0.30)
                                         enableDraw = false;//only enable drawing these streets if zoomed in enough
                                     g->set_line_width (2);
-                                    if (scale_factor >  0.18)
-                                        g->set_line_width (2);
-                                    g->set_color (255, 255, 143, 255);
+                                    g->set_color (Colour_unclassified);
             }     
             
              //if segment is a straight line
@@ -1037,7 +1059,7 @@ void draw_streets(ezgl::renderer *g){
                     g->set_line_dash(ezgl::line_dash::none);
                     g->draw_line({xyFrom.first, xyFrom.second}, {xyTo.first, xyTo.second});
 
-                    draw_street_name(g, xyFrom, xyTo, numCurvePoints, segmentID, segmentLength, streetName, segmentInfo.oneWay);
+                    draw_street_name(g, xyFrom, xyTo, numCurvePoints, segmentLength, streetName, segmentInfo.oneWay);
                 }
             }
             //segment is curved
@@ -1089,13 +1111,14 @@ void clearIntersection_highlights(){
     }
 }
 
-void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, int& numCurvePoints, int& segmentID, double& segmentLength, std::string& streetName, bool oneWay){
+void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay){
     //Variables for drawing text of street segments
     //uses find_street_segment_length from m1
     double rotationAngle, xMiddleOfSegment, yMiddleOfSegment;
     
     //Greater screen_ratio = more reprinting of street name and arrows: < (for oneway streets)
     double screen_ratio = segmentLength/scale_factor; //screen_ratio is the available length of the street segment on screen. 
+    g->set_color (224, 224, 224, 255);  
     
      if (numCurvePoints == 0){ //if segment is a straight line
          
@@ -1111,8 +1134,7 @@ void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std
                 if (rotationAngle < -90){
                     rotationAngle = rotationAngle + 180;
                 }
-                //draw text
-                g->set_color (0, 0, 0, 255);   
+                //draw text 
                 g->set_text_rotation(rotationAngle);
 
                 std::string direction_symbol = ">"; //symbol for one way street
