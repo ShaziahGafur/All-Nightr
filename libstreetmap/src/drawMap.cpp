@@ -72,19 +72,19 @@ void draw_main_canvas (ezgl::renderer *g);
 double lon_from_x (double x);
 double lat_from_y (double x);
 
+void drawFeature_byType(int feature_type, ezgl::renderer *g);
+void drawFeatures(ezgl::renderer *g);
+void draw_streets(ezgl::renderer *g);
+void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay);
+void draw_intersections(ezgl::renderer *g);  
+void clearIntersection_highlights();
+//int intersectionThreshold(int interIndex);
+
 void populatePointsOfInterest();
 void populateWaybyRoadType();
 void populateFeatureIds_byType();
 void populateFeaturepoints_xy();
 void populateFeatureCentroids();
-
-void clearIntersection_highlights();
-void drawFeature_byType(int feature_type, ezgl::renderer *g);
-void drawFeatures(ezgl::renderer *g);
-void draw_intersections();  
-void draw_streets(ezgl::renderer *g);
-void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay);
-int intersectionThreshold(int interIndex);
 
 void draw_feature_names(ezgl::renderer *g);
 ezgl::point2d compute2DPolygonCentroid(std::vector<ezgl::point2d> &vertices, double& area);
@@ -202,7 +202,7 @@ void draw_main_canvas (ezgl::renderer *g){
     scale_factor = zoom/(max_lon - min_lon); //Percentage. 1 = 100% (Auto fit). 0.05 = very zoomed in
     
     //Use these for creating thresholds for zooming
-    std::cout<<"\nscale_factor: "<<scale_factor;
+//    std::cout<<"\nscale_factor: "<<scale_factor;
 //    std::cout<<"\nzoom: "<<zoom;
     
     
@@ -282,52 +282,8 @@ void draw_main_canvas (ezgl::renderer *g){
 //        it++;
 //    }
     
-//     std::cout<<scale_factor<<"<-s f\n";
     //Drawing Intersections
-    //***********************************************************************************
-    
-    if (scale_factor <=0.01) {
-        bool enableDraw;
-    
-        for(size_t i = 0; i < intersections.size(); ++i){
-            enableDraw = false;
-
-          double x = intersections[i].position.lon();
-          double y = intersections[i].position.lat();
-
-          //must convert lat lon values to cartesian (refer to tutorial slides)
-          x = x_from_lon(x);
-          y = y_from_lat(y);
-
-    //      int threshold = intersectionThresrhold(i);
-    //      if (threshold==0||(threshold==1&&scale_factor <= 0.30)||(scale_factor <=0.01) )
-    //          enableDraw = true;
-    //      else 
-    //          enableDraw = false;
-
-          float width;
-          if (scale_factor > 0.005)
-              width =  2;
-          else if (scale_factor > 0.001)
-              width =  1;
-    //      else if (scale_factor > 0.0001)
-    //          width =  0.;
-          else //if (scale_factor < 0.10)
-              width =  0.5;
-
-          float height = width;
-
-          if (intersections[i].highlight)
-              g->set_color(ezgl::RED);
-          else
-              g->set_color(ezgl::BLUE);
-
-          //for intersection id, get segs. Check seg's lowest threshold value
-          //for that threshold value, enable or disable drawing
-            g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
-    
-    }
-}
+    draw_intersections(g);
 
 }
 
@@ -746,23 +702,28 @@ void find_button(GtkWidget* widget, ezgl::application *application){
     application->update_message (intersectionNames); 
     // Redraw the graphics
     application->refresh_drawing();
-}
+}\
 
-//Based on the segments touching the street, returns the highest zoom threshold value (0 = highest threshold, 1 = medium threshold, 2 = lowest threshold) 
-int intersectionThreshold(int interIndex){
-    int threshold=2;
-    for (int i = 0; i < IntersectionStreetSegments[interIndex].size(); i++){
-        InfoStreetSegment segInfo = getInfoStreetSegment(IntersectionStreetSegments[interIndex][i]);
-        RoadType roadType = WaybyRoadType.at(segInfo.wayOSMID);
-        if (roadType == motorway||roadType == trunk||roadType == primary ||roadType == secondary ) //significant roads always show on map
-            return 1;
-        else if (roadType!= residential||roadType!= unclassified){ //either tertiary or unknown 
-            if (threshold==2)
-                threshold = 1; //most significant is tertiary/unknown
-        }   
-    }
-    return threshold;
-}
+/**
+ * Unused function: intersectionThreshold
+ * Remove once we are sure we should remove
+ */
+
+////Based on the segments touching the street, returns the highest zoom threshold value (0 = highest threshold, 1 = medium threshold, 2 = lowest threshold) 
+//int intersectionThreshold(int interIndex){
+//    int threshold=2;
+//    for (int i = 0; i < IntersectionStreetSegments[interIndex].size(); i++){
+//        InfoStreetSegment segInfo = getInfoStreetSegment(IntersectionStreetSegments[interIndex][i]);
+//        RoadType roadType = WaybyRoadType.at(segInfo.wayOSMID);
+//        if (roadType == motorway||roadType == trunk||roadType == primary ||roadType == secondary ) //significant roads always show on map
+//            return 1;
+//        else if (roadType!= residential||roadType!= unclassified){ //either tertiary or unknown 
+//            if (threshold==2)
+//                threshold = 1; //most significant is tertiary/unknown
+//        }   
+//    }
+//    return threshold;
+//}
 //vertices are the feature points in xy coordinates, vertexCount = number of feature points
 ezgl::point2d compute2DPolygonCentroid(std::vector< ezgl::point2d > & vertices, double& area)
 {
@@ -904,13 +865,14 @@ void drawFeatures(ezgl::renderer *g){
     
     //color set in sub_function
     drawFeature_byType(Park, g);
+    drawFeature_byType(Lake, g);
     drawFeature_byType(Island, g);
     drawFeature_byType(Greenspace, g);
     drawFeature_byType(Beach, g);
     drawFeature_byType(Golfcourse, g);
     drawFeature_byType(River, g);
     drawFeature_byType(Stream, g);
-    drawFeature_byType(Lake, g);
+    
     if(scale_factor <  0.1){    
         drawFeature_byType(Building, g);
         drawFeature_byType(Unknown, g);
@@ -1080,12 +1042,6 @@ void draw_streets(ezgl::renderer *g){
         }
     }
 }
-void clearIntersection_highlights(){
-    for (std::vector<int>::iterator it = Highlighted_intersections.begin(); it != Highlighted_intersections.end(); ++it){
-        std::cout << *it;
-        intersections[*it].highlight = false;
-    }
-}
 
 void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay){
     //Variables for drawing text of street segments
@@ -1174,6 +1130,59 @@ void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std
     else{
          //segment is curved
          //currently no street names
+    }
+}
+
+void draw_intersections(ezgl::renderer *g){
+    
+     if (scale_factor <=0.01) {
+         
+        for(size_t i = 0; i < intersections.size(); ++i){
+
+          double x = intersections[i].position.lon();
+          double y = intersections[i].position.lat();
+
+          //must convert lat lon values to cartesian (refer to tutorial slides)
+          x = x_from_lon(x);
+          y = y_from_lat(y);
+
+    //      int threshold = intersectionThresrhold(i);
+    //      if (threshold==0||(threshold==1&&scale_factor <= 0.30)||(scale_factor <=0.01) )
+    //          enableDraw = true;
+    //      else 
+    //          enableDraw = false;
+
+          float width;
+          if (scale_factor > 0.005)
+              width =  2;
+          else if (scale_factor > 0.001)
+              width =  1;
+    //      else if (scale_factor > 0.0001)
+    //          width =  0.;
+          else //if (scale_factor < 0.10)
+              width =  0.5;
+
+          float height = width;
+
+          if (intersections[i].highlight)
+              g->set_color(ezgl::RED);
+          else
+              g->set_color(ezgl::BLUE);
+
+          //for intersection id, get segs. Check seg's lowest threshold value
+          //for that threshold value, enable or disable drawing
+            g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
+    
+        }
+    }
+    
+}
+
+
+void clearIntersection_highlights(){
+    for (std::vector<int>::iterator it = Highlighted_intersections.begin(); it != Highlighted_intersections.end(); ++it){
+        std::cout << *it;
+        intersections[*it].highlight = false;
     }
 }
 
