@@ -69,24 +69,32 @@ double min_lon;
 /************  FUNCTION DECLARATIONS  ***********/
 void draw_map_blank_canvas ();
 void draw_main_canvas (ezgl::renderer *g);
+
+//  CONVERSIONS //
 double lon_from_x (double x);
 double lat_from_y (double x);
+double y_from_lat (double lat);
+double x_from_lon (double lon);
+std::pair < double, double > latLonToCartesian (LatLon latLonPoint);
+double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, double> xyTo);
 
+//  DRAWING //
 void drawFeature_byType(int feature_type, ezgl::renderer *g);
 void drawFeatures(ezgl::renderer *g);
+void draw_feature_names(ezgl::renderer *g);
 void draw_streets(ezgl::renderer *g);
-void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay);
+void draw_street_name(ezgl::renderer *g, int segmentID, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay);
 void draw_intersections(ezgl::renderer *g);  
 void clearIntersection_highlights();
 //int intersectionThreshold(int interIndex);
 
+// POPULATING GLOBAL VARIABLES //
 void populatePointsOfInterest();
 void populateWaybyRoadType();
 void populateFeatureIds_byType();
 void populateFeaturepoints_xy();
 void populateFeatureCentroids();
 
-void draw_feature_names(ezgl::renderer *g);
 ezgl::point2d compute2DPolygonCentroid(std::vector<ezgl::point2d> &vertices, double& area);
 ezgl::point2d find_PolyLine_Middle(int featureId);
 double feature_max_width (int numPoints, int featureId);
@@ -97,11 +105,6 @@ void find_button(GtkWidget *widget, ezgl::application *application);
 void initial_setup(ezgl::application *application, bool /*new_window*/);
 
 //void find_map_bounds(double& max_lat, double& min_lat, double& max_lon, double& min_lon);
-
-std::pair < double, double > latLonToCartesian (LatLon latLonPoint);
-
-double y_from_lat (double lat);
-double x_from_lon (double lon);
 
 /************************************************/
 
@@ -315,6 +318,19 @@ double lat_from_y (double y){
     return y / (DEGREE_TO_RADIAN * EARTH_RADIUS_METERS);
 }
 
+double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, double> xyTo){
+    
+    double rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first) / DEGREE_TO_RADIAN;
+
+    if (rotationAngle > 90) {
+        rotationAngle = rotationAngle - 180;
+    }
+    if (rotationAngle < -90) {
+        rotationAngle = rotationAngle + 180;
+    }
+    
+    return rotationAngle;
+}
 
 void populatePointsOfInterest(){
     
@@ -865,9 +881,9 @@ void drawFeatures(ezgl::renderer *g){
     
     //color set in sub_function
     drawFeature_byType(Park, g);
+    drawFeature_byType(Greenspace, g);
     drawFeature_byType(Lake, g);
     drawFeature_byType(Island, g);
-    drawFeature_byType(Greenspace, g);
     drawFeature_byType(Beach, g);
     drawFeature_byType(Golfcourse, g);
     drawFeature_byType(River, g);
@@ -987,22 +1003,23 @@ void draw_streets(ezgl::renderer *g){
                                     g->set_color (Colour_unclassified);
             }     
             
-             //if segment is a straight line
-            if (numCurvePoints == 0){
-
+            if (enableDraw){
+                
                 xyFrom = latLonToCartesian(intersections[segmentInfo.from].position);
                 xyTo = latLonToCartesian(intersections[segmentInfo.to].position);
 
-                if (enableDraw){ //if the line should be drawn
-                    g->set_line_dash(ezgl::line_dash::none);
-                    g->draw_line({xyFrom.first, xyFrom.second}, {xyTo.first, xyTo.second});
+                 //if segment is a straight line
+                if (numCurvePoints == 0){
 
-                    draw_street_name(g, xyFrom, xyTo, numCurvePoints, segmentLength, streetName, segmentInfo.oneWay);
+                        g->set_line_dash(ezgl::line_dash::none);
+                        g->draw_line({xyFrom.first, xyFrom.second}, {xyTo.first, xyTo.second});
+
+                        if(streetName != "<unknown>")// "<unknown>" street name not drawn
+                            draw_street_name(g, segmentID, xyFrom, xyTo, numCurvePoints, segmentLength, streetName, segmentInfo.oneWay);
+
                 }
-            }
-            //segment is curved
-             else{
-                if(enableDraw){
+                        
+                else{ //segment is curved
 
                     //first deal with all curves from segment's "from" intersection to the last curve point
 
@@ -1037,99 +1054,204 @@ void draw_streets(ezgl::renderer *g){
                     xyRight = latLonToCartesian(pointsRight); 
 
                     g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
+                    
+                    if(streetName != "<unknown>")// "<unknown>" street name not drawn
+                        draw_street_name(g, segmentID, xyFrom, xyTo, numCurvePoints, segmentLength, streetName, segmentInfo.oneWay);
+                
                 }
-             }
+            }
         }
     }
 }
 
-void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay){
+void draw_street_name(ezgl::renderer* g, int segmentID, std::pair<double, double>& xyFrom, std::pair<double, double>& xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay)
+{
     //Variables for drawing text of street segments
     //uses find_street_segment_length from m1
-    double rotationAngle, xMiddleOfSegment, yMiddleOfSegment;
-    
+    double xMiddleOfSegment, yMiddleOfSegment;
+
     //Greater screen_ratio = more reprinting of street name and arrows: < (for oneway streets)
-    double screen_ratio = segmentLength/scale_factor; //screen_ratio is the available length of the street segment on screen. 
-    g->set_color (224, 224, 224, 255);  
-    
-     if (numCurvePoints == 0){ //if segment is a straight line
-         
-            if(streetName != "<unknown>"){ // "<unknown>" street name not drawn
+    double screen_ratio = segmentLength / scale_factor; //screen_ratio is the available length of the street segment on screen.
+    g ->set_color(224, 224, 224, 255);
 
-                rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first)/DEGREE_TO_RADIAN;
-                xMiddleOfSegment = 0.5*(xyFrom.first + xyTo.first);
-                yMiddleOfSegment = 0.5*(xyFrom.second + xyTo.second);
+    if (numCurvePoints == 0) { //if segment is a straight line
 
-                if (rotationAngle > 90 ){
-                    rotationAngle = rotationAngle - 180;
-                }
-                if (rotationAngle < -90){
-                    rotationAngle = rotationAngle + 180;
-                }
-                //draw text 
-                g->set_text_rotation(rotationAngle);
+//        rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first) / DEGREE_TO_RADIAN;
+        xMiddleOfSegment = 0.5 * (xyFrom.first + xyTo.first);
+        yMiddleOfSegment = 0.5 * (xyFrom.second + xyTo.second);
 
-                std::string direction_symbol = ">"; //symbol for one way street
-                if (oneWay){
-                    if (xyFrom.first > xyTo.first){
-                        direction_symbol = "<"; //reverse direction
-                    }
-                }
+//        if (rotationAngle > 90) {
+//            rotationAngle = rotationAngle - 180;
+//        }
+//        if (rotationAngle < -90) {
+//            rotationAngle = rotationAngle + 180;
+//        }
+        
+        //draw text
+        g->set_text_rotation(getRotationAngle(xyFrom, xyTo));
 
-                //only enough space to draw direction
-                if (screen_ratio < 5000){
-                    if (oneWay){
-                        g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, direction_symbol, segmentLength, segmentLength);            
-                    }
-                }
-
-                //only enough space to draw name
-                else if (screen_ratio < 20000){
-                    g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);            
-                }
-
-                //draw:  [direction] [name] [direction]
-                else if (screen_ratio < 30000){
-                    g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);            
-                    if (oneWay){
-                        g->draw_text({(xMiddleOfSegment+xyFrom.first)/2, (yMiddleOfSegment+xyFrom.second)/2}, direction_symbol, segmentLength, segmentLength);
-                        g->draw_text({(xMiddleOfSegment+xyTo.first)/2, (yMiddleOfSegment+xyTo.second)/2}, direction_symbol, segmentLength, segmentLength);
-                    }
-                }
-
-                //draw:  [direction] [name] [direction] [name] [direction] 
-                else if (screen_ratio < 50000){
-                    g->draw_text({ (2*xMiddleOfSegment+xyFrom.first)/3, (2*yMiddleOfSegment+xyFrom.second)/3}, streetName, segmentLength, segmentLength); 
-                    g->draw_text({ (2*xMiddleOfSegment+xyTo.first)/3, (2*yMiddleOfSegment+xyTo.second)/3}, streetName, segmentLength, segmentLength); 
-
-                    if (oneWay){
-                        g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, direction_symbol, segmentLength, segmentLength);         
-                        g->draw_text({ (((2*xMiddleOfSegment+xyFrom.first)/3)+xyFrom.first)/2, (((2*yMiddleOfSegment+xyFrom.second)/3)+xyFrom.second)/2}, direction_symbol, segmentLength, segmentLength); 
-                        g->draw_text({ (((2*xMiddleOfSegment+xyTo.first)/3)+xyTo.first)/2, (((2*yMiddleOfSegment+xyTo.second)/3)+xyTo.second)/2}, direction_symbol, segmentLength, segmentLength); 
-                    }
-                }
-
-                 //draw:  [direction] [name] [direction] [name] [direction] [name] [direction] 
-                else{
-                    g->draw_text({ xMiddleOfSegment, yMiddleOfSegment}, streetName, segmentLength, segmentLength);            
-                    g->draw_text({(xMiddleOfSegment+xyFrom.first)/2, (yMiddleOfSegment+xyFrom.second)/2}, streetName, segmentLength, segmentLength);
-                    g->draw_text({(xMiddleOfSegment+xyTo.first)/2, (yMiddleOfSegment+xyTo.second)/2}, streetName, segmentLength, segmentLength);
-
-                    if (oneWay){
-                      g->draw_text({(((xMiddleOfSegment+xyFrom.first)/2)+xyFrom.first)/2, (((yMiddleOfSegment+xyFrom.second)/2)+xyFrom.second)/2}, direction_symbol, segmentLength, segmentLength);         
-                      g->draw_text({(((xMiddleOfSegment+xyFrom.first)/2)+xMiddleOfSegment)/2, (((yMiddleOfSegment+xyFrom.second)/2)+yMiddleOfSegment)/2}, direction_symbol, segmentLength, segmentLength);         
-                      g->draw_text({(((xMiddleOfSegment+xyTo.first)/2)+xMiddleOfSegment)/2, (((yMiddleOfSegment+xyTo.second)/2)+yMiddleOfSegment)/2}, direction_symbol, segmentLength, segmentLength);         
-                      g->draw_text({(((xMiddleOfSegment+xyTo.first)/2)+xyTo.first)/2, (((yMiddleOfSegment+xyTo.second)/2)+xyTo.second)/2}, direction_symbol, segmentLength, segmentLength);         
-
-                    }
-                }
-                //for safety, set rotation back to zero
-                g->set_text_rotation(0);
+        std::string direction_symbol = ">"; //symbol for one way street
+        if (oneWay) {
+            if (xyFrom.first > xyTo.first) {
+                direction_symbol = "<"; //reverse direction
             }
-     }
-    else{
-         //segment is curved
-         //currently no street names
+        }
+
+        //only enough space to draw direction
+        if (screen_ratio < 5000) {
+            if (oneWay) {
+                g->draw_text({ xMiddleOfSegment,
+                                    yMiddleOfSegment },
+                          direction_symbol, segmentLength, segmentLength);
+            }
+        }
+
+        //only enough space to draw name
+        else if (screen_ratio < 20000) {
+            g->draw_text({ xMiddleOfSegment,
+                                yMiddleOfSegment },
+                      streetName, segmentLength, segmentLength);
+        }
+
+        //draw:  [direction] [name] [direction]
+        else if (screen_ratio < 30000) {
+            g->draw_text({ xMiddleOfSegment,
+                                yMiddleOfSegment },
+                      streetName, segmentLength, segmentLength);
+            if (oneWay) {
+                g->draw_text({ (xMiddleOfSegment + xyFrom.first) / 2,
+                                    (yMiddleOfSegment + xyFrom.second) / 2 },
+                          direction_symbol, segmentLength, segmentLength);
+                g->draw_text({ (xMiddleOfSegment + xyTo.first) / 2,
+                                    (yMiddleOfSegment + xyTo.second) / 2 },
+                          direction_symbol, segmentLength, segmentLength);
+            }
+        }
+
+        //draw:  [direction] [name] [direction] [name] [direction]
+        else if (screen_ratio < 50000) {
+            g->draw_text({ (2 * xMiddleOfSegment + xyFrom.first) / 3,
+                                (2 * yMiddleOfSegment + xyFrom.second) / 3 },
+                      streetName, segmentLength, segmentLength);
+            g->draw_text({ (2 * xMiddleOfSegment + xyTo.first) / 3,
+                                (2 * yMiddleOfSegment + xyTo.second) / 3 },
+                      streetName, segmentLength, segmentLength);
+
+            if (oneWay) {
+                g->draw_text({ xMiddleOfSegment,
+                                    yMiddleOfSegment },
+                          direction_symbol, segmentLength, segmentLength);
+                g->draw_text({ (((2 * xMiddleOfSegment + xyFrom.first) / 3) + xyFrom.first) / 2,
+                                    (((2 * yMiddleOfSegment + xyFrom.second) / 3) + xyFrom.second) / 2 },
+                          direction_symbol, segmentLength, segmentLength);
+                g->draw_text({ (((2 * xMiddleOfSegment + xyTo.first) / 3) + xyTo.first) / 2,
+                                    (((2 * yMiddleOfSegment + xyTo.second) / 3) + xyTo.second) / 2 },
+                          direction_symbol, segmentLength, segmentLength);
+            }
+        }
+
+        //draw:  [direction] [name] [direction] [name] [direction] [name] [direction]
+        else {
+            g->draw_text({ xMiddleOfSegment,
+                                yMiddleOfSegment },
+                      streetName, segmentLength, segmentLength);
+            g->draw_text({ (xMiddleOfSegment + xyFrom.first) / 2,
+                                (yMiddleOfSegment + xyFrom.second) / 2 },
+                      streetName, segmentLength, segmentLength);
+            g->draw_text({ (xMiddleOfSegment + xyTo.first) / 2,
+                                (yMiddleOfSegment + xyTo.second) / 2 },
+                      streetName, segmentLength, segmentLength);
+
+            if (oneWay) {
+                g->draw_text({ (((xMiddleOfSegment + xyFrom.first) / 2) + xyFrom.first) / 2,
+                                    (((yMiddleOfSegment + xyFrom.second) / 2) + xyFrom.second) / 2 },
+                          direction_symbol, segmentLength, segmentLength);
+                g->draw_text({ (((xMiddleOfSegment + xyFrom.first) / 2) + xMiddleOfSegment) / 2,
+                                    (((yMiddleOfSegment + xyFrom.second) / 2) + yMiddleOfSegment) / 2 },
+                          direction_symbol, segmentLength, segmentLength);
+                g->draw_text({ (((xMiddleOfSegment + xyTo.first) / 2) + xMiddleOfSegment) / 2,
+                                    (((yMiddleOfSegment + xyTo.second) / 2) + yMiddleOfSegment) / 2 },
+                          direction_symbol, segmentLength, segmentLength);
+                g->draw_text({ (((xMiddleOfSegment + xyTo.first) / 2) + xyTo.first) / 2,
+                                    (((yMiddleOfSegment + xyTo.second) / 2) + xyTo.second) / 2 },
+                          direction_symbol, segmentLength, segmentLength);
+            }
+        }
+        //for safety, set rotation back to zero
+        g->set_text_rotation(0);
+    }
+    else { //segment is curved
+//        std::string direction_symbol = ">"; //set default direction for one-way streets
+//
+//////        if (scale_factor <= 0.1) { //if zoomed out enough that street name should be printed once
+//        int midCurvePoint, quarterLeft, quarterRight;
+//////        if (oneWay) {
+//////            if (xyFrom.first > xyTo.first) {
+//////                direction_symbol = "<"; //reverse direction
+//////            }
+//////        }
+//            
+//        if (numCurvePoints % 2 == 0) {
+//            midCurvePoint = (numCurvePoints - 1) / 2;
+//            std::pair <double, double> leftPoint = latLonToCartesian(getStreetSegmentCurvePoint(midCurvePoint, segmentID));
+//            std::pair <double, double> rightPoint = latLonToCartesian(getStreetSegmentCurvePoint(midCurvePoint + 1, segmentID));
+//            xMiddleOfSegment = (leftPoint.first + rightPoint.first) / 2;
+//            yMiddleOfSegment = (leftPoint.second + rightPoint.second) / 2;
+//              
+//            //set text rotation for street name
+//            g->set_text_rotation(getRotationAngle(leftPoint, rightPoint));
+//
+//        }
+//        else {
+//            midCurvePoint = numCurvePoints / 2;
+//            std::pair <double, double> curvePoint = latLonToCartesian(getStreetSegmentCurvePoint(midCurvePoint, segmentID));
+//            xMiddleOfSegment = curvePoint.first;
+//            yMiddleOfSegment = curvePoint.second;
+//            std::pair <double, double> left, right;
+//            if (numCurvePoints==1){
+//                left = xyFrom;
+//                right = xyTo;
+//            }
+//            else{
+//                left = latLonToCartesian(getStreetSegmentCurvePoint(midCurvePoint-1, segmentID));
+//                right = latLonToCartesian(getStreetSegmentCurvePoint(midCurvePoint+1, segmentID));
+//            }
+//            std::pair <double, double> leftAvg((left.first + xMiddleOfSegment)/2, (left.second + yMiddleOfSegment)/2);
+//            std::pair <double, double> rightAvg((right.first + xMiddleOfSegment)/2, (right.second + yMiddleOfSegment)/2);
+//
+//            //set text rotation for street name
+//            g->set_text_rotation(getRotationAngle(leftAvg, rightAvg));
+//
+//        }
+//        
+//        //drawing curve points for debugging (will be removed)
+//        for (int i = 0; i < numCurvePoints; i++){
+//            float width;
+//            if (scale_factor > 0.005)
+//                width =  2;
+//            else if (scale_factor > 0.001)
+//                width =  1;
+//      //      else if (scale_factor > 0.0001)
+//      //          width =  0.;
+//            else //if (scale_factor < 0.10)
+//                width =  0.5;
+//            float height = width;
+//
+//         
+//            g->set_color(ezgl::GREEN);
+//            std::pair <double, double> curvePoint = latLonToCartesian(getStreetSegmentCurvePoint(i, segmentID));
+//            double x = curvePoint.first;
+//            double y = curvePoint.second;
+//          //for intersection id, get segs. Check seg's lowest threshold value
+//          //for that threshold value, enable or disable drawing
+//            g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
+//            
+//            
+//        }
+
+//        g->draw_text({xMiddleOfSegment, yMiddleOfSegment }, streetName);
+        
+//        }
     }
 }
 
