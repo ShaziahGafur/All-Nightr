@@ -83,7 +83,7 @@ void drawFeature_byType(int feature_type, ezgl::renderer *g);
 void drawFeatures(ezgl::renderer *g);
 void draw_feature_names(ezgl::renderer *g);
 void draw_streets(ezgl::renderer *g);
-void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay);
+void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, double& segmentLength, std::string& streetName, bool oneWay);
 void draw_intersections(ezgl::renderer *g);  
 void clearIntersection_highlights();
 //int intersectionThreshold(int interIndex);
@@ -637,9 +637,11 @@ void find_button(GtkWidget* widget, ezgl::application *application){
        
     //get street names to be used find function
     iss >> street1; 
-    //std::cout << street1 << "\n";
+    if (street1.find_first_not_of(' ') == std::string::npos) 
+        return;
     std::getline(iss, street2);
-    std::cout<<"street2 is: "<<street2;
+    if (street2.find_first_not_of(' ') == std::string::npos)
+        return;
     street2 = street2.substr(street2.find("and") + 4); 
 //    if (street2.find(" & ")< street2.length()){ //found an & in the string
 //        iss >> street2;  
@@ -648,37 +650,33 @@ void find_button(GtkWidget* widget, ezgl::application *application){
 //    else{
 //         street2 = street2.substr(street2.find("and") + 4); //
 //    }
-    //std::cout << street2 << "\n";
-
+    
+    //if one of the street names is invalid (whitespace only)
+    if (street2.find_first_not_of(' ') == std::string::npos)
+        return;
     
     //obtains all of the possible streetIds that match the entered street names
     std::vector<int> street_ids_1 = find_street_ids_from_partial_street_name(street1);
     std::vector<int> street_ids_2 = find_street_ids_from_partial_street_name(street2);
     
-    int street1_remaining_id = 0;
-    int street2_remaining_id = 0;
+    int street1_id = 0;
+    int street2_id = 0;
     //nested for-loop which finds intersections between all streetId's returned by partial_street_name function
     //outer for-loop looks through all matches in 
 
     for(int i = 0; i < street_ids_1.size() && (streetIntersections.empty() == true); i++){
-        for(int j = 0; j < street_ids_2.size() && (streetIntersections.empty() == true) ; j++){
+        for(street2_id = 0; street2_id < street_ids_2.size() && (streetIntersections.empty() == true) ; street2_id++){
+            street1_id = i; //store old value of i before incrementation
             
             //load twoStreets pair
-            twoStreets.first = street_ids_1[i];
-
-            twoStreets.second = street_ids_2[j];
+            twoStreets.first = street_ids_1[street1_id];
+            twoStreets.second = street_ids_2[street2_id];
 
             streetIntersections = find_intersections_of_two_streets(twoStreets);
-            street2_remaining_id++;
         }
-        
-        street1_remaining_id++; //holds record of the index
     }
+    
     //an un empty streetIntersections vector indicates that common intersections were found for the predicted streets
-    
-    //std::pair<int, int> twoStreets(street_ids_1[0], street_ids_2[0]);
-    
-    //std::vector<int> streetIntersections = find_intersections_of_two_streets(twoStreets);
     
     std::string intersectionNames = "";
         
@@ -687,15 +685,32 @@ void find_button(GtkWidget* widget, ezgl::application *application){
         intersectionNames+=getIntersectionName(streetIntersections[i]);
         if (i+1!=streetIntersections.size())
             intersectionNames+=", ";
-    //    std::cout << intersections[streetIntersections[i]].name << "\n";
     }
     
-    //Suggested Street names'  
+    //Suggested Street names  
     std::string suggested_streets = "";
     
-    for(int i = street1_remaining_id; i < street_ids_1.size(); i++){
-        for(int j = street2_remaining_id; j < street_ids_2.size(); j++){
+//    street2_id++; //advance to next possible street for street 2
+    //finish iteration on street1 (i.e. for that same street1 value, check all other possibilities on street 2)
+    for(int j = street2_id; j < street_ids_2.size(); j++){
 
+        //load twoStreets pair
+        twoStreets.first = street_ids_1[street1_id];
+
+        twoStreets.second = street_ids_2[j];
+        streetIntersections = find_intersections_of_two_streets(twoStreets);
+        if (streetIntersections.empty()==false){
+
+            suggested_streets+=getStreetName(twoStreets.first)+" & "+getStreetName(twoStreets.second)+"\n";
+            streetIntersections.clear();    
+        }
+    }
+    street1_id++;
+    
+    //check all possibilities for other values of street 1, and for each street1, check with all combinations of street 2
+    for(int i = street1_id; i < street_ids_1.size(); i++){
+        for(int j = 0; j < street_ids_2.size(); j++){
+            
             //load twoStreets pair
             twoStreets.first = street_ids_1[i];
 
@@ -703,9 +718,8 @@ void find_button(GtkWidget* widget, ezgl::application *application){
             streetIntersections = find_intersections_of_two_streets(twoStreets);
             if (streetIntersections.empty()==false){
                 
-                for(int k = 0; k < streetIntersections.size(); k++){
-                    suggested_streets+=getStreetName(twoStreets.first)+" & "+getStreetName(twoStreets.second)+"\n";
-                }
+                suggested_streets+=getStreetName(twoStreets.first)+" & "+getStreetName(twoStreets.second)+"\n";
+                streetIntersections.clear();    
             }
         }
     }
@@ -714,32 +728,13 @@ void find_button(GtkWidget* widget, ezgl::application *application){
         std::cout<<"\nDid you mean?\n\n";
         std::cout<<suggested_streets;
     }
-    
+//    //for safety
+//    streetIntersections.clear(); 
     application->update_message (intersectionNames); 
     // Redraw the graphics
     application->refresh_drawing();
-}\
+}
 
-/**
- * Unused function: intersectionThreshold
- * Remove once we are sure we should remove
- */
-
-////Based on the segments touching the street, returns the highest zoom threshold value (0 = highest threshold, 1 = medium threshold, 2 = lowest threshold) 
-//int intersectionThreshold(int interIndex){
-//    int threshold=2;
-//    for (int i = 0; i < IntersectionStreetSegments[interIndex].size(); i++){
-//        InfoStreetSegment segInfo = getInfoStreetSegment(IntersectionStreetSegments[interIndex][i]);
-//        RoadType roadType = WaybyRoadType.at(segInfo.wayOSMID);
-//        if (roadType == motorway||roadType == trunk||roadType == primary ||roadType == secondary ) //significant roads always show on map
-//            return 1;
-//        else if (roadType!= residential||roadType!= unclassified){ //either tertiary or unknown 
-//            if (threshold==2)
-//                threshold = 1; //most significant is tertiary/unknown
-//        }   
-//    }
-//    return threshold;
-//}
 //vertices are the feature points in xy coordinates, vertexCount = number of feature points
 ezgl::point2d compute2DPolygonCentroid(std::vector< ezgl::point2d > & vertices, double& area)
 {
@@ -1016,7 +1011,7 @@ void draw_streets(ezgl::renderer *g){
 
                         if(streetName != "<unknown>"){// "<unknown>" street name not drawn
                                 if (!(roadType ==motorway&& scale_factor > 0.6)){ //motorway names will not show unless zoomed in a little (makes the default display look cleaner)
-                                draw_street_name(g, xyFrom, xyTo, numCurvePoints, segmentLength, streetName, segmentInfo.oneWay);
+                                draw_street_name(g, xyFrom, xyTo, segmentLength, streetName, segmentInfo.oneWay);
                             }
                         }
                 }
@@ -1125,7 +1120,7 @@ void draw_streets(ezgl::renderer *g){
  * @param streetName
  * @param oneWay
  */
-void draw_street_name(ezgl::renderer* g, std::pair<double, double>& xyFrom, std::pair<double, double>& xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay)
+void draw_street_name(ezgl::renderer* g, std::pair<double, double>& xyFrom, std::pair<double, double>& xyTo, double& segmentLength, std::string& streetName, bool oneWay)
 {
     //Variables for drawing text of street segments
     //uses find_street_segment_length from m1
