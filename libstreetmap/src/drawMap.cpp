@@ -85,7 +85,9 @@ void draw_feature_names(ezgl::renderer *g);
 void draw_streets(ezgl::renderer *g);
 void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, double& segmentLength, std::string& streetName, bool oneWay);
 void draw_intersections(ezgl::renderer *g);  
+void draw_points_of_interest(ezgl::renderer *g);
 void clearIntersection_highlights();
+
 //int intersectionThreshold(int interIndex);
 
 // POPULATING GLOBAL VARIABLES //
@@ -225,65 +227,7 @@ void draw_main_canvas (ezgl::renderer *g){
     draw_feature_names(g);
      
     //Draw POIs
-    //***********************************************************************************
-    
-//    bool enable_poi = true;
-//    if (scale_factor > 0.5)
-//        enable_poi = false;
-//    
-//    //Extract vectors from PointsOfInterest vector to make it easier to parse through each type separately
-//    std::vector<poiStruct> library = PointsOfInterest[0];
-//    std::vector<poiStruct> cafes = PointsOfInterest[1];
-//    std::vector<poiStruct> restaurant = PointsOfInterest[2];
-//    
-//    //Declare iterator to go through each vector
-//    std::vector<poiStruct>::iterator it = library.begin();
-//    
-//    //Variables to extract data from poi struct
-//    poiStruct poiData;
-//    std::pair<double,double> xyCoordinates;
-//    std::string poiName;
-//    
-//    //loop through library vector, extract data and draw names of library stations on map
-//    while(it != library.end()){
-//        poiData = *it;
-//        xyCoordinates = poiData.xyCoordinates;
-//        poiName = poiData.Name;
-//        
-//        g->set_color (ezgl::BLACK);
-//        if (enable_poi)
-//            g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName);
-//        
-//        it++;
-//    }
-//    
-//    //loop through cafes vector, extract data and draw names of library stations on map
-//    it = cafes.begin();
-//    while(it != cafes.end()){
-//        poiData = *it;
-//        xyCoordinates = poiData.xyCoordinates;
-//        poiName = poiData.Name;
-//        
-//        g->set_color (ezgl::BLACK);
-//        if (enable_poi)
-//            g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
-//        
-//        it++;
-//    }
-//    
-//    //loop through restaurant vector, extract data and draw names of library stations on map
-//    it = restaurant.begin();
-//    while(it != restaurant.end()){
-//        poiData = *it;
-//        xyCoordinates = poiData.xyCoordinates;
-//        poiName = poiData.Name;
-//        
-//        g->set_color (ezgl::BLACK);
-//        if (enable_poi)
-//            g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
-//        
-//        it++;
-//    }
+    draw_points_of_interest(g);
     
     //Drawing Intersections
     draw_intersections(g);
@@ -340,7 +284,7 @@ void populatePointsOfInterest(){
     LatLon latlon;
     std::pair<double, double> xy;
     double x, y;
-    std::vector<poiStruct> library, cafes, restaurant;
+    std::vector<poiStruct> library, cafes, fast_food;
     //iterate through points of interest using layer 1
     for (unsigned poiIterator = 0; poiIterator < getNumPointsOfInterest(); poiIterator++){
         value = getPointOfInterestType(poiIterator);
@@ -358,7 +302,7 @@ void populatePointsOfInterest(){
             
             library.push_back(poiData);
         }
-        else if (value == "cafes"){
+        else if (value == "cafe"){
             name = getPointOfInterestName(poiIterator);
             latlon = getPointOfInterestPosition(poiIterator);
             
@@ -371,7 +315,7 @@ void populatePointsOfInterest(){
             
             cafes.push_back(poiData);
         }
-        else if (value == "restaurant"){
+        else if (value == "fast_food"){
             name = getPointOfInterestName(poiIterator);
             latlon = getPointOfInterestPosition(poiIterator);
             
@@ -382,13 +326,13 @@ void populatePointsOfInterest(){
             poiData.addName(name);
             poiData.addXYCoordinates(xy);
             
-            restaurant.push_back(poiData);
+            fast_food.push_back(poiData);
         }
     }
     
     PointsOfInterest[0] = library;
     PointsOfInterest[1] = cafes;
-    PointsOfInterest[2] = restaurant;
+    PointsOfInterest[2] = fast_food;
 }
 
 /*
@@ -888,6 +832,69 @@ void drawFeatures(ezgl::renderer *g){
         drawFeature_byType(Building, g);
         drawFeature_byType(Unknown, g);
     }
+}
+
+//function draws points of interest names on map
+void draw_points_of_interest(ezgl::renderer *g){
+    
+    bool enable_poi = true;
+    if (scale_factor > 0.3)
+        enable_poi = false;
+    
+    //Extract vectors from PointsOfInterest vector to make it easier to parse through each type separately
+    std::vector<poiStruct> library = PointsOfInterest[0];
+    std::vector<poiStruct> cafes = PointsOfInterest[1];
+    std::vector<poiStruct> fast_food = PointsOfInterest[2];
+    
+    //Declare iterator to go through each vector
+    std::vector<poiStruct>::iterator it = library.begin();
+    
+    //Variables to extract data from poi struct
+    poiStruct poiData;
+    std::pair<double,double> xyCoordinates;
+    std::string poiName;
+    
+    //loop through library vector, extract data and draw names of libraries on map
+    while(it != library.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
+        
+        g->set_color (ezgl::GREEN);
+        if (enable_poi)
+            g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName);
+        
+        it++;
+    }
+    
+    //loop through cafes vector, extract data and draw names of cafes on map
+    it = cafes.begin();
+    while(it != cafes.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
+        
+        g->set_color (ezgl::GREEN);
+        if (enable_poi)
+            g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        
+        it++;
+    }
+    
+    //loop through fast_food vector, extract data and draw names of fast_foods on map
+    it = fast_food.begin();
+    while(it != fast_food.end()){
+        poiData = *it;
+        xyCoordinates = poiData.xyCoordinates;
+        poiName = poiData.Name;
+        
+        g->set_color (ezgl::GREEN);
+        if (enable_poi)
+            g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        
+        it++;
+    }
+    
 }
 
 //function draws all streets on map
