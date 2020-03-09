@@ -83,7 +83,7 @@ void drawFeature_byType(int feature_type, ezgl::renderer *g);
 void drawFeatures(ezgl::renderer *g);
 void draw_feature_names(ezgl::renderer *g);
 void draw_streets(ezgl::renderer *g);
-void draw_street_name(ezgl::renderer *g, int segmentID, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay);
+void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay);
 void draw_intersections(ezgl::renderer *g);  
 void clearIntersection_highlights();
 //int intersectionThreshold(int interIndex);
@@ -1014,19 +1014,28 @@ void draw_streets(ezgl::renderer *g){
                         g->set_line_dash(ezgl::line_dash::none);
                         g->draw_line({xyFrom.first, xyFrom.second}, {xyTo.first, xyTo.second});
 
-                        if(streetName != "<unknown>")// "<unknown>" street name not drawn
-                            draw_street_name(g, segmentID, xyFrom, xyTo, numCurvePoints, segmentLength, streetName, segmentInfo.oneWay);
-
+                        if(streetName != "<unknown>"){// "<unknown>" street name not drawn
+                                if (!(roadType ==motorway&& scale_factor > 0.6)){ //motorway names will not show unless zoomed in a little (makes the default display look cleaner)
+                                draw_street_name(g, xyFrom, xyTo, numCurvePoints, segmentLength, streetName, segmentInfo.oneWay);
+                            }
+                        }
                 }
                         
                 else{ //segment is curved
 
+                    //First draw street's line, then the text
                     //first deal with all curves from segment's "from" intersection to the last curve point
 
                     //first curve of the segment
                     LatLon pointsLeft  = getIntersectionPosition(segmentInfo.from);
                     LatLon pointsRight = getStreetSegmentCurvePoint(0, segmentID);
 
+                    //also determine curve segment that is the longest
+                    double maxCurveLength = 0;
+                    //track the place where the max curve length exists
+                    int maxCurvePosition = 0; // 0 means the max is between segment's from and the first curve point. 1 means the max is between the 1st and 2nd curve points
+                    maxCurveLength = find_distance_between_two_points(std::pair <LatLon, LatLon>(pointsLeft, pointsRight));
+                    
                     std::pair <double, double> xyLeft = latLonToCartesian(pointsLeft);
                     std::pair <double, double> xyRight = latLonToCartesian(pointsRight);
 
@@ -1035,7 +1044,13 @@ void draw_streets(ezgl::renderer *g){
                     for (int curvePointIndex = 0; curvePointIndex < numCurvePoints - 1; curvePointIndex++){
                         pointsLeft = pointsRight;
                         pointsRight = getStreetSegmentCurvePoint(curvePointIndex + 1, segmentID);
-
+                        
+                        double curveLength = find_distance_between_two_points(std::pair <LatLon, LatLon>(pointsLeft, pointsRight));
+                        if (curveLength > maxCurveLength){
+                            maxCurveLength = curveLength;
+                            maxCurvePosition = curvePointIndex + 1;
+                        }
+                        
                         xyLeft = latLonToCartesian(pointsLeft);
                         xyRight = latLonToCartesian(pointsRight);
 
@@ -1046,25 +1061,71 @@ void draw_streets(ezgl::renderer *g){
                     pointsLeft = pointsRight;
                     pointsRight = getIntersectionPosition(segmentInfo.to);
 
-                    //update segment length to length between curve points
-                    std::pair <LatLon, LatLon> points (pointsLeft, pointsRight);
-                    segmentLength = find_distance_between_two_points(points);
+                    double curveLength = find_distance_between_two_points(std::pair <LatLon, LatLon>(pointsLeft, pointsRight));
+                        if (curveLength > maxCurveLength){
+                            maxCurveLength = curveLength;
+                            maxCurvePosition = numCurvePoints;
+                        }
 
                     xyLeft = latLonToCartesian(pointsLeft);
                     xyRight = latLonToCartesian(pointsRight); 
 
                     g->draw_line({xyLeft.first, xyLeft.second}, {xyRight.first, xyRight.second});
                     
-                    if(streetName != "<unknown>")// "<unknown>" street name not drawn
-                        draw_street_name(g, segmentID, xyFrom, xyTo, numCurvePoints, segmentLength, streetName, segmentInfo.oneWay);
-                
+                    //Draw street name
+                    
+                    //if zoomed out too far, do not draw street name of major roads (many cities have several motorways adjacent, which causes street names to look squished)
+                    if (!((roadType ==motorway ||roadType ==trunk)&& scale_factor > 0.075)){
+
+                        if(streetName != "<unknown>"){// "<unknown>" street name not drawn
+                            std::pair <double, double> xyLeftMax;// =  latLonToCartesian(getStreetSegmentCurvePoint(maxCurvePosition, segmentID));
+                            std::pair <double, double> xyRightMax;// =  latLonToCartesian(getStreetSegmentCurvePoint(maxCurvePosition + 1, segmentID));
+    //                        
+                            if (maxCurvePosition==0){
+                                xyLeftMax = latLonToCartesian(getIntersectionPosition(segmentInfo.from));
+                            }
+                            else
+                                xyLeftMax = latLonToCartesian(getStreetSegmentCurvePoint(maxCurvePosition - 1, segmentID));
+
+                            if (maxCurvePosition==numCurvePoints){
+                                xyRightMax = latLonToCartesian(getIntersectionPosition(segmentInfo.to));
+                            }
+                            else
+                                 xyRightMax =  latLonToCartesian(getStreetSegmentCurvePoint(maxCurvePosition, segmentID));
+    //                        
+                            double xMiddleOfSegment = (xyLeftMax.first + xyRightMax.first)/2;
+                            double yMiddleOfSegment = (xyLeftMax.second + xyRightMax.second)/2;
+                            std::string streetSegName = streetName; //saves copy of street name
+                            if (segmentInfo.oneWay){
+                                std::string direction_symbol = ">"; //symbol for one way street
+                                if (xyFrom.first > xyTo.first) {
+                                         direction_symbol = "<"; //reverse direction
+                                    }
+                                streetSegName = direction_symbol + "    " + streetSegName + "    " + direction_symbol;
+                            }
+
+                            g->set_text_rotation(getRotationAngle(xyLeftMax, xyRightMax));
+                            g->set_color(ezgl::WHITE);
+                            g->draw_text({xMiddleOfSegment, yMiddleOfSegment}, streetSegName, segmentLength, segmentLength);
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-void draw_street_name(ezgl::renderer* g, int segmentID, std::pair<double, double>& xyFrom, std::pair<double, double>& xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay)
+/**
+ * Draws street name for only a STRAIGHT street segment. If segment is curved, drawing of street name happens in draw_streets
+ * @param g
+ * @param xyFrom
+ * @param xyTo
+ * @param numCurvePoints
+ * @param segmentLength
+ * @param streetName
+ * @param oneWay
+ */
+void draw_street_name(ezgl::renderer* g, std::pair<double, double>& xyFrom, std::pair<double, double>& xyTo, int& numCurvePoints, double& segmentLength, std::string& streetName, bool oneWay)
 {
     //Variables for drawing text of street segments
     //uses find_street_segment_length from m1
@@ -1074,22 +1135,13 @@ void draw_street_name(ezgl::renderer* g, int segmentID, std::pair<double, double
     double screen_ratio = segmentLength / scale_factor; //screen_ratio is the available length of the street segment on screen.
     g ->set_color(224, 224, 224, 255);
 
-    if (numCurvePoints == 0) { //if segment is a straight line
-
-//        rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first) / DEGREE_TO_RADIAN;
         xMiddleOfSegment = 0.5 * (xyFrom.first + xyTo.first);
         yMiddleOfSegment = 0.5 * (xyFrom.second + xyTo.second);
-
-//        if (rotationAngle > 90) {
-//            rotationAngle = rotationAngle - 180;
-//        }
-//        if (rotationAngle < -90) {
-//            rotationAngle = rotationAngle + 180;
-//        }
         
-        //draw text
+        //set rotation for text to draw
         g->set_text_rotation(getRotationAngle(xyFrom, xyTo));
 
+        //set default direction for one way street
         std::string direction_symbol = ">"; //symbol for one way street
         if (oneWay) {
             if (xyFrom.first > xyTo.first) {
@@ -1097,7 +1149,7 @@ void draw_street_name(ezgl::renderer* g, int segmentID, std::pair<double, double
             }
         }
 
-        //only enough space to draw direction
+        //if there is only enough space to draw direction
         if (screen_ratio < 5000) {
             if (oneWay) {
                 g->draw_text({ xMiddleOfSegment,
@@ -1106,7 +1158,7 @@ void draw_street_name(ezgl::renderer* g, int segmentID, std::pair<double, double
             }
         }
 
-        //only enough space to draw name
+        //if only enough space to draw name
         else if (screen_ratio < 20000) {
             g->draw_text({ xMiddleOfSegment,
                                 yMiddleOfSegment },
@@ -1179,80 +1231,7 @@ void draw_street_name(ezgl::renderer* g, int segmentID, std::pair<double, double
         }
         //for safety, set rotation back to zero
         g->set_text_rotation(0);
-    }
-    else { //segment is curved
-//        std::string direction_symbol = ">"; //set default direction for one-way streets
-//
-//////        if (scale_factor <= 0.1) { //if zoomed out enough that street name should be printed once
-//        int midCurvePoint, quarterLeft, quarterRight;
-//////        if (oneWay) {
-//////            if (xyFrom.first > xyTo.first) {
-//////                direction_symbol = "<"; //reverse direction
-//////            }
-//////        }
-//            
-//        if (numCurvePoints % 2 == 0) {
-//            midCurvePoint = (numCurvePoints - 1) / 2;
-//            std::pair <double, double> leftPoint = latLonToCartesian(getStreetSegmentCurvePoint(midCurvePoint, segmentID));
-//            std::pair <double, double> rightPoint = latLonToCartesian(getStreetSegmentCurvePoint(midCurvePoint + 1, segmentID));
-//            xMiddleOfSegment = (leftPoint.first + rightPoint.first) / 2;
-//            yMiddleOfSegment = (leftPoint.second + rightPoint.second) / 2;
-//              
-//            //set text rotation for street name
-//            g->set_text_rotation(getRotationAngle(leftPoint, rightPoint));
-//
-//        }
-//        else {
-//            midCurvePoint = numCurvePoints / 2;
-//            std::pair <double, double> curvePoint = latLonToCartesian(getStreetSegmentCurvePoint(midCurvePoint, segmentID));
-//            xMiddleOfSegment = curvePoint.first;
-//            yMiddleOfSegment = curvePoint.second;
-//            std::pair <double, double> left, right;
-//            if (numCurvePoints==1){
-//                left = xyFrom;
-//                right = xyTo;
-//            }
-//            else{
-//                left = latLonToCartesian(getStreetSegmentCurvePoint(midCurvePoint-1, segmentID));
-//                right = latLonToCartesian(getStreetSegmentCurvePoint(midCurvePoint+1, segmentID));
-//            }
-//            std::pair <double, double> leftAvg((left.first + xMiddleOfSegment)/2, (left.second + yMiddleOfSegment)/2);
-//            std::pair <double, double> rightAvg((right.first + xMiddleOfSegment)/2, (right.second + yMiddleOfSegment)/2);
-//
-//            //set text rotation for street name
-//            g->set_text_rotation(getRotationAngle(leftAvg, rightAvg));
-//
-//        }
-//        
-//        //drawing curve points for debugging (will be removed)
-//        for (int i = 0; i < numCurvePoints; i++){
-//            float width;
-//            if (scale_factor > 0.005)
-//                width =  2;
-//            else if (scale_factor > 0.001)
-//                width =  1;
-//      //      else if (scale_factor > 0.0001)
-//      //          width =  0.;
-//            else //if (scale_factor < 0.10)
-//                width =  0.5;
-//            float height = width;
-//
-//         
-//            g->set_color(ezgl::GREEN);
-//            std::pair <double, double> curvePoint = latLonToCartesian(getStreetSegmentCurvePoint(i, segmentID));
-//            double x = curvePoint.first;
-//            double y = curvePoint.second;
-//          //for intersection id, get segs. Check seg's lowest threshold value
-//          //for that threshold value, enable or disable drawing
-//            g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
-//            
-//            
-//        }
-
-//        g->draw_text({xMiddleOfSegment, yMiddleOfSegment }, streetName);
-        
-//        }
-    }
+    
 }
 
 void draw_intersections(ezgl::renderer *g){
