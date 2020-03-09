@@ -222,27 +222,27 @@ void draw_main_canvas (ezgl::renderer *g){
     draw_feature_names(g);
      
     //Draw POIs
-//    //***********************************************************************************
-//    
+    //***********************************************************************************
+    
 //    bool enable_poi = true;
 //    if (scale_factor > 0.5)
 //        enable_poi = false;
 //    
 //    //Extract vectors from PointsOfInterest vector to make it easier to parse through each type separately
-//    std::vector<poiStruct> police = PointsOfInterest[0];
-//    std::vector<poiStruct> hospitals = PointsOfInterest[1];
-//    std::vector<poiStruct> fire_station = PointsOfInterest[2];
+//    std::vector<poiStruct> library = PointsOfInterest[0];
+//    std::vector<poiStruct> cafes = PointsOfInterest[1];
+//    std::vector<poiStruct> restaurant = PointsOfInterest[2];
 //    
 //    //Declare iterator to go through each vector
-//    std::vector<poiStruct>::iterator it = police.begin();
+//    std::vector<poiStruct>::iterator it = library.begin();
 //    
 //    //Variables to extract data from poi struct
 //    poiStruct poiData;
 //    std::pair<double,double> xyCoordinates;
 //    std::string poiName;
 //    
-//    //loop through police vector, extract data and draw names of police stations on map
-//    while(it != police.end()){
+//    //loop through library vector, extract data and draw names of library stations on map
+//    while(it != library.end()){
 //        poiData = *it;
 //        xyCoordinates = poiData.xyCoordinates;
 //        poiName = poiData.Name;
@@ -254,9 +254,9 @@ void draw_main_canvas (ezgl::renderer *g){
 //        it++;
 //    }
 //    
-//    //loop through hospital vector, extract data and draw names of police stations on map
-//    it = hospitals.begin();
-//    while(it != hospitals.end()){
+//    //loop through cafes vector, extract data and draw names of library stations on map
+//    it = cafes.begin();
+//    while(it != cafes.end()){
 //        poiData = *it;
 //        xyCoordinates = poiData.xyCoordinates;
 //        poiName = poiData.Name;
@@ -268,9 +268,9 @@ void draw_main_canvas (ezgl::renderer *g){
 //        it++;
 //    }
 //    
-//    //loop through fire_station vector, extract data and draw names of police stations on map
-//    it = fire_station.begin();
-//    while(it != fire_station.end()){
+//    //loop through restaurant vector, extract data and draw names of library stations on map
+//    it = restaurant.begin();
+//    while(it != restaurant.end()){
 //        poiData = *it;
 //        xyCoordinates = poiData.xyCoordinates;
 //        poiName = poiData.Name;
@@ -368,12 +368,12 @@ void populatePointsOfInterest(){
     LatLon latlon;
     std::pair<double, double> xy;
     double x, y;
-    std::vector<poiStruct> police, hospital, fire_station;
+    std::vector<poiStruct> library, cafes, restaurant;
     //iterate through points of interest using layer 1
     for (unsigned poiIterator = 0; poiIterator < getNumPointsOfInterest(); poiIterator++){
         value = getPointOfInterestType(poiIterator);
         
-        if (value == "police"){
+        if (value == "library"){
             name = getPointOfInterestName(poiIterator);
             latlon = getPointOfInterestPosition(poiIterator);
             
@@ -384,9 +384,9 @@ void populatePointsOfInterest(){
             poiData.addName(name);
             poiData.addXYCoordinates(xy);
             
-            police.push_back(poiData);
+            library.push_back(poiData);
         }
-        else if (value == "hospital"){
+        else if (value == "cafes"){
             name = getPointOfInterestName(poiIterator);
             latlon = getPointOfInterestPosition(poiIterator);
             
@@ -397,9 +397,9 @@ void populatePointsOfInterest(){
             poiData.addName(name);
             poiData.addXYCoordinates(xy);
             
-            hospital.push_back(poiData);
+            cafes.push_back(poiData);
         }
-        else if (value == "fire_station"){
+        else if (value == "restaurant"){
             name = getPointOfInterestName(poiIterator);
             latlon = getPointOfInterestPosition(poiIterator);
             
@@ -410,13 +410,13 @@ void populatePointsOfInterest(){
             poiData.addName(name);
             poiData.addXYCoordinates(xy);
             
-            fire_station.push_back(poiData);
+            restaurant.push_back(poiData);
         }
     }
     
-    PointsOfInterest[0] = police;
-    PointsOfInterest[1] = hospital;
-    PointsOfInterest[2] = fire_station;
+    PointsOfInterest[0] = library;
+    PointsOfInterest[1] = cafes;
+    PointsOfInterest[2] = restaurant;
 }
 
 /*
