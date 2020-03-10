@@ -67,6 +67,11 @@ double min_lat;
 double max_lon;
 double min_lon;
 
+//when displaying the area around an intersection, these two values depict comfortable dimensions of Lat and Lon
+const double intersectionViewLon = 0.004; //Only one dimension is required as ezgl takes care of the other dimension for us
+ezgl::rectangle new_world;
+bool navigateScreen; 
+
 /************  FUNCTION DECLARATIONS  ***********/
 void draw_map_blank_canvas ();
 void draw_main_canvas (ezgl::renderer *g);
@@ -206,6 +211,11 @@ void draw_main_canvas (ezgl::renderer *g){
     double zoom = zoom_rect.width(); //width of zoom rectangle
     //global variable: ratio of zoom rectangle  width with map scale's width to develo percentage of the full map shown in the window
     scale_factor = zoom/(max_lon - min_lon); //Percentage. 1 = 100% (Auto fit). 0.05 = very zoomed in
+    
+    if (navigateScreen){
+        g->set_visible_world(new_world); 
+    }
+    navigateScreen = false; //resetting for the next iteration
     
     //Use these for creating thresholds for zooming
 //    std::cout<<"\nscale_factor: "<<scale_factor;
@@ -553,7 +563,7 @@ void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double 
 
 void initial_setup(ezgl::application *application, bool new_window)
 {
-
+    navigateScreen = false;
   //Create a Find button and link it with find_button callback function.
     //number indicates the order of the button (0->top)
   application->create_button("Find", 0, find_button);
@@ -632,6 +642,17 @@ void find_button(GtkWidget* widget, ezgl::application *application){
             intersectionNames+=", ";
     }
     
+    if (intersectionNames=="")
+        intersectionNames = "No results found";
+    
+    else{//update global variables to navigate screen to the intersection
+        LatLon intersectionFound = getIntersectionPosition(streetIntersections[0]);
+        ezgl::rectangle intersectionView({x_from_lon(intersectionFound.lon()-(intersectionViewLon/2)), y_from_lat(intersectionFound.lat())},{x_from_lon(intersectionFound.lon()+(intersectionViewLon/2)), y_from_lat(intersectionFound.lat())}); 
+        new_world = intersectionView;
+        navigateScreen = true;
+    }
+    // Redraw the graphics
+    application->refresh_drawing();
     //Suggested Street names  
     std::string suggested_streets = "";
     
@@ -672,7 +693,7 @@ void find_button(GtkWidget* widget, ezgl::application *application){
       GtkWidget* view = (GtkWidget *)application->get_object("SearchStreetsResults");
         GtkTextView * textViewPtr = GTK_TEXT_VIEW(view);
           GtkTextBuffer* buffer = gtk_text_view_get_buffer(textViewPtr);
-        gtk_text_buffer_set_text(buffer, "No results found", -1); 
+        gtk_text_buffer_set_text(buffer, "  ", -1); 
     
     if (suggested_streets!=""){
         suggested_streets = "\nDid you mean?\n\n" + suggested_streets;
@@ -680,6 +701,7 @@ void find_button(GtkWidget* widget, ezgl::application *application){
 
     }    
     application->update_message (intersectionNames); 
+    
     // Redraw the graphics
     application->refresh_drawing();
     
