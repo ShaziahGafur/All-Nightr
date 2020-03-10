@@ -14,6 +14,7 @@
 #include <cmath>
 #include <iostream>
 #include <sstream>
+#include <gtk/gtk.h>
 
 /************  GLOBAL VARIABLES  *****************/
 enum RoadType {
@@ -556,7 +557,7 @@ void initial_setup(ezgl::application *application, bool new_window)
   //Create a Find button and link it with find_button callback function.
     //number indicates the order of the button (0->top)
   application->create_button("Find", 0, find_button);
-
+    
 
 }
 
@@ -668,15 +669,20 @@ void find_button(GtkWidget* widget, ezgl::application *application){
         }
     }
     
+      GtkWidget* view = (GtkWidget *)application->get_object("SearchStreetsResults");
+        GtkTextView * textViewPtr = GTK_TEXT_VIEW(view);
+          GtkTextBuffer* buffer = gtk_text_view_get_buffer(textViewPtr);
+        gtk_text_buffer_set_text(buffer, "No results found", -1); 
+    
     if (suggested_streets!=""){
-        std::cout<<"\nDid you mean?\n\n";
-        std::cout<<suggested_streets;
-    }
-//    //for safety
-//    streetIntersections.clear(); 
+        suggested_streets = "\nDid you mean?\n\n" + suggested_streets;
+        gtk_text_buffer_set_text(buffer, suggested_streets.c_str(), -1);
+
+    }    
     application->update_message (intersectionNames); 
     // Redraw the graphics
     application->refresh_drawing();
+    
 }
 
 //vertices are the feature points in xy coordinates, vertexCount = number of feature points
