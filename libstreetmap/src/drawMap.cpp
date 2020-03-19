@@ -9,7 +9,10 @@
 #include "intersection_data.h"
 #include "poiStruct.h"
 #include "poiStruct.cpp"
+#include "FeatureIds_byArea.h"
 #include <vector>
+#include <set>
+#include <unordered_set>
 #include <string>
 #include <cmath>
 #include <iostream>
@@ -40,7 +43,7 @@ std::vector<intersection_data> intersections;
 //Hashtable --> key: [OSMway] value: [Road Type (e.g. 0 = Unknown, 1 = motorway...)]
 std::unordered_map<OSMID, RoadType> WaybyRoadType;
 
-//Hashtable --> key: [feature id (POLYGONS ONLY)] value: [centroid (x,y)]
+//Hashtable --> key: [feature id] value: [centroid (x,y)]
 std::unordered_map< int, ezgl::point2d > FeatureCentroids;
 
 //Vector --> key: [feature id] value: [vector of featurepoints in (x,y) coordinates --> std::vector<ezgl::point2d>]
@@ -87,7 +90,7 @@ void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std
 int intersectionThreshold(int interIndex);
 
 void draw_feature_names(ezgl::renderer *g);
-ezgl::point2d compute2DPolygonCentroid(std::vector<ezgl::point2d> &vertices, double& area);
+ezgl::point2d compute2DPolygonCentroid(int& featureId, std::vector<ezgl::point2d> &vertices, double& area);
 ezgl::point2d find_PolyLine_Middle(int featureId);
 double feature_max_width (int numPoints, int featureId);
 
@@ -162,8 +165,9 @@ void draw_map(){
     //populate all global variables
     populateWaybyRoadType();
     populateFeatureIds_byType();
-    populatePointsOfInterest();
+//    populatePointsOfInterest();
     populateFeaturepoints_xy();
+    populateFeatureCentroids();
     draw_map_blank_canvas();
 }
 
@@ -204,7 +208,6 @@ void draw_main_canvas (ezgl::renderer *g){
     //Use these for creating thresholds for zooming
     std::cout<<"\nscale_factor: "<<scale_factor;
 //    std::cout<<"\nzoom: "<<zoom;
-    
     
     //Drawing Background
     //***********************************************************************************
@@ -283,6 +286,7 @@ void draw_main_canvas (ezgl::renderer *g){
 //    }
     
 //     std::cout<<scale_factor<<"<-s f\n";
+    
     //Drawing Intersections
     //***********************************************************************************
     
@@ -326,9 +330,8 @@ void draw_main_canvas (ezgl::renderer *g){
           //for that threshold value, enable or disable drawing
             g->fill_rectangle({x-(width/2),y-(height/2)}, {x + (width/2), y + (height/2)});
     
+        }
     }
-}
-
 }
 
 std::pair < double, double > latLonToCartesian (LatLon latLonPoint){
@@ -595,23 +598,6 @@ void drawFeature_byType(int feature_type, ezgl::renderer *g){
             //ezgl function which takes a vector<point2d> (i.e (x,y) coordinates for each point that defines the feature outline)
             g->fill_poly(Featurepoints_xy[featureId]);
         }
-            
-  
-//            double max_width = feature_max_width (numOfFeaturePoints, featureId);
-//            
-//            //std::cout << "max_width " << max_width << "\n";
-//            
-//            //std::cout << feature_centroid.x << feature_centroid.y << "\n";
-//            
-//            if( getFeatureName(featureId) != "<noname>")
-//                g->draw_text(feature_centroid, getFeatureName(featureId), max_width, max_width);
-//            
-//  
-//            g->fill_rectangle({feature_centroid.x,feature_centroid.y}, {feature_centroid.x + 10, feature_centroid.y + 10});
-//  
-            //float width = max_width;
-
-            //g->fill_rectangle({feature_centroid.x-(width/2),feature_centroid.y-(width/2)}, {feature_centroid.x + (width/2), feature_centroid.y + (width/2)});
     }
 }
 
@@ -756,7 +742,7 @@ int intersectionThreshold(int interIndex){
         RoadType roadType = WaybyRoadType.at(segInfo.wayOSMID);
         if (roadType == motorway||roadType == trunk||roadType == primary ||roadType == secondary ) //significant roads always show on map
             return 1;
-        else if (roadType!= residential||roadType!= unclassified){ //either tertiary or unknown 
+        else if (roadType!= residential && roadType!= unclassified){ //either tertiary or unknown 
             if (threshold==2)
                 threshold = 1; //most significant is tertiary/unknown
         }   
@@ -764,32 +750,39 @@ int intersectionThreshold(int interIndex){
     return threshold;
 }
 //vertices are the feature points in xy coordinates, vertexCount = number of feature points
-ezgl::point2d compute2DPolygonCentroid(std::vector< ezgl::point2d > & vertices, double& area)
+ezgl::point2d compute2DPolygonCentroid(int& featureId, std::vector< ezgl::point2d > & vertices, double& area)
 {
-    ezgl::point2d centroid(0, 0);
-    double x0 = 0.0; // Current vertex X
-    double y0 = 0.0; // Current vertex Y
-    double x1 = 0.0; // Next vertex X
-    double y1 = 0.0; // Next vertex Y
-    double a = 0.0;  //multiplication factor (xi*yi+1 - xi+1yi))
-
-    // For all vertices
-    for (int i = 0; (i+1) < vertices.size(); ++i){
-        x0 = vertices[i].x;
-        x1 = vertices[i+1].x;
-        
-        y0 = vertices[i].y;
-        y1 = vertices[i+1].y;
-        
-        a = x0*y1 - x1*y0;
-        centroid.x += (x0 + x1)*a;
-        centroid.y += (y0 + y1)*a;
-    }
-
-    centroid.x /= (6.0 * area);
-    centroid.y /= (6.0 * area);  
+    if(area == 0)
+        return find_PolyLine_Middle(featureId);
     
-    return centroid;
+    else{
+        ezgl::point2d centroid(0.0, 0.0);
+        double x0 = 0.0; // Current vertex X
+        double y0 = 0.0; // Current vertex Y
+        double x1 = 0.0; // Next vertex X
+        double y1 = 0.0; // Next vertex Y
+        double a = 0.0;  //multiplication factor (xi*yi+1 - xi+1yi))
+        double AR = 0.0;
+        
+        // For all vertices
+        for (int i = 0; (i+1) < vertices.size(); ++i){
+            x0 = vertices[i].x;
+            x1 = vertices[i+1].x;
+
+            y0 = vertices[i].y;
+            y1 = vertices[i+1].y;
+
+            a = (x0*y1) - (x1*y0);
+            AR += a;
+            centroid.x += (x0 + x1)*a;
+            centroid.y += (y0 + y1)*a;
+        }
+        AR *= 0.5; 
+        centroid.x /= (6.0 * AR);
+        centroid.y /= (6.0 * AR);  
+        
+        return centroid;
+    }
 }
 //Finds greatest length along the centre of the polygon in which text can fit
 double feature_max_width (int numPoints, int featureId){
@@ -819,50 +812,60 @@ double feature_max_width (int numPoints, int featureId){
 }
 
 void draw_feature_names(ezgl::renderer *g){
+    
     int feature_type;
 
     g->set_text_rotation(0);
 
     //helpful for debugging
     //std::cout << "max_width " << max_width << "\n";
-    //std::cout << feature_centroid.x << feature_centroid.y << "\n";
     //float width = max_width;
     //g->fill_rectangle({feature_centroid.x-(width/2),feature_centroid.y-(width/2)}, {feature_centroid.x + (width/2), feature_centroid.y + (width/2)});
 
-    //loops through featureIds to retrieve name and correlates it with FeatureCentroids hashtable to get position
-//    for( std::unordered_map< int, ezgl::point2d >::iterator it = FeatureCentroids.begin();  it != FeatureCentroids.begin(); it++){
-      for( int featureidx = 0;  featureidx < getNumFeatures(); featureidx++){      
-        feature_type = getFeatureType(featureidx);
-                
+    //loops through FeatureCentroids hashtable, consisting of feature centroid locations with unique names
+    for( std::unordered_map< int, ezgl::point2d >::iterator it = FeatureCentroids.begin();  it != FeatureCentroids.end(); it++){
         
-        if( (feature_type != Unknown) && (getFeatureName(featureidx) != "<noname>") && (scale_factor < 0.10) ){
-                
-            switch(feature_type){
+        feature_type = getFeatureType((*it).first);
+                 
+        switch(feature_type){
 
-                case     Park      : g->set_color (76,153,0, 255);
-                                     break;
-                case     Beach     : g->set_color (160,160,160, 255);
-                                     break;       
-                case     Lake      : g->set_color (0,128,255, 255);
-                                     break;
-                case     River     : g->set_color (0,128,255, 255);
-                                     break;
-                case     Island    : g->set_color (255,255,255, 255);
-                                     break;
-                case     Building  : g->set_color (255,255,255, 255);
-                                     break;
-                case     Greenspace: g->set_color (76,153,0, 255);
-                                     break;
-                case     Golfcourse: g->set_color (76,153,0, 255);
-                                     break;
-                case     Stream    : g->set_color (0,128,255, 255);
-                                     break;
+            case     Park      : g->set_color (76,153,0, 255);
+                                 break;
+            case     Beach     : g->set_color (160,160,160, 255);
+                                 break;       
+            case     Lake      : g->set_color (0,128,255, 255);
+                                 break;
+            case     River     : g->set_color (0,128,255, 255);
+                                 break;
+            case     Island    : g->set_color (255,255,255, 255);
+                                 break;
+            case     Building  : g->set_color (255,255,255, 255);
+                                 break;
+            case     Greenspace: g->set_color (76,153,0, 255);
+                                 break;
+            case     Golfcourse: g->set_color (76,153,0, 255);
+                                 break;
+            case     Stream    : g->set_color (0,128,255, 255);
+                                 break;
 
-                default: g->set_color (224,224,224, 255);
-            } 
+            default: g->set_color (224,224,224, 255);
+        } 
+        
+        if( (scale_factor < 0.30) && (feature_type != Unknown) && (feature_type != Building) && (getFeatureName((*it).first) != "<noname>") ){
+               
+            
             //draw feature name in centre of polygon
-            g->draw_text(FeatureCentroids.at(featureidx), getFeatureName(featureidx));
+            g->draw_text((*it).second, getFeatureName((*it).first));
+            
+//            g->fill_rectangle({(*it).second.x-50,(*it).second.y-50}, {(*it).second.x + 50, (*it).second.y + 50});
         }
+    
+      
+//        double max_width = feature_max_width (numOfFeaturePoints, featureId);
+
+//        std::cout << "max_width " << max_width << "\n";
+
+       // g->fill_rectangle({FeatureCentroids.at(FeatureIds_uniqueNames[i]).x-(10),FeatureCentroids.at(FeatureIds_uniqueNames[i]).y-(10)}, {FeatureCentroids.at(FeatureIds_uniqueNames[i]).x + (10), FeatureCentroids.at(FeatureIds_uniqueNames[i]).y + (10)});
     }
 }
 
@@ -1177,9 +1180,6 @@ void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std
     }
 }
 
-void populateFeatureCentroids(){
-    
-}
 //populates Featurepoints_xy vector needed to draw features and feature names
 void populateFeaturepoints_xy(){
     //uses StreetsDatabase function
@@ -1189,9 +1189,18 @@ void populateFeaturepoints_xy(){
     
     for(int featureId = 0; featureId < getNumFeatures(); ++featureId){
 
-        numOfFeaturePoints = getFeaturePointCount(featureId);
+        
+        if(FeatureAreaVector[featureId] == 0){
+            //it is a polyline
+            numOfFeaturePoints = getFeaturePointCount(featureId);
+        }
+        else{
+            //it is a polygon and the first and last points are identical
+            numOfFeaturePoints = getFeaturePointCount(featureId) - 1;
+        }
 
         //iterate through feature points then convert to (x,y) coordinates
+        //must stop at (numOfFeaturePoints-1) because
         for (unsigned featurePointId = 0; featurePointId < numOfFeaturePoints; featurePointId++){
             //1) retrieves the featurepoint in lat lon
             //2) LatLonToCartesian is called to return an (x,y) pair
@@ -1204,16 +1213,39 @@ void populateFeaturepoints_xy(){
             ezgl::point2d featurePoint_point2d(featurePoint_xy.first, featurePoint_xy.second);
             
             Featurepoints_xy[featureId].push_back(featurePoint_point2d);
-        }
-        
-        if(FeatureAreaVector[featureId] == 0){
-            //insert feature middle point into FeatureCentroids hashtable
-            FeatureCentroids.insert({featureId , find_PolyLine_Middle(featureId)});
-        }
-        else{
-            //insertfeature area centre point into FeatureCentroids hashtable       
-            FeatureCentroids.insert({featureId , compute2DPolygonCentroid(Featurepoints_xy[featureId], FeatureAreaVector[featureId])});
-
-        }
+        }     
     } 
+}
+
+//populates the FeatureCentroids unordered_map
+//first have to define all of the unique Names 
+//then can associate a featureid with that name (largest area)
+//then, populate the FeatureCentroids vector using that featureid)
+void populateFeatureCentroids(){
+    
+    std::unordered_map<std::string, int> uniqueNames;
+    std::unordered_map<std::string, int>::const_iterator found_ptr;
+    
+    //insert the unique Feature names into the uniqueNames unordered_map
+    for( int featureid = 0;  featureid < getNumFeatures(); featureid++){
+        
+        found_ptr = uniqueNames.find(getFeatureName(featureid));
+        
+        //if feature with same name already exists in the uniqueNames unordered map, insert only if area is larger
+        if(found_ptr != uniqueNames.end()){
+            
+            //if feature name with larger area found, replace uniqueNames featureid
+             if(FeatureAreaVector[featureid] > uniqueNames[getFeatureName(featureid)])
+                 uniqueNames.insert({getFeatureName(featureid), featureid});
+             continue;
+        }
+        //otherwise, insert the first/only instance of that feature name       
+        uniqueNames.insert({getFeatureName(featureid), featureid});
+    }
+    
+    //for each unique feature name, find it's centroid and insert it into the FeatureCentroids vector (used to draw Feature names)
+    for(std::unordered_map<std::string, int>::iterator it = uniqueNames.begin(); it != uniqueNames.end(); it++){
+        
+        FeatureCentroids.insert( {(*it).second, compute2DPolygonCentroid((*it).second, Featurepoints_xy[(*it).second], FeatureAreaVector[(*it).second] ) });
+    }
 }
