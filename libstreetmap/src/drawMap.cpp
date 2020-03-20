@@ -890,10 +890,16 @@ void drawFeatures(ezgl::renderer *g){
 
 //function draws points of interest names on map
 void draw_points_of_interest(ezgl::renderer *g){
-    
-    bool enable_poi = true;
-    if (scale_factor > 0.2)
-        enable_poi = false;
+    //use two different enables because there are many more restaurants than libraries
+    bool enable_poi_eat = true;
+    bool enable_poi_lib = true;
+    //if too zoomed out, don't draw any names
+    if (scale_factor > 0.2){
+        enable_poi_eat = false;
+        enable_poi_lib = false;
+    }
+    else if (scale_factor > 0.02)
+        enable_poi_eat = false;
     
     //Extract vectors from PointsOfInterest vector to make it easier to parse through each type separately
     std::vector<poiStruct> library = PointsOfInterest[0];
@@ -912,7 +918,7 @@ void draw_points_of_interest(ezgl::renderer *g){
         xyCoordinates = (*it).xyCoordinates;
         poiName = (*it).Name;
         
-        if (enable_poi){
+        if (enable_poi_lib){
             g->set_color (178,141,196, 255);
             //if 24/7, draw text in bold
             if((*it).hours == "24/7")
@@ -931,7 +937,7 @@ void draw_points_of_interest(ezgl::renderer *g){
         xyCoordinates = (*it).xyCoordinates;
         poiName = (*it).Name;
         
-        if (enable_poi){
+        if (enable_poi_eat){
             g->set_color (189,164, 143, 255);
             //if 24/7, draw text in bold
             if((*it).hours == "24/7")
@@ -950,7 +956,7 @@ void draw_points_of_interest(ezgl::renderer *g){
         xyCoordinates = (*it).xyCoordinates;
         poiName = (*it).Name;
         
-        if (enable_poi){
+        if (enable_poi_eat){
             g->set_color (233,128,96,255);
             //if 24/7, draw text in bold
             if((*it).hours == "24/7")
