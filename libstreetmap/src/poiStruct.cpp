@@ -19,11 +19,3 @@ poiStruct::poiStruct() {
 
 poiStruct::~poiStruct() {
 }
-
-void poiStruct::addName (std::string name){
-    Name = name;
-}
-
-void poiStruct::addXYCoordinates (std::pair<double,double> coordinates){
-    xyCoordinates = coordinates;
-}

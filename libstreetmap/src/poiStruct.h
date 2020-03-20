@@ -22,13 +22,11 @@ class poiStruct{
         
         ~poiStruct();
         
-        void addName (std::string name);
-        
-        void addXYCoordinates (std::pair<double,double> coordinates);
-        
         std::pair<double, double> xyCoordinates;
         
         std::string Name;
+        
+        std::string hours;
     
 };
 

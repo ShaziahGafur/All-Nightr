@@ -17,6 +17,7 @@
 #include <iostream>
 #include <sstream>
 #include <gtk/gtk.h>
+#include <time.h>
 
 /************  GLOBAL VARIABLES  *****************/
 enum RoadType {
@@ -28,7 +29,9 @@ enum RoadType {
     tertiary, 
     residential
 };
+
 //nightmode street color scheme
+//streets
 ezgl::color Colour_unclassified(114, 111, 85, 255); //yellow (1 = least opaque)
 ezgl::color Colour_motorway(100, 38, 7); // orange (3 = lightest)
 ezgl::color Colour_trunk(129, 68, 6, 255); // orange (2)
@@ -36,7 +39,10 @@ ezgl::color Colour_primary(174, 133, 40, 255); // orange (1 = darkest)
 ezgl::color Colour_secondary(154, 92, 0, 255); //yellow (3 = lightest)
 ezgl::color Colour_tertiary(152, 122, 0, 255); // yellow (2 )
 ezgl::color Colour_residential(114, 111, 85, 255); // yellow (1 = darkest)
+//features
+//poi
 
+/**************   DATA STRUCTURES ****************/
 //Vector --> key: [intersection ID] value: [intersection_data struct]
 std::vector<intersection_data> intersections;
 
@@ -74,6 +80,9 @@ const double intersectionViewLon = 0.004; //Only one dimension is required as ez
 ezgl::rectangle new_world;
 bool navigateScreen; 
 
+//current weekday. Used to determine hours of operation
+std::string Weekday;
+
 /************  FUNCTION DECLARATIONS  ***********/
 void draw_map_blank_canvas ();
 void draw_main_canvas (ezgl::renderer *g);
@@ -106,6 +115,7 @@ void populateFeatureCentroids();
 ezgl::point2d compute2DPolygonCentroid(int& featureId, std::vector<ezgl::point2d> &vertices, double& area);
 ezgl::point2d find_PolyLine_Middle(int featureId);
 double feature_max_width (int numPoints, int featureId);
+std::string get_operationHours(const OSMNode* poi_OSMentity);
 
 
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click);
@@ -170,10 +180,16 @@ void draw_map(){
     max_lon = x_from_lon(max_lon);
     max_lat = y_from_lat(max_lat);
     
+    //get the current weekday
+    std::time_t now = std::time(0);
+    std::stringstream date(ctime(&now));
+    date >> Weekday;
+    Weekday.erase(Weekday.begin()+2);
+    
     //populate all global variables
     populateWaybyRoadType();
     populateFeatureIds_byType();
-//    populatePointsOfInterest();
+    populatePointsOfInterest();
     populateFeaturepoints_xy();
     populateFeatureCentroids();
     draw_map_blank_canvas();
@@ -288,53 +304,69 @@ double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, do
 
 void populatePointsOfInterest(){
     
-    //store value and name of POI
-    std::string value, name;
+    //store value of POI
+    std::string value;
+    
     poiStruct poiData;
     LatLon latlon;
     std::pair<double, double> xy;
     double x, y;
     std::vector<poiStruct> library, cafes, fast_food;
+    
+    OSMID poi_OSMID;
+    const OSMNode* poi_OSMentity;
+    
     //iterate through points of interest using layer 1
     for (unsigned poiIterator = 0; poiIterator < getNumPointsOfInterest(); poiIterator++){
-        value = getPointOfInterestType(poiIterator);
         
+        value = getPointOfInterestType(poiIterator);
+    
         if (value == "library"){
-            name = getPointOfInterestName(poiIterator);
+            poiData.Name = getPointOfInterestName(poiIterator);
+            poi_OSMID = getPointOfInterestOSMNodeID(poiIterator);
+            poi_OSMentity = getNodeByIndex(OSMID_to_node.at(poi_OSMID));
+            
             latlon = getPointOfInterestPosition(poiIterator);
             
             //conversion to cartesian
             x = x_from_lon (latlon.lon());
             y = y_from_lat (latlon.lat());
             xy = std::make_pair(x,y);
-            poiData.addName(name);
-            poiData.addXYCoordinates(xy);
+            poiData.xyCoordinates = xy;
+            
+            poiData.hours = get_operationHours(poi_OSMentity);
             
             library.push_back(poiData);
         }
         else if (value == "cafe"){
-            name = getPointOfInterestName(poiIterator);
+            poiData.Name = getPointOfInterestName(poiIterator);
+            poi_OSMID = getPointOfInterestOSMNodeID(poiIterator);
+            poi_OSMentity = getNodeByIndex(OSMID_to_node.at(poi_OSMID));
+            
             latlon = getPointOfInterestPosition(poiIterator);
             
             x = x_from_lon (latlon.lon());
             y = y_from_lat (latlon.lat());
             xy = std::make_pair(x,y);
+            poiData.xyCoordinates = xy;
             
-            poiData.addName(name);
-            poiData.addXYCoordinates(xy);
+            poiData.hours = get_operationHours(poi_OSMentity);
             
             cafes.push_back(poiData);
         }
         else if (value == "fast_food"){
-            name = getPointOfInterestName(poiIterator);
+            poiData.Name = getPointOfInterestName(poiIterator);
+            poi_OSMID = getPointOfInterestOSMNodeID(poiIterator);
+            poi_OSMentity = getNodeByIndex(OSMID_to_node.at(poi_OSMID));
+            
             latlon = getPointOfInterestPosition(poiIterator);
             
             x = x_from_lon (latlon.lon());
             y = y_from_lat (latlon.lat());
             xy = std::make_pair(x,y);
+            poiData.xyCoordinates = xy;
             
-            poiData.addName(name);
-            poiData.addXYCoordinates(xy);
+            poiData.hours = get_operationHours(poi_OSMentity);
             
             fast_food.push_back(poiData);
         }
@@ -354,6 +386,7 @@ void populateWaybyRoadType(){
     std::string key,value;
     RoadType road_type;
     
+    
     //Searches through all OSM Ways and their keys to determine road types
     for (unsigned i = 0; i < getNumberOfWays(); i++){
         //creates a pointer that enables accessing the way's OSMID
@@ -361,25 +394,26 @@ void populateWaybyRoadType(){
         key="N/A"; //in case the way has no keys
         for(int j = 0; j<getTagCount(wayPtr); ++j){
             std::tie(key,value) = getTagPair(wayPtr,j);
-            if (key == "highway")
-                break;
-        }
-        if (key == "highway"){ //if highway key exists
-            if(value == "motorway")
-                road_type = motorway;
-            else if (value == "trunk")
-                road_type = trunk;
-            else if (value == "primary")
-                road_type = primary;
-            else if (value == "secondary")
-                road_type = secondary;
-            else if (value == "tertiary")
-                road_type = tertiary;
-            else if (value == "residential")
-                road_type = residential;
-            else road_type = unclassified;
             
-            WaybyRoadType.insert({wayPtr->id(),road_type}); //take the value of key and store it in global variable with OSMID
+            if (key == "highway"){
+                
+                if(value == "motorway")
+                    road_type = motorway;
+                else if (value == "trunk")
+                    road_type = trunk;
+                else if (value == "primary")
+                    road_type = primary;
+                else if (value == "secondary")
+                    road_type = secondary;
+                else if (value == "tertiary")
+                    road_type = tertiary;
+                else if (value == "residential")
+                    road_type = residential;
+                else road_type = unclassified;
+
+                WaybyRoadType.insert({wayPtr->id(), road_type}); //take the value of key and store it in global variable with OSMID
+                break;
+            }
         }
         
     }
@@ -392,59 +426,65 @@ void populateWaybyRoadType(){
         key="N/A"; //in case the way has no keys
         for(int j=0;j<getTagCount(relationPtr); ++j){
             std::tie(key,value) = getTagPair(relationPtr,j);
-            if (key == "highway")
-                break;
-        }
-        if (key == "highway"){ //if highway key exists
-           if(value == "motorway")
-                road_type = motorway;
-            else if (value == "trunk")
-                road_type = trunk;
-            else if (value == "primary")
-                road_type = primary;
-            else if (value == "secondary")
-                road_type = secondary;
-            else if (value == "tertiary")
-                road_type = tertiary;
-            else if (value == "residential")
-                road_type = residential;
-            else road_type = unclassified;
             
-            WaybyRoadType.insert({relationPtr->id(),road_type}); //take the value of key and store it in global variable with OSMID
+            if (key == "highway"){
+                
+                if(value == "motorway")
+                    road_type = motorway;
+                else if (value == "trunk")
+                    road_type = trunk;
+                else if (value == "primary")
+                    road_type = primary;
+                else if (value == "secondary")
+                    road_type = secondary;
+                else if (value == "tertiary")
+                    road_type = tertiary;
+                else if (value == "residential")
+                    road_type = residential;
+                else road_type = unclassified;
+
+                WaybyRoadType.insert({relationPtr->id(), road_type}); //take the value of key and store it in global variable with OSMID
+                break;
+            }
         }
         
     }
     
     //Searches through all OSM Nodes and their keys to determine road types
-    //Repeats same process for node 
+    //also looks for POI tags
+    //Repeats same process as above, for node 
     for (unsigned i = 0; i < getNumberOfNodes(); i++){
+        
         //creates a pointer that enables accessing the node's OSMID
         const OSMNode* nodePtr = getNodeByIndex(i);
+        
         key="N/A"; //in case the way has no keys
         for(int j=0;j<getTagCount(nodePtr); ++j){
-            std::tie(key,value) = getTagPair(nodePtr,j);
-            if (key == "highway")
-                break;
-        }
-        if (key == "highway"){ //if highway key exists
-            if(value == "motorway")
-                road_type = motorway;
-            else if (value == "trunk")
-                road_type = trunk;
-            else if (value == "primary")
-                road_type = primary;
-            else if (value == "secondary")
-                road_type = secondary;
-            else if (value == "tertiary")
-                road_type = tertiary;
-            else if (value == "residential")
-                road_type = residential;
-            else road_type = unclassified;
             
-            WaybyRoadType.insert({nodePtr->id(),road_type}); //take the value of key and store it in global variable with OSMID
+            std::tie(key,value) = getTagPair(nodePtr,j);
+            
+            if (key == "highway"){
+                if(value == "motorway")
+                    road_type = motorway;
+                else if (value == "trunk")
+                    road_type = trunk;
+                else if (value == "primary")
+                    road_type = primary;
+                else if (value == "secondary")
+                    road_type = secondary;
+                else if (value == "tertiary")
+                    road_type = tertiary;
+                else if (value == "residential")
+                    road_type = residential;
+                else road_type = unclassified;
+
+                WaybyRoadType.insert({nodePtr->id(), road_type}); //take the value of key and store it in global variable with OSMID
+                //breaks out of the inner tag loop, increments to next node
+                break;
+            }
+
         }
-        
-    }  
+    }
 }
 
 void populateFeatureIds_byType(){
@@ -766,33 +806,32 @@ void draw_feature_names(ezgl::renderer *g){
     for( std::unordered_map< int, ezgl::point2d >::iterator it = FeatureCentroids.begin();  it != FeatureCentroids.end(); it++){
         
         feature_type = getFeatureType((*it).first);
-                 
-        switch(feature_type){
-
-            case     Park      : g->set_color (76,153,0, 255);
-                                 break;
-            case     Beach     : g->set_color (160,160,160, 255);
-                                 break;       
-            case     Lake      : g->set_color (0,128,255, 255);
-                                 break;
-            case     River     : g->set_color (0,128,255, 255);
-                                 break;
-            case     Island    : g->set_color (255,255,255, 255);
-                                 break;
-            case     Building  : g->set_color (255,255,255, 255);
-                                 break;
-            case     Greenspace: g->set_color (76,153,0, 255);
-                                 break;
-            case     Golfcourse: g->set_color (76,153,0, 255);
-                                 break;
-            case     Stream    : g->set_color (0,128,255, 255);
-                                 break;
-
-            default: g->set_color (224,224,224, 255);
-        } 
         
         if( (scale_factor < 0.05) && (feature_type != Unknown) && (feature_type != Building) && (getFeatureName((*it).first) != "<noname>") ){
                
+            switch(feature_type){
+
+                case     Park      : g->set_color (76,153,0, 255);
+                                     break;
+                case     Beach     : g->set_color (160,160,160, 255);
+                                     break;       
+                case     Lake      : g->set_color (0,128,255, 255);
+                                     break;
+                case     River     : g->set_color (0,128,255, 255);
+                                     break;
+                case     Island    : g->set_color (255,255,255, 255);
+                                     break;
+                case     Building  : g->set_color (255,255,255, 255);
+                                     break;
+                case     Greenspace: g->set_color (76,153,0, 255);
+                                     break;
+                case     Golfcourse: g->set_color (76,153,0, 255);
+                                     break;
+                case     Stream    : g->set_color (0,128,255, 255);
+                                     break;
+
+                default: g->set_color (224,224,224, 255);
+            } 
             
             //draw feature name in centre of polygon
             g->draw_text((*it).second, getFeatureName((*it).first));
@@ -830,18 +869,6 @@ ezgl::point2d find_PolyLine_Middle(int featureId){
 
 //function called in darw_main_canvas(), which draws all features in pre-determined order using helper function: drawFeatrues_byType)
 void drawFeatures(ezgl::renderer *g){
-    //Draws in the following order:
-        //  Lake (Least important, drawn first)
-        //  Park
-        //  Island,
-        //  Park,
-        //  Greenspace
-        //  Beach
-        //  Golfcourse,
-        //  Building
-        //  River
-        //  Stream
-        //  Unknown = 0,(Most important, drawn last)
 
     g->set_line_dash(ezgl::line_dash::none);
     
@@ -865,7 +892,7 @@ void drawFeatures(ezgl::renderer *g){
 void draw_points_of_interest(ezgl::renderer *g){
     
     bool enable_poi = true;
-    if (scale_factor > 0.3)
+    if (scale_factor > 0.2)
         enable_poi = false;
     
     //Extract vectors from PointsOfInterest vector to make it easier to parse through each type separately
@@ -877,51 +904,67 @@ void draw_points_of_interest(ezgl::renderer *g){
     std::vector<poiStruct>::iterator it = library.begin();
     
     //Variables to extract data from poi struct
-    poiStruct poiData;
     std::pair<double,double> xyCoordinates;
     std::string poiName;
     
     //loop through library vector, extract data and draw names of libraries on map
     while(it != library.end()){
-        poiData = *it;
-        xyCoordinates = poiData.xyCoordinates;
-        poiName = poiData.Name;
+        xyCoordinates = (*it).xyCoordinates;
+        poiName = (*it).Name;
         
-        g->set_color (ezgl::GREEN);
-        if (enable_poi)
+        if (enable_poi){
+            g->set_color (178,141,196, 255);
+            //if 24/7, draw text in bold
+            if((*it).hours == "24/7")
+                g->format_font("cairo", ezgl::font_slant::normal, ezgl::font_weight::bold);
+            else
+                g->format_font("cairo", ezgl::font_slant::normal, ezgl::font_weight::normal);
+
             g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName);
-        
+        }
         it++;
     }
     
     //loop through cafes vector, extract data and draw names of cafes on map
     it = cafes.begin();
     while(it != cafes.end()){
-        poiData = *it;
-        xyCoordinates = poiData.xyCoordinates;
-        poiName = poiData.Name;
+        xyCoordinates = (*it).xyCoordinates;
+        poiName = (*it).Name;
         
-        g->set_color (ezgl::GREEN);
-        if (enable_poi)
-            g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        if (enable_poi){
+            g->set_color (189,164, 143, 255);
+            //if 24/7, draw text in bold
+            if((*it).hours == "24/7")
+                g->format_font("cairo", ezgl::font_slant::normal, ezgl::font_weight::bold);
+            else
+                g->format_font("cairo", ezgl::font_slant::normal, ezgl::font_weight::normal);
         
+            g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName);
+        }
         it++;
     }
     
     //loop through fast_food vector, extract data and draw names of fast_foods on map
     it = fast_food.begin();
     while(it != fast_food.end()){
-        poiData = *it;
-        xyCoordinates = poiData.xyCoordinates;
-        poiName = poiData.Name;
+        xyCoordinates = (*it).xyCoordinates;
+        poiName = (*it).Name;
         
-        g->set_color (ezgl::GREEN);
-        if (enable_poi)
-            g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName, 10, 10);
+        if (enable_poi){
+            g->set_color (233,128,96,255);
+            //if 24/7, draw text in bold
+            if((*it).hours == "24/7")
+                g->format_font("cairo", ezgl::font_slant::normal, ezgl::font_weight::bold);
+            else
+                g->format_font("cairo", ezgl::font_slant::normal, ezgl::font_weight::normal);
+            
+            g->draw_text({xyCoordinates.first, xyCoordinates.second}, poiName);
+        }
         
         it++;
     }
-    
+    //set font back to default
+    g->format_font("cairo", ezgl::font_slant::normal, ezgl::font_weight::normal);
 }
 
 //function draws all streets on map
@@ -1295,7 +1338,7 @@ void draw_intersections(ezgl::renderer *g){
           float height = width;
 
           if (intersections[i].highlight)
-              g->set_color(ezgl::RED);
+              g->set_color(ezgl::LIME_GREEN);
           else
               g->set_color(ezgl::BLUE);
 
@@ -1383,5 +1426,19 @@ void populateFeatureCentroids(){
     for(std::unordered_map<std::string, int>::iterator it = uniqueNames.begin(); it != uniqueNames.end(); it++){
         
         FeatureCentroids.insert( {(*it).second, compute2DPolygonCentroid((*it).second, Featurepoints_xy[(*it).second], FeatureAreaVector[(*it).second] ) });
+    }
+}
+
+//Funciton looks though tags to get hours of operation
+//If open from 10-11pm for current weekday, returns true
+std::string get_operationHours(const OSMNode* poi_OSMentity){
+    std::string key, value;
+    
+    for(int j = 0; j < getTagCount(poi_OSMentity); j++){
+        std::tie(key, value) = getTagPair(poi_OSMentity, j);
+        if(key == "opening_hours"){
+            //std::cout << value << "\n";
+            return value;
+        }
     }
 }

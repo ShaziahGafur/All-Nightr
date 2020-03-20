@@ -41,7 +41,7 @@ std::vector<streetStruct> StreetVector;
 //Vector --> key: [intersection ID] value: [streetSegmentsVector]
 std::vector<std::vector<int>> IntersectionStreetSegments;
 
-//Hashtable --> key: [Node_Id] value: [OSMID]
+//Hashtable --> key: [OSMID] value: [int]
 std::unordered_map<OSMID, int> OSMID_to_node;
 
 //Hashtable --> key: [OSMway] value: [length of way]
