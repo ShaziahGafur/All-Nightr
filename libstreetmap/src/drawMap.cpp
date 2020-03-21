@@ -588,8 +588,9 @@ void initial_setup(ezgl::application *application, bool new_window)
     navigateScreen = false;
   //Create a Find button and link it with find_button callback function.
     //number indicates the order of the button (0->top)
-  application->create_button("Find", 0, find_button);
-    
+  //application->create_button("Find", 1, 0, 1, 1, find_button);
+    GtkButton* findButton = (GtkButton*) application->get_object("find");   
+    g_signal_connect(findButton,"clicked",G_CALLBACK(find_button),application);
 
 }
 
