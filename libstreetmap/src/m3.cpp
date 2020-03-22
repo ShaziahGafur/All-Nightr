@@ -37,11 +37,12 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     std::vector<StreetSegmentIndex>::const_iterator it = path.begin();
     
     do{
-        // move to next segment
-        it++; 
         
         //add travel time of this segment        
         travelTime = travelTime + find_street_segment_travel_time(*it);
+        
+        // move to next segment
+        it++; 
         
         //get street id
         segStruct = getInfoStreetSegment(*it);
@@ -53,7 +54,7 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
             previousStreetID = nextStreetID;
         } 
     } while (it != path.end());
- 
+    travelTime = travelTime - turn_penalty;
     return travelTime;
 }
         
