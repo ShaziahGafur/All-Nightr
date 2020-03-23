@@ -11,6 +11,8 @@
 #include <unordered_map> 
 #include "streetStruct.h"
 #include "poiStruct.h"
+#include "wave.h"
+#include "Node.h"
 #include <bits/stdc++.h>
 #include <iostream>
 #include <vector>
