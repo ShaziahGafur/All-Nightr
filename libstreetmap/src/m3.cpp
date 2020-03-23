@@ -3,6 +3,15 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
+
+//includes for m3 visualization
+#include "ezgl/application.hpp"
+#include "ezgl/graphics.hpp"
+#include "ezgl/point.hpp"
+#include <chrono>
+#include <thread>
+//#define VISUALIZE
+
 #include "m3.h"
 #include "globals.h"
 
@@ -11,9 +20,13 @@ bool breadthFirstSearch(Node* sourceNode, int destID);
 std::vector<StreetSegmentIndex> bfsTraceBack(int destID);
 Node* getNodeByID(int intersectionID);
 
+void highlightStreetSegment (ezgl::renderer *g, int ID);
+void delay(int milliseconds);
+
 //global variable
 //key : int intersectionID, value: pointer to node
 std::unordered_map< int, Node*> nodesEncountered;
+int prevSegID = 0;
 
 // Returns the time required to travel along the path specified, in seconds.
 // The path is given as a vector of street segment ids, and this function can
@@ -78,6 +91,7 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
  std::vector<StreetSegmentIndex> find_path_between_intersections(const IntersectionIndex intersect_id_start, const IntersectionIndex intersect_id_end, const double turn_penalty){
     
     bool pathFound = false;
+    std::vector<StreetSegmentIndex> path;
     
     //make node object of starting intersection
     Node sourceNode(intersect_id_start);
@@ -90,9 +104,9 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     pathFound = breadthFirstSearch(sourceNodePtr, intersect_id_end);
     //If path is found, traceback path and store street segments
     if (pathFound){
-        //std::vector<StreetSegmentIndex> path = bfsTraceBack(destNode);
+        path = bfsTraceBack(intersect_id_end);
     }
-
+    return path;        
 }
         
 double compute_path_walking_time(const std::vector<StreetSegmentIndex>& path, 
@@ -173,7 +187,7 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int destID){
     //variable to traverse nodes
     Node* currentNode = getNodeByID(destID);
     //get reaching edge segment from destination Node
-    int prevSegID = currentNode->reachingEdge;
+    prevSegID = currentNode->reachingEdge;
     
     //variable to store intersectionID
     int intersectionID = destID;
@@ -210,3 +224,24 @@ Node* getNodeByID(int intersectionID){
     
     return nodeOfID;
 }
+/*
+#ifdef VISUALIZE
+
+
+    ezgl::application* app;
+    ezgl::renderer *g = app -> get_renderer();
+    highlightStreetSegment (g, prevSegID);
+    app -> flush_drawing();
+    delay(50);
+
+#endif
+
+
+void delay(int milliseconds){
+    std::chrono::milliseconds duration(milliseconds);
+    std::this_thread::sleep_for(duration);
+}
+
+void highlightStreetSegment (ezgl::renderer *g, int ID){
+    
+}*/
