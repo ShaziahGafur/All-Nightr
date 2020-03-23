@@ -8,7 +8,7 @@
 
 //helper declarations
 bool breadthFirstSearch(Node* sourceNode, int destID);
-std::vector<StreetSegmentIndex> bfsTraceBack(Node* destNode);
+std::vector<StreetSegmentIndex> bfsTraceBack(int destID);
 Node* getNodeByID(int intersectionID);
 
 //global variable
@@ -166,26 +166,47 @@ bool breadthFirstSearch(Node* sourceNode, int destID){
     }
     
 }
-/*
-std::vector<StreetSegmentIndex> bfsTraceBack(Node* destNode){
+
+std::vector<StreetSegmentIndex> bfsTraceBack(int destID){
     std::list<StreetSegmentIndex> path;
 
     //variable to traverse nodes
-    Node* currentNode = destNode;
+    Node* currentNode = getNodeByID(destID);
     //get reaching edge segment from destination Node
     int prevSegID = currentNode->reachingEdge;
     
+    //variable to store intersectionID
+    int intersectionID = destID;
+    
     while (prevSegID != NO_EDGE){
-        path.push_front(prevSegID);
+        path.push_front(prevSegID);         //note: push_front is very bad efficiency -> try to use push back instead later and reverse the algorithm?
         
-       
+        //find intersection-node the segment came to current node from and set it to current node
+        InfoStreetSegment segStruct = getInfoStreetSegment(prevSegID);
+        if (segStruct.to == intersectionID){
+            currentNode = getNodeByID(segStruct.from);
+        }
+        else{
+            currentNode = getNodeByID(segStruct.to);
+        }
         
+       //update the previous segment ID (prevSegID) by setting it to the reaching edge of the current node
+        prevSegID = currentNode->reachingEdge;        
     }  
-            
+    //convert list to a vector
+    std::vector<StreetSegmentIndex> pathVect;
+    pathVect.reserve(path.size());
+    std::copy(std::begin(path), std::end(path), std::back_inserter(pathVect));
+    
+    return pathVect;
 }
+
 
 Node* getNodeByID(int intersectionID){
     Node* nodeOfID;
+    
+    //Use global structure to access node
+    nodeOfID = nodesEncountered.find(intersectionID) -> second;
+    
     return nodeOfID;
 }
-*/
