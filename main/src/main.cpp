@@ -31,7 +31,7 @@ constexpr int ERROR_EXIT_CODE = 1;          //An error occured
 constexpr int BAD_ARGUMENTS_EXIT_CODE = 2;  //Invalid command-line usage
 
 //The default map to load if none is specified
-std::string default_map_path = "london_england";
+std::string default_map_path = "toronto_canada";
 std::string path_directory = "/cad2/ece297s/public/maps/";
 std::string file_type = ".streets.bin";
 
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
 
     //You can now do something with the map data
     //Clean-up the map data and related data structures
-    draw_map();
+    //draw_map();
     std::vector<StreetSegmentIndex> path;
         double turn_penalty;
         double expected;
