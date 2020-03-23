@@ -18,7 +18,7 @@
 #include <sstream>
 #include <gtk/gtk.h>
 #include <time.h>
-
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 /************  GLOBAL VARIABLES  *****************/
 enum RoadType {
     unclassified = 0,
@@ -42,6 +42,7 @@ ezgl::color Colour_residential(114, 111, 85, 255); // yellow (1 = darkest)
 //features
 //poi
 
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 /**************   DATA STRUCTURES ****************/
 //Vector --> key: [intersection ID] value: [intersection_data struct]
 std::vector<intersection_data> intersections;
@@ -83,6 +84,7 @@ bool navigateScreen;
 //current weekday. Used to determine hours of operation
 std::string Weekday;
 
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 /************  FUNCTION DECLARATIONS  ***********/
 void draw_map_blank_canvas ();
 void draw_main_canvas (ezgl::renderer *g);
@@ -120,9 +122,11 @@ std::string get_operationHours(const OSMNode* poi_OSMentity);
 
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click);
 void find_button(GtkWidget *widget, ezgl::application *application);
+void load_map_button(GtkWidget* widget, ezgl::application *application);
 void initial_setup(ezgl::application *application, bool /*new_window*/);
 
-//void find_map_bounds(double& max_lat, double& min_lat, double& max_lon, double& min_lon);
+//also populates intersections vector
+void find_map_bounds();
 
 /************************************************/
 
@@ -134,8 +138,7 @@ void initial_setup(ezgl::application *application, bool /*new_window*/);
  * After, this function calls draw_map_blank_canvas(), which manages setting up the application & environment for the map to function
  */
 
-void draw_map(){
-    
+void find_map_bounds(){
     //find the maximum and minimum lat & lons of the map based on intersections 
     max_lat = getIntersectionPosition(0).lat(); 
     min_lat = max_lat;
@@ -143,6 +146,7 @@ void draw_map(){
     min_lon = max_lon;
     
     //initialize global intersections vector
+    intersections.clear();
     int numIntersections = getNumIntersections();
     intersections.resize(numIntersections);
     
@@ -179,12 +183,16 @@ void draw_map(){
     min_lat = y_from_lat(min_lat);
     max_lon = x_from_lon(max_lon);
     max_lat = y_from_lat(max_lat);
+}
+
+void draw_map(){
+
+    find_map_bounds();
     
     //get the current weekday
     std::time_t now = std::time(0);
     std::stringstream date(ctime(&now));
     date >> Weekday;
-    Weekday.erase(Weekday.begin()+2);
     
     //populate all global variables
     populateWaybyRoadType();
@@ -192,6 +200,7 @@ void draw_map(){
     populatePointsOfInterest();
     populateFeaturepoints_xy();
     populateFeatureCentroids();
+    
     draw_map_blank_canvas();
 }
 
@@ -203,10 +212,9 @@ void draw_map_blank_canvas (){
     settings.main_ui_resource = "libstreetmap/resources/main.ui";
     settings.window_identifier = "MainWindow";
     settings.canvas_identifier = "MainCanvas";
-
+    
     ezgl::application application(settings);
     
-   
     ezgl::rectangle initial_world({min_lon, min_lat},{max_lon, max_lat}); 
     
     application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
@@ -240,7 +248,6 @@ void draw_main_canvas (ezgl::renderer *g){
     
     //Drawing Background
     //***********************************************************************************
-    g->draw_rectangle({min_lon, min_lat},{max_lon, max_lat});
     g->set_color (32, 32, 32, 255);
     g->fill_rectangle({min_lon,min_lat}, {max_lon, max_lat});
     
@@ -303,6 +310,8 @@ double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, do
 }
 
 void populatePointsOfInterest(){
+    //clear any remnant data
+    PointsOfInterest.clear();
     
     //store value of POI
     std::string value;
@@ -383,6 +392,9 @@ void populatePointsOfInterest(){
  * The "highway" OSM key is used to access the road type
  */
 void populateWaybyRoadType(){
+    //clear any remnant data that is there now
+    WaybyRoadType.clear();
+    
     std::string key,value;
     RoadType road_type;
     
@@ -488,6 +500,9 @@ void populateWaybyRoadType(){
 }
 
 void populateFeatureIds_byType(){
+    //clear any remnant data
+    FeatureIds_byType.clear();
+    
     FeatureIds_byType.resize(10);
         for(size_t featureId = 0; featureId < getNumFeatures(); ++featureId){
 
@@ -585,12 +600,20 @@ void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double 
 
 void initial_setup(ezgl::application *application, bool new_window)
 {
+    //prepare full window title string
+    std::string fullTitle = "All Nightr - " + MapName;
+    //convert to char* type (to pass into gtk function)
+    const char* windowTitle = fullTitle.c_str();
+    GtkWindow* mainWindowPointer = (GtkWindow*) application->get_object("MainWindow"); 
+    gtk_window_set_title(mainWindowPointer, windowTitle);
+    
     navigateScreen = false;
-  //Create a Find button and link it with find_button callback function.
-    //number indicates the order of the button (0->top)
-  //application->create_button("Find", 1, 0, 1, 1, find_button);
+  //Create a Find button and link it with find_button callback function
     GtkButton* findButton = (GtkButton*) application->get_object("find");   
     g_signal_connect(findButton,"clicked",G_CALLBACK(find_button),application);
+    
+    GtkButton* loadButton = (GtkButton*) application->get_object("load_map");   
+    g_signal_connect(loadButton, "clicked", G_CALLBACK(load_map_button), application);
 
 }
 
@@ -1326,12 +1349,6 @@ void draw_intersections(ezgl::renderer *g){
           x = x_from_lon(x);
           y = y_from_lat(y);
 
-    //      int threshold = intersectionThresrhold(i);
-    //      if (threshold==0||(threshold==1&&scale_factor <= 0.30)||(scale_factor <=0.01) )
-    //          enableDraw = true;
-    //      else 
-    //          enableDraw = false;
-
           float width;
           if (scale_factor > 0.005)
               width =  2;
@@ -1368,6 +1385,9 @@ void clearIntersection_highlights(){
 
 //populates Featurepoints_xy vector needed to draw features and feature names
 void populateFeaturepoints_xy(){
+    //clear any data that is there
+    Featurepoints_xy.clear();
+    
     //uses StreetsDatabase function
     Featurepoints_xy.resize(getNumFeatures());
     
@@ -1408,6 +1428,8 @@ void populateFeaturepoints_xy(){
 //then can associate a featureid with that name (largest area)
 //then, populate the FeatureCentroids vector using that featureid)
 void populateFeatureCentroids(){
+    //erase any remnant data
+    FeatureCentroids.clear();
     
     std::unordered_map<std::string, int> uniqueNames;
     std::unordered_map<std::string, int>::const_iterator found_ptr;
@@ -1448,4 +1470,88 @@ std::string get_operationHours(const OSMNode* poi_OSMentity){
             return value;
         }
     }
+    return "not available";
+}
+
+void load_map_button(GtkWidget* widget, ezgl::application *application)
+{
+    // string variables needed to interpret input
+    std::string city_input, country_input, new_map;
+    std::string path_directory = "/cad2/ece297s/public/maps/";
+    std::string file_type = ".streets.bin";
+    
+    // Get the GtkEntry object
+    GtkEntry* text_entry = (GtkEntry *) application->get_object("TextInput");
+    
+    // Get the text written in the widget
+    const char* text = gtk_entry_get_text(text_entry);
+    
+    //convert into a string
+    std::string map_input(text);
+    
+    //check if nothing was entered
+    if(map_input.empty()){
+        std::cout << "No map entered";
+        return;
+    }
+     //otherwise parse the input
+    
+    //helps to parse entered text
+    std::size_t pos = map_input.find(",");
+    
+   //extract city (get all characters up to, but not including ",")
+    city_input = map_input.substr(0, pos);
+
+    //extract country (all characters after "," and a [space])
+    country_input = map_input.substr(pos + 2);
+    
+    //the new map is city_country
+    new_map = city_input + "_" + country_input;
+    
+    //1) check if they are loading the same map (waste of time!)
+    if((city_input + " " + country_input) == MapName){
+        application->update_message ("Map already loaded!"); 
+    }
+    
+    else{
+        //also empties all global variables from m1
+        close_map();
+        
+        bool load_success = load_map( path_directory + new_map + file_type); 
+        
+        if(!load_success){
+            application -> update_message ( "Failed to load map '" + path_directory + new_map + file_type );
+        }
+        
+        else{
+            Highlighted_intersections.clear();
+            
+            //updates min_lon, min_lat, max_lon, max_lat Global Variables (needed to populate global variables)
+            //also populates intersections vector
+            find_map_bounds();
+            
+            //re-populate all global variables
+            populateWaybyRoadType();
+            populateFeatureIds_byType();
+            populatePointsOfInterest();
+            populateFeaturepoints_xy();
+            populateFeatureCentroids();
+
+            ezgl::rectangle new_initial_world({min_lon, min_lat}, {max_lon, max_lat}); 
+
+            application->change_canvas_world_coordinates("MainCanvas", new_initial_world);
+
+            application->refresh_drawing();
+
+            //prepare full window title string
+            std::string fullTitle = "All Nightr - " + MapName;
+            //convert to char* type (to pass into gtk function)
+            const char* windowTitle = fullTitle.c_str();
+            GtkWindow* mainWindowPointer = (GtkWindow*) application->get_object("MainWindow"); 
+            gtk_window_set_title(mainWindowPointer, windowTitle);
+        }
+
+    }
+
+    return;
 }

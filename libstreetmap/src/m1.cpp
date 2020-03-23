@@ -61,6 +61,8 @@ std::vector<LatLon> IntersectionCoordinates;
 
 //Multimap --> key: [Street Name] value: [Street Index]
 std::multimap<std::string, int> StreetNames;
+
+std::string MapName;
 //----------------------------------------------------------------
 
 //---Function Declarations----------------------------------------
@@ -84,6 +86,8 @@ void populateIntersectionCoordinates();
 void populateStreetNames();
 //returns true if a given streetName begins with the same characters as a given prefix
 bool isStreetName(std::string streetName, std::string prefix, int prefixLength);
+//Used to extract map name as City Country, used in graphics (M3)
+std::string getMapName(std::string fullpath);
 //------------------------------------------------------------------
 
 // load_map will be called with the name of the file that stores the "layer-2"
@@ -123,6 +127,11 @@ bool load_map(std::string map_streets_database_filename) {
     
     //If load_successful is still true, populate data structures
     if (load_successful){
+        
+        std::cout << map_streets_database_filename << "\n";
+        //update the global map name variable
+        MapName = getMapName(map_streets_database_filename);
+        
         //Populating Street Vector Nodes with streetsdatabaseAPI data
         populateStreetVector();
     
@@ -851,4 +860,32 @@ bool isStreetName(std::string streetName, std::string prefix, int prefixLength){
             return false; //mismatch found
     }
     return true; //streetName begins with that prefix
+}
+
+//Used to extract map name as city[SPACE]country, used in graphics (M3)
+std::string getMapName(std::string fullpath){
+    
+    std::string city, country;
+    
+    //ignore the file directory, until the actual map name (format: city_country)
+    std::size_t pos = fullpath.find("/");
+    
+    while (pos != std::string::npos){
+        //remove all text leading up to the first "/"
+        fullpath = fullpath.substr(pos);
+        //remove "/"
+        fullpath.erase(fullpath.begin());
+        //find the next "/"
+        pos = fullpath.find("/");
+    }
+    
+    fullpath = fullpath.substr(0,fullpath.find("."));
+    
+    city = fullpath.substr(0,fullpath.find("_"));
+    
+    country = fullpath.substr(fullpath.find("_") + 1);
+       
+    fullpath = city + " " + country;
+    
+    return fullpath;
 }

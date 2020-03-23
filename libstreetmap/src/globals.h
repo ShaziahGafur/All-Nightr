@@ -19,6 +19,16 @@
 
 //-----Global Variables------------------------------------------
 
+//0. Map Loading
+
+//name of curretnly loaded map
+extern std::string MapName;
+//
+////close current map
+//extern void close_map();
+
+//loads another map
+//extern bool load_map(std::string map_streets_database_filename); 
 
 //1. Street Data
 //Vector --> key: [streetID] value: [StreetStruct]
