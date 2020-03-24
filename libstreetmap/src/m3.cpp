@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
 //includes for m3 visualization
 #include "ezgl/application.hpp"
@@ -35,7 +30,7 @@ int prevSegID = 0;
 // given turn_penalty (in seconds) per turn implied by the path.  If there is
 // no turn, then there is no penalty. Note that whenever the street id changes
 // (e.g. going from Bloor Street West to Bloor Street East) we have a turn.
-double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, const double turn_penalty){
+double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, const double turn_penalty){    
     
     double travelTime = 0;
     //Error check if vector size is zero
@@ -45,26 +40,24 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     
     //make streetinfo struct and streetID variable to retrieve streetID from street segment index
     InfoStreetSegment segStruct;
-    int previousStreetID, nextStreetID;
-    
-    //get first streetID
-    segStruct = getInfoStreetSegment(path.front());
-    previousStreetID = segStruct.streetID;
+    int previousStreetID, nextStreetID; //street IDs of two consecutive street
     
     //Find number of turn penalties by finding # of turns -> Need to find street id from street segment to get # of turns
     //Use global structure?
     //Also get travel time of each segment and store in travelTime
     std::vector<StreetSegmentIndex>::const_iterator it = path.begin();
     
-    do{
+    //get first streetID
+    segStruct = getInfoStreetSegment(*it);
+    previousStreetID = segStruct.streetID;
+    
+    travelTime = find_street_segment_travel_time(*it);
+    it++;
+    
+    //For all street segments after the first one, run loop
+    while(it != path.end()){
         
-        //add travel time of this segment        
-        travelTime = travelTime + find_street_segment_travel_time(*it);
-        
-        // move to next segment
-        it++; 
-        
-        //get street id
+        //First check if there was a turn
         segStruct = getInfoStreetSegment(*it);
         nextStreetID = segStruct.streetID;
         
@@ -73,10 +66,14 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
             travelTime = travelTime + turn_penalty;
             previousStreetID = nextStreetID;
         } 
-    } while (it != path.end());
+        
+        //Second, add travel time of the street segment
+        travelTime = travelTime + find_street_segment_travel_time(*it);
+                
+        // advance to next segment
+        it++;    
+    }
     
-    //I don't actually know why I have to subtract turn_penalty, but all the test case answers have exactly 1 extra turn penalty
-    travelTime = travelTime - turn_penalty;
     return travelTime;
 }
  
