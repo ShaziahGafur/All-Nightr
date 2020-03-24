@@ -225,10 +225,10 @@ bool breadthFirstSearch(Node* sourceNode, int destID){
             nodesEncountered.insert({intersectionID, nptr});
             
         }
-        //if no path is found
-        return false;
     }
     
+    //if no path is found
+    return false;
 }
 
 std::vector<StreetSegmentIndex> bfsTraceBack(int destID){
