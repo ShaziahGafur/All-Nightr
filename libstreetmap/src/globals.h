@@ -79,6 +79,8 @@ extern std::vector<double> SegmentTravelTime;
 //Vector --> key: [intersection ID] value: [LatLon Coordinates]
 extern std::vector<LatLon> IntersectionCoordinates;
 
+//5. Directions & M3-related
+extern std::string directionsText;
 
 #endif /* GLOBALS_H */
 

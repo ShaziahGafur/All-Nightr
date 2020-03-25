@@ -22,7 +22,9 @@ void delay(int milliseconds);
 //key : int intersectionID, value: pointer to node
 std::unordered_map<int, Node*> nodesEncountered;
 double bestPathTravelTime;
-int prevSegID = 0;
+//int prevSegID = 0;
+
+std::string directionsText;
 
 // Returns the time required to travel along the path specified, in seconds.
 // The path is given as a vector of street segment ids, and this function can
@@ -268,6 +270,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
     }
     
     //if no path is found
+    directionsText = "No path found";
     return false;
 }
 
@@ -291,7 +294,11 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int destID){
         
         //advance nextNode
         //find intersection-node the segment came to current node from and set it to next node
-        InfoStreetSegment segStruct = getInfoStreetSegment(prevSegID);
+        InfoStreetSegment segStruct = getInfoStreetSegment(forwardSegID);
+        
+        //save directions
+        directionsText = directionsText + getStreetName(segStruct.streetID)+ "\n";
+        
         if (segStruct.to == intersectionID){
             nextNode = getNodeByID(segStruct.from);
         }
@@ -305,6 +312,8 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int destID){
         //retrieve next segment (segment after nextNode)
         forwardSegID = nextNode->reachingEdge;        
     }
+    
+    std::cout<<"Directions are:\n"<<directionsText<<std::endl;
     
 //    //convert list to a vector
 //    std::vector<StreetSegmentIndex> pathVect;
