@@ -18,6 +18,7 @@
 #include <sstream>
 #include <gtk/gtk.h>
 #include <time.h>
+#include <regex>
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 /************  GLOBAL VARIABLES  *****************/
 enum RoadType {
@@ -97,7 +98,10 @@ double x_from_lon (double lon);
 std::pair < double, double > latLonToCartesian (LatLon latLonPoint);
 double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, double> xyTo);
 
+//------------------------------------------------------------------------------
 //  DRAWING //
+//also populates intersections vector
+void find_map_bounds();
 void drawFeature_byType(int feature_type, ezgl::renderer *g);
 void drawFeatures(ezgl::renderer *g);
 void draw_feature_names(ezgl::renderer *g);
@@ -107,6 +111,7 @@ void draw_intersections(ezgl::renderer *g);
 void draw_points_of_interest(ezgl::renderer *g);
 void clearIntersection_highlights();
 
+//------------------------------------------------------------------------------
 // POPULATING GLOBAL VARIABLES //
 void populatePointsOfInterest();
 void populateWaybyRoadType();
@@ -114,19 +119,23 @@ void populateFeatureIds_byType();
 void populateFeaturepoints_xy();
 void populateFeatureCentroids();
 
+//------------------------------------------------------------------------------
+// MISCELLANEOUS
 ezgl::point2d compute2DPolygonCentroid(int& featureId, std::vector<ezgl::point2d> &vertices, double& area);
 ezgl::point2d find_PolyLine_Middle(int featureId);
-double feature_max_width (int numPoints, int featureId);
 std::string get_operationHours(const OSMNode* poi_OSMentity);
+bool extract_streets_from_text(const char* text, std::string& street1, std::string& street2);
+//returns a vector with all of the possible intersections given a set of street_ids
+std::vector< std::vector<int> >  get_intersection_and_suggestions(std::vector<int>& street_ids_1, std::vector<int>& street_ids_2, std::string& suggested_streets);
 
-
+//------------------------------------------------------------------------------
+// APPLICATION
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click);
 void find_button(GtkWidget *widget, ezgl::application *application);
 void load_map_button(GtkWidget* widget, ezgl::application *application);
 void initial_setup(ezgl::application *application, bool /*new_window*/);
-
-//also populates intersections vector
-void find_map_bounds();
+void directions_button(GtkWidget* widget, ezgl::application *application);
+void done_directions_button(GtkWidget* widget, ezgl::application *application);
 
 /************************************************/
 
@@ -612,145 +621,84 @@ void initial_setup(ezgl::application *application, bool new_window)
     GtkButton* findButton = (GtkButton*) application->get_object("find");   
     g_signal_connect(findButton,"clicked",G_CALLBACK(find_button),application);
     
+    //link load button to load_map call-back function
     GtkButton* loadButton = (GtkButton*) application->get_object("load_map");   
     g_signal_connect(loadButton, "clicked", G_CALLBACK(load_map_button), application);
 
+   //link Get direction button to directions_button call-back function
+    GtkButton* directionsButton = (GtkButton*) application->get_object("directions");   
+    g_signal_connect(directionsButton, "clicked", G_CALLBACK(directions_button), application);
 }
 
 void find_button(GtkWidget* widget, ezgl::application *application){
     //two string variables needed to interpret input
-    std::string street1, street2;
-    std::pair<int, int> twoStreets;
-    std::vector<int> streetIntersections;
+    std::string street1, street2, suggested_streets;
     
     // Get the GtkEntry object
     GtkEntry* text_entry = (GtkEntry *) application->get_object("TextInput");
     
     // Get the text written in the widget
     const char* text = gtk_entry_get_text(text_entry);
-
-    //convert string into a stream
-    std::istringstream iss(text);
-    if (text==NULL){
-        std::cout<<"Empty Find parameters\n";
+    
+    if (extract_streets_from_text(text, street1, street2) == false){
+        application->update_message ("Please enter two street names (e.g. Main street and Danforth)"); 
         return;
     }
-       
-    //get street names to be used find function
-    iss >> street1; 
-    if (street1.find_first_not_of(' ') == std::string::npos) 
-        return;
-    std::getline(iss, street2);
-    if (street2.find_first_not_of(' ') == std::string::npos)
-        return;
-    street2 = street2.substr(street2.find("and") + 4); 
-//    if (street2.find(" & ")< street2.length()){ //found an & in the string
-//        iss >> street2;  
-//        std::getline(iss, street2);
-//    }
-//    else{
-//         street2 = street2.substr(street2.find("and") + 4); //
-//    }
-    
-    //if one of the street names is invalid (whitespace only)
-    if (street2.find_first_not_of(' ') == std::string::npos)
-        return;
-    
     //obtains all of the possible streetIds that match the entered street names
     std::vector<int> street_ids_1 = find_street_ids_from_partial_street_name(street1);
     std::vector<int> street_ids_2 = find_street_ids_from_partial_street_name(street2);
     
-    int street1_id = 0;
-    int street2_id = 0;
-    //nested for-loop which finds intersections between all streetId's returned by partial_street_name function
-    //outer for-loop looks through all matches in 
-
-    for(int i = 0; i < street_ids_1.size() && (streetIntersections.empty() == true); i++){
-        for(street2_id = 0; street2_id < street_ids_2.size() && (streetIntersections.empty() == true) ; street2_id++){
-            street1_id = i; //store old value of i before incrementation
-            
-            //load twoStreets pair
-            twoStreets.first = street_ids_1[street1_id];
-            twoStreets.second = street_ids_2[street2_id];
-
-            streetIntersections = find_intersections_of_two_streets(twoStreets);
-        }
-    }
+    //a vector with all of the possible intersections given a set of street_ids
+    std::vector< std::vector<int> > streetIntersections;
     
-    //an un empty streetIntersections vector indicates that common intersections were found for the predicted streets
+    streetIntersections = get_intersection_and_suggestions(street_ids_1, street_ids_2, suggested_streets);
     
+    //sting which holds the primary intersection names
     std::string intersectionNames = "";
-        
-    for(int i = 0; i < streetIntersections.size(); i++){
-        intersections[streetIntersections[i]].highlight = true;
-        intersectionNames+=getIntersectionName(streetIntersections[i]);
-        if (i+1!=streetIntersections.size())
-            intersectionNames+=", ";
-    }
     
-    if (intersectionNames=="")
+    if (streetIntersections.empty())
         intersectionNames = "No results found";
-    
-    else{//update global variables to navigate screen to the intersection
-        LatLon intersectionFound = getIntersectionPosition(streetIntersections[0]);
+        
+    else{
+        //clear other highlighted intersections, 
+        clearIntersection_highlights();
+        
+        //add the intersecting street names to string
+        //note: two streets may have more than one intersection
+        for(int i = 0; i < streetIntersections[0].size(); i++){
+            intersectionNames += getIntersectionName(streetIntersections[0][i]);
+            //if there are more intersections left
+            if (i+1 != streetIntersections[0].size())
+                intersectionNames+=", ";
+
+            Highlighted_intersections.push_back(streetIntersections[0][i]);
+            intersections[streetIntersections[0][i]].highlight = true;
+        }
+        
+        //update global variables to navigate screen to the intersection
+        LatLon intersectionFound = getIntersectionPosition(streetIntersections[0][0]);
         ezgl::rectangle intersectionView({x_from_lon(intersectionFound.lon()-(intersectionViewLon/2)), y_from_lat(intersectionFound.lat())},{x_from_lon(intersectionFound.lon()+(intersectionViewLon/2)), y_from_lat(intersectionFound.lat())}); 
         new_world = intersectionView;
         navigateScreen = true;
     }
-    // Redraw the graphics
-    application->refresh_drawing();
-    //Suggested Street names  
-    std::string suggested_streets = "";
-    
-//    street2_id++; //advance to next possible street for street 2
-    //finish iteration on street1 (i.e. for that same street1 value, check all other possibilities on street 2)
-    for(int j = street2_id; j < street_ids_2.size(); j++){
 
-        //load twoStreets pair
-        twoStreets.first = street_ids_1[street1_id];
-
-        twoStreets.second = street_ids_2[j];
-        streetIntersections = find_intersections_of_two_streets(twoStreets);
-        if (streetIntersections.empty()==false){
-
-            suggested_streets+=getStreetName(twoStreets.first)+" & "+getStreetName(twoStreets.second)+"\n";
-            streetIntersections.clear();    
-        }
-    }
-    street1_id++;
-    
-    //check all possibilities for other values of street 1, and for each street1, check with all combinations of street 2
-    for(int i = street1_id; i < street_ids_1.size(); i++){
-        for(int j = 0; j < street_ids_2.size(); j++){
-            
-            //load twoStreets pair
-            twoStreets.first = street_ids_1[i];
-
-            twoStreets.second = street_ids_2[j];
-            streetIntersections = find_intersections_of_two_streets(twoStreets);
-            if (streetIntersections.empty()==false){
-                
-                suggested_streets+=getStreetName(twoStreets.first)+" & "+getStreetName(twoStreets.second)+"\n";
-                streetIntersections.clear();    
-            }
-        }
-    }
-    
-      GtkWidget* view = (GtkWidget *)application->get_object("SearchStreetsResults");
-        GtkTextView * textViewPtr = GTK_TEXT_VIEW(view);
-          GtkTextBuffer* buffer = gtk_text_view_get_buffer(textViewPtr);
-        gtk_text_buffer_set_text(buffer, "  ", -1); 
-    
-    if (suggested_streets!=""){
-        suggested_streets = "\nDid you mean?\n\n" + suggested_streets;
-        gtk_text_buffer_set_text(buffer, suggested_streets.c_str(), -1);
-
-    }    
     application->update_message (intersectionNames); 
     
     // Redraw the graphics
-    application->refresh_drawing();
+    application->refresh_drawing(); 
     
+    GtkWidget* view = (GtkWidget *)application->get_object("SearchStreetsResults");
+    GtkTextView * textViewPtr = GTK_TEXT_VIEW(view);
+    GtkTextBuffer* buffer = gtk_text_view_get_buffer(textViewPtr);
+    gtk_text_buffer_set_text(buffer, "  ", -1); 
+    
+    //if there are alternative intersections
+    if (suggested_streets.empty() == false){
+        //append message
+        suggested_streets = "\nDid you mean?\n\n" + suggested_streets;
+        gtk_text_buffer_set_text(buffer, suggested_streets.c_str(), -1);
+
+    }
 }
 
 //vertices are the feature points in xy coordinates, vertexCount = number of feature points
@@ -787,32 +735,6 @@ ezgl::point2d compute2DPolygonCentroid(int& featureId, std::vector< ezgl::point2
         
         return centroid;
     }
-}
-//Finds greatest length along the centre of the polygon in which text can fit
-double feature_max_width (int numPoints, int featureId){
-    
-    //find the maximum and minimum intersections of the map
-    double feat_max_lon = getFeaturePoint(0, featureId).lon();
-    double feat_min_lon = feat_max_lon;
-    
-    for(int i = 0; i < numPoints; i++){
-
-        //get position from streetsdatabaseAPI function
-        LatLon featurePointLatLon = getFeaturePoint(i, featureId);
-        
-        //compare the lon position to update max/min
-        feat_max_lon = std::max(feat_max_lon, featurePointLatLon.lon());
-        feat_min_lon = std::min(feat_min_lon, featurePointLatLon.lon());
-    }
-    
-    LatLon firstPoint (0, feat_min_lon);
-    
-    LatLon secondPoint (0, feat_max_lon);
-    
-    std::pair<LatLon, LatLon> length(firstPoint, secondPoint);
-    
-    return find_distance_between_two_points(length);
-    
 }
 
 void draw_feature_names(ezgl::renderer *g){
@@ -863,10 +785,6 @@ void draw_feature_names(ezgl::renderer *g){
 //            g->fill_rectangle({(*it).second.x-50,(*it).second.y-50}, {(*it).second.x + 50, (*it).second.y + 50});
         }
     
-      
-//        double max_width = feature_max_width (numOfFeaturePoints, featureId);
-
-//        std::cout << "max_width " << max_width << "\n";
 
        // g->fill_rectangle({FeatureCentroids.at(FeatureIds_uniqueNames[i]).x-(10),FeatureCentroids.at(FeatureIds_uniqueNames[i]).y-(10)}, {FeatureCentroids.at(FeatureIds_uniqueNames[i]).x + (10), FeatureCentroids.at(FeatureIds_uniqueNames[i]).y + (10)});
     }
@@ -1217,18 +1135,20 @@ void draw_streets(ezgl::renderer *g){
     }
 }
 
-/**
- * Draws street name for only a STRAIGHT street segment. If segment is curved, drawing of street name happens in draw_streets
- * @param g
- * @param xyFrom
- * @param xyTo
- * @param numCurvePoints
- * @param segmentLength
- * @param streetName
- * @param oneWay
- */
+
 void draw_street_name(ezgl::renderer* g, std::pair<double, double>& xyFrom, std::pair<double, double>& xyTo, double& segmentLength, std::string& streetName, bool oneWay)
 {
+    /**
+    * Draws street name for only a STRAIGHT street segment. If segment is curved, drawing of street name happens in draw_streets
+    * @param g
+    * @param xyFrom
+    * @param xyTo
+    * @param numCurvePoints
+    * @param segmentLength
+    * @param streetName
+    * @param oneWay
+    */
+
     //Variables for drawing text of street segments
     //uses find_street_segment_length from m1
     double xMiddleOfSegment, yMiddleOfSegment;
@@ -1378,7 +1298,6 @@ void draw_intersections(ezgl::renderer *g){
 
 void clearIntersection_highlights(){
     for (std::vector<int>::iterator it = Highlighted_intersections.begin(); it != Highlighted_intersections.end(); ++it){
-        std::cout << *it;
         intersections[*it].highlight = false;
     }
 }
@@ -1474,7 +1393,7 @@ std::string get_operationHours(const OSMNode* poi_OSMentity){
 }
 
 void load_map_button(GtkWidget* widget, ezgl::application *application)
-{
+{   
     // string variables needed to interpret input
     std::string city_input, country_input, new_map;
     std::string path_directory = "/cad2/ece297s/public/maps/";
@@ -1542,6 +1461,8 @@ void load_map_button(GtkWidget* widget, ezgl::application *application)
             application->change_canvas_world_coordinates("MainCanvas", new_initial_world);
 
             application->refresh_drawing();
+            
+            application->update_message ("Map loaded"); 
 
             //prepare full window title string
             std::string fullTitle = "All Nightr - " + MapName;
@@ -1554,4 +1475,144 @@ void load_map_button(GtkWidget* widget, ezgl::application *application)
     }
 
     return;
+}
+
+void directions_button(GtkWidget* widget, ezgl::application *application){
+    
+//    application->create_button("Done", 10, done_directions_button);
+    
+    //two string variables needed to interpret input
+    std::string street1, street2, suggested_streets;
+    
+    //Text prompt for directions mode 
+    std::string directions_prompt = "";
+    
+    int destinationId, sourceId;
+    
+    // Get the GtkEntry object
+    GtkEntry* text_entry = (GtkEntry *) application->get_object("TextInput");
+    
+    // Get the text written in the widget
+    const char* text = gtk_entry_get_text(text_entry);
+    
+    if (extract_streets_from_text(text, street1, street2) == false)
+        //insert some kind of error message
+        return;
+    
+    //obtains all of the possible streetIds that match the entered street names
+    std::vector<int> street_ids_1 = find_street_ids_from_partial_street_name(street1);
+    std::vector<int> street_ids_2 = find_street_ids_from_partial_street_name(street2);
+    
+    //a vector with all of the possible intersections given a set of street_ids
+    std::vector< std::vector<int> > streetIntersections;
+    
+    streetIntersections = get_intersection_and_suggestions(street_ids_1, street_ids_2, suggested_streets);
+    
+    //string which holds the primary intersection names
+    std::string intersectionNames = "";
+    
+    if (streetIntersections.empty())
+        directions_prompt = "No results found";
+        
+    else{
+        //clear other highlighted intersections, 
+        clearIntersection_highlights();
+        
+        destinationId = streetIntersections[0][0];
+        
+        directions_prompt = getIntersectionName(streetIntersections[0][0]);
+
+        Highlighted_intersections.push_back(streetIntersections[0][0]);
+        intersections[streetIntersections[0][0]].highlight = true;
+        
+//        
+//        //update global variables to navigate screen to the intersection
+//        LatLon intersectionFound = getIntersectionPosition(streetIntersections[0][0]);
+//        ezgl::rectangle intersectionView({x_from_lon(intersectionFound.lon()-(intersectionViewLon/2)), y_from_lat(intersectionFound.lat())},{x_from_lon(intersectionFound.lon()+(intersectionViewLon/2)), y_from_lat(intersectionFound.lat())}); 
+//        new_world = intersectionView;
+//        navigateScreen = true;
+//    }
+
+    application->update_message ("Directions Mode"); 
+    
+    // Redraw the graphics
+//    application->refresh_drawing(); 
+
+    directions_prompt = "Destination: \n" + directions_prompt + "\n\n" + "Please enter starting location in search bar: ";
+    }
+    
+    GtkWidget* view = (GtkWidget *)application->get_object("SearchStreetsResults");
+    GtkTextView * textViewPtr = GTK_TEXT_VIEW(view);
+    GtkTextBuffer* buffer = gtk_text_view_get_buffer(textViewPtr);
+    
+    gtk_text_buffer_set_text(buffer, directions_prompt.c_str(), -1);
+    
+    
+}
+
+void done_directions_button(GtkWidget* widget, ezgl::application *application){
+    //clear message
+    //clear path
+}
+bool extract_streets_from_text(const char* text, std::string& street1, std::string& street2){
+    
+    //convert into a string
+    std::string text_input(text);
+    
+    //if text is empty or only white spaces
+    if (text_input.empty() || (text_input.find_first_not_of(' ') == std::string::npos)){ 
+        std::cout<<"Empty Find parameters\n";
+        return false;
+    }
+       
+    std::smatch m; //typedef std::match_results<string>
+    
+    //get street names to be used find function
+    //format (street1)(and or &)(street2)
+    std::regex ex("([a-zA-Z]+[\\s\\-[a-zA-Z]+]*)+\\s(and|&)\\s([a-zA-Z]+[\\s\\-[a-zA-Z]+]*)");
+    
+    bool found = std::regex_search(text_input, m, ex);
+     
+    if(found){
+        street1 = m[1].str();
+        street2 = m[3].str();
+        return true;
+    }
+    
+    else return false;
+
+}
+
+//returns a vector with all of the possible intersections given a set of street_ids
+std::vector< std::vector<int> >  get_intersection_and_suggestions(std::vector<int>& street_ids_1, std::vector<int>& street_ids_2, std::string& suggested_streets){
+    
+    std::pair<int, int> twoStreets;
+    //a vector which holds all of the intersection possibilities
+    std::vector< std::vector<int> > streetIntersections;
+    std::vector<int> streetIntersections_temp;
+    
+    //nested for-loop which finds intersections between all streetId's returned by partial_street_name function
+    //stops once a single intersection is found. (Other matches go to suggested streets)
+    for(int str1_idx = 0; str1_idx < street_ids_1.size(); str1_idx++){
+        
+        twoStreets.first = street_ids_1[str1_idx];
+        
+        for(int str2_idx = 0; str2_idx < street_ids_2.size(); str2_idx++){
+            
+            twoStreets.second = street_ids_2[str2_idx];
+
+            streetIntersections_temp = find_intersections_of_two_streets(twoStreets);
+            
+            //if an intersection is found...
+            if(!streetIntersections_temp.empty()){
+                
+                //after first match found, all other names go into suggested_streets string
+                if(streetIntersections.empty() == false)
+                    suggested_streets += getStreetName(twoStreets.first)+" & "+getStreetName(twoStreets.second)+"\n";
+                    
+                streetIntersections.push_back(streetIntersections_temp);
+            }  
+        }
+    }
+    return streetIntersections;
 }
