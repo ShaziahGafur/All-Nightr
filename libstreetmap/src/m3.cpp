@@ -6,12 +6,12 @@
 #include <chrono>
 #include <thread>
 //#define VISUALIZE
-
+#include <list> //remove once wavefront data structure updated
 #include "m3.h"
 #include "globals.h"
 
 //helper declarations
-bool breadthFirstSearch(Node* sourceNode, int destID);
+bool breadthFirstSearch(int startID, int destID, const double turn_penalty);
 std::vector<StreetSegmentIndex> bfsTraceBack(int destID);
 Node* getNodeByID(int intersectionID);
 
@@ -20,7 +20,8 @@ void delay(int milliseconds);
 
 //global variable
 //key : int intersectionID, value: pointer to node
-std::unordered_map< int, Node*> nodesEncountered;
+std::unordered_map<int, Node*> nodesEncountered;
+double bestPathTravelTime;
 int prevSegID = 0;
 
 // Returns the time required to travel along the path specified, in seconds.
@@ -90,19 +91,24 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     bool pathFound = false;
     std::vector<StreetSegmentIndex> path;
     
-    //make node object of starting intersection
-    Node sourceNode(intersect_id_start);
-    Node* sourceNodePtr = &sourceNode;
+//    //make node object of starting intersection
+//    Node sourceNode(intersect_id_start);
+//    Node* sourceNodePtr = &sourceNode;
+//    
+//    store source node into unordered_map
+//    int intersectID = intersect_id_start;
+//    nodesEncountered.insert({intersectID, sourceNodePtr});
     
-    //store source node into unordered_map
-    int intersectID = intersect_id_start;
-    nodesEncountered.insert({intersectID, sourceNodePtr});
+    //start and end intersections flipped 
+    //to allow "Tracing forwards rather than "Tracing backwards"
+    pathFound = breadthFirstSearch(intersect_id_end, intersect_id_start, turn_penalty); 
     
-    pathFound = breadthFirstSearch(sourceNodePtr, intersect_id_end);
+    std::cout<<"Path found: "<<pathFound<<std::endl;
     //If path is found, traceback path and store street segments
     if (pathFound){
         path = bfsTraceBack(intersect_id_end);
     }
+    //delete wavefront data structures
     return path;        
 }
         
@@ -179,51 +185,85 @@ std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> find
 }
 
 
-bool breadthFirstSearch(Node* sourceNode, int destID){
-    //declare list which will contain nodes and edges on the wavefront
-    std::list<wave> wavefront;
+bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
+    
+    bestPathTravelTime = 0;
+    //Create Node for start Intersection
+    Node* sourceNodePtr = new Node(startID, NO_EDGE, NO_TIME);
+    nodesEncountered.insert({startID, sourceNodePtr}); //keep track of new start node and its ID (for deletion)
+    
+    //declare list which will contain queue of nodes to check 
+    std::list<wave> wavefront; //change data structure to heap
+     //put source node into wavefront
+    wavefront.push_back(wave(sourceNodePtr, NO_EDGE, NO_TIME));
     
     //variable to be used later to store intersection ID as an int
-    int intersectionID;
-    //put source node into wavefront
-    wavefront.push_back(wave(sourceNode, NO_EDGE));
-    
-    //while wavefront isn't empty, check connected nodes
-    while (!wavefront.empty()){
-        //current wave is top on list
+    int  outerIntersectID;
+       
+    //while there exists nodes in the queue, check these connected nodes
+    while (!wavefront.empty()){   
+        //first deal with wave at top of list
         wave waveCurrent = wavefront.front();
         //remove top wave, it is being checked
         wavefront.pop_front();
+        double waveCurrentTime = waveCurrent.travelTime;
+        Node * waveCurrentNode = waveCurrent.node;
         
-        //store the edge from previous node to this node(reaching edge of top wave) as the reaching edge of the  current node so far
-        waveCurrent.node->reachingEdge = waveCurrent.edgeID;
+        bool betterPathFlag = false;
+        
+        //if better path was found (currently travelling by this wave had smaller time than the Node's prehistoric best time)
+        if (waveCurrentTime < waveCurrentNode->bestTime){
+            betterPathFlag = true;
+            waveCurrentNode->bestTime = waveCurrentTime; //update Node's best time
+            waveCurrentNode->reachingEdge = waveCurrent.edgeID; //update Node's reaching edge
+            
+        }  
         
         //check if current node is destination node
         if (waveCurrent.node->ID == destID){
+            bestPathTravelTime = waveCurrentTime; //set the time for the best path
             return true;
         }
         
-        //iterate through edges of current node to add the nodes they're going TO to the wavefront
-        std::vector<int>edges = waveCurrent.node-> outEdgeIDs;
-        std::vector<int>::iterator it;
-        for(it = edges.begin(); it != edges.end(); ++it){
-            //make this a helper function?
-            //find "TO" intersection for segment and push node and edge used to get to node to bottom of wavefront
-            InfoStreetSegment segStruct = getInfoStreetSegment(*it);
-            if (segStruct.from == waveCurrent.node->ID){
-                intersectionID = segStruct.to;
+        if (betterPathFlag){ //If better path found, crawl to outer nodes
+            //iterate through edges of current node to add the nodes they're going TO to the wavefront
+            std::vector<int>edges = waveCurrentNode-> outEdgeIDs;
+            std::vector<int>::iterator it;
+            for(it = edges.begin(); it != edges.end(); ++it){
+                //make this a helper function?
+                //find "TO" intersection for segment and push node and edge used to get to node to bottom of wavefront
+                InfoStreetSegment segStruct = getInfoStreetSegment(*it);
+                if (segStruct.from == waveCurrentNode->ID){
+                    outerIntersectID = segStruct.to;
+                }
+                else{ //the inner Node = the 'to' of the segment
+                    //check if one-way
+                    if (segStruct.oneWay)
+                        continue; //path down this segment is invalid, skip to next segment
+                    outerIntersectID = segStruct.from;
+                }
+                
+                std::unordered_map<int,Node*>::const_iterator nodeItr =  nodesEncountered.find(outerIntersectID);
+                Node* outerNode;
+                
+                if (nodeItr ==nodesEncountered.end()){ //if node does not exist yet
+                    outerNode = new Node(outerIntersectID, *it, waveCurrentTime);//create a new Node
+                    nodesEncountered.insert({outerIntersectID, outerNode});
+
+                }
+                else{ //if node exists, use the existing node
+                    outerNode = nodeItr->second;
+                }
+                
+                std::vector<int> adjacentSegments; //hold street segmnts of the inner node and segment from inner to outer node
+                adjacentSegments.push_back(waveCurrentNode->reachingEdge); //segment to get to inner node
+                adjacentSegments.push_back(*it); //segment from inner to outer node
+                //calculate travel time of both adjacent segments, subtract off the 1st segment 
+                //result is the turn_penalty (if applicable) and 2nd street seg travel time
+                double newTravelTime = compute_path_travel_time(adjacentSegments, turn_penalty) - waveCurrentTime; 
+                wavefront.push_back(wave(outerNode, *it, waveCurrentTime + newTravelTime)); //create new wavefront elemenet and add to queue
+
             }
-            else{
-                intersectionID = segStruct.from;
-            }
-            Node n(intersectionID);
-            Node* nptr = &n;
-            //push pointer to this node and the segment used to get to it is the edge
-            wavefront.push_back(wave(nptr, *it));
-             
-            //insert node formed into unordered map
-            nodesEncountered.insert({intersectionID, nptr});
-            
         }
     }
     
@@ -231,38 +271,47 @@ bool breadthFirstSearch(Node* sourceNode, int destID){
     return false;
 }
 
+//bfsTraceBack is actually "tracing forward" since initially start and end IDs were flipped
+//Creates message for directions of path
 std::vector<StreetSegmentIndex> bfsTraceBack(int destID){
-    std::list<StreetSegmentIndex> path;
-
-    //variable to traverse nodes
-    Node* currentNode = getNodeByID(destID);
-    //get reaching edge segment from destination Node
-    prevSegID = currentNode->reachingEdge;
     
+    std::vector<StreetSegmentIndex> path;
+    //variable to traverse nodes
+    Node* currentNode = NULL;
+    Node * nextNode = getNodeByID(destID);
+    //get reaching edge segment from destination Node
+    int forwardSegID = nextNode->reachingEdge;
+   
     //variable to store intersectionID
     int intersectionID = destID;
     
-    while (prevSegID != NO_EDGE){
-        path.push_front(prevSegID);         //note: push_front is very bad efficiency -> try to use push back instead later and reverse the algorithm?
+    while (forwardSegID != NO_EDGE){
+        path.push_back(forwardSegID);        
+        currentNode = nextNode;
         
-        //find intersection-node the segment came to current node from and set it to current node
+        //advance nextNode
+        //find intersection-node the segment came to current node from and set it to next node
         InfoStreetSegment segStruct = getInfoStreetSegment(prevSegID);
         if (segStruct.to == intersectionID){
-            currentNode = getNodeByID(segStruct.from);
+            nextNode = getNodeByID(segStruct.from);
         }
         else{
-            currentNode = getNodeByID(segStruct.to);
+            nextNode = getNodeByID(segStruct.to);
         }
         
-       //update the previous segment ID (prevSegID) by setting it to the reaching edge of the current node
-        prevSegID = currentNode->reachingEdge;        
-    }  
-    //convert list to a vector
-    std::vector<StreetSegmentIndex> pathVect;
-    pathVect.reserve(path.size());
-    std::copy(std::begin(path), std::end(path), std::back_inserter(pathVect));
+        //delete the current node. No longer needed
+        delete currentNode;
+
+        //retrieve next segment (segment after nextNode)
+        forwardSegID = nextNode->reachingEdge;        
+    }
     
-    return pathVect;
+//    //convert list to a vector
+//    std::vector<StreetSegmentIndex> pathVect;
+//    pathVect.reserve(path.size());
+//    std::copy(std::begin(path), std::end(path), std::back_inserter(pathVect));
+    
+    return path;
 }
 
 
