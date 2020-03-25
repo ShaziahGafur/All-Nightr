@@ -8,8 +8,13 @@
 #include "globals.h"
 
 
-Node::Node(int intersectionID){
-    ID = intersectionID;
+Node::Node(int intersectionID, int reachingEdgeID, double shortestTime){
+    ID = intersectionID; //Node's ID = intersection ID
     outEdgeIDs = find_street_segments_of_intersection(intersectionID);
+    reachingEdge = reachingEdgeID;
+    bestTime = shortestTime;
+    crawlEnable = true;
 }
+
+
 
