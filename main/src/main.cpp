@@ -62,6 +62,13 @@ int main(int argc, char** argv) {
 
     //You can now do something with the map data
     //Clean-up the map data and related data structures
+<<<<<<< HEAD
+    draw_map();
+    std::vector<StreetSegmentIndex> path;
+        double turn_penalty;
+        double expected;
+        double actual;
+=======
 //    draw_map();
 //    std::vector<StreetSegmentIndex> path;
 //        double turn_penalty;
@@ -72,6 +79,7 @@ int main(int argc, char** argv) {
     
 //    find_path_between_intersections(109, 110, 5);
     
+>>>>>>> 0fb5928c9b5d352aa1eaaf86b266e9fedbe6623e
 
 
     std::cout << "Closing map\n";

@@ -32,6 +32,7 @@
 #include <vector>
 #include <algorithm>
 #include <set>
+#include "segmentStruct.h"
 
 //-----Global Variables------------------------------------------
 //Vector --> key: [streetID] value: [StreetStruct]
@@ -62,6 +63,9 @@ std::vector<LatLon> IntersectionCoordinates;
 //Multimap --> key: [Street Name] value: [Street Index]
 std::multimap<std::string, int> StreetNames;
 
+//Vector --> key: [segment ID] value: [segmentStruct]
+std::vector<segmentStruct> segmentHighlight;
+
 std::string MapName;
 //----------------------------------------------------------------
 
@@ -84,6 +88,8 @@ void populateSegmentTravelTime();
 void populateIntersectionCoordinates();
 //Populating names of street with street index
 void populateStreetNames();
+//Populating street segment highlight
+void populateSegmentHighlight();
 //returns true if a given streetName begins with the same characters as a given prefix
 bool isStreetName(std::string streetName, std::string prefix, int prefixLength);
 //Used to extract map name as City Country, used in graphics (M3)
@@ -158,6 +164,9 @@ bool load_map(std::string map_streets_database_filename) {
     
         //Populate segment travel times;
         populateSegmentTravelTime();
+        
+        //Populate segment highlights
+        populateSegmentHighlight();
     
     }
     return load_successful;
@@ -843,7 +852,23 @@ void populateStreetNames() {
        //add this string to the StreetNames multimap key --> [name], value --> [id]          
        StreetNames.insert(std::make_pair(cachedStreetName, streetIdx));
 
+    }
 }
+
+//Populates SegmentHighlight vector
+//Key -> segmentID value -> segmentStruct
+void populateSegmentHighlight(){
+    //set size of global struct
+    segmentHighlight.resize(getNumStreetSegments());
+    // Set value = segmentStruct with bools which are false in constructor because initially no directions are given
+    //bools will be set to true in m3.cpp find_path function
+    segmentStruct seg;
+    
+    //iterate through street segments 
+    std::fill (segmentHighlight.begin(), segmentHighlight.end(), seg);
+//    for (unsigned i = 0; i < getNumStreetSegments(); i++){
+//        segmentHighlight[i] = seg;
+//    }
 }
 
 //compares characters of street prefix and street name in streetName Map. streetName must begin with same character as prefix
