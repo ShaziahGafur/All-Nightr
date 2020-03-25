@@ -318,7 +318,7 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
         //advance nextNode
         //find intersection-node the segment came to current node from and set it to next node
         InfoStreetSegment segStruct = getInfoStreetSegment(forwardSegID);
-        
+//        std::cout<<"forward street id: "<<segStruct.streetID<<std::endl;
         //save directions
         directionsText = directionsText + getStreetName(segStruct.streetID)+ "\n";
         
@@ -337,8 +337,8 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
         //retrieve next segment (segment after nextNode)
         forwardSegID = nextNode->reachingEdge;        
     }
-    
-//    std::cout<<"Directions are:\n"<<directionsText<<std::endl;
+    delete nextNode;
+    std::cout<<"Directions are:\n"<<directionsText<<std::endl;
     
 //    //convert list to a vector
 //    std::vector<StreetSegmentIndex> pathVect;
