@@ -19,10 +19,12 @@
 struct wave{
     Node* node;
     int edgeID;
-    wave (Node* n, int id) {node = n; edgeID = id;}
+    double travelTime;
+    wave (Node* n, int id, double time) {node = n; edgeID = id; travelTime = time;}
 };
 
 #define NO_EDGE -1  //no edge id
+#define NO_TIME 0  //zero time
 
 #endif /* WAVE_H */
 
