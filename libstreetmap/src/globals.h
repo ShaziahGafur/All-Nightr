@@ -13,6 +13,7 @@
 #include "poiStruct.h"
 #include "wave.h"
 #include "Node.h"
+#include "segmentStruct.h"
 #include <bits/stdc++.h>
 #include <iostream>
 #include <vector>
@@ -79,6 +80,7 @@ extern std::vector<double> SegmentTravelTime;
 //Vector --> key: [intersection ID] value: [LatLon Coordinates]
 extern std::vector<LatLon> IntersectionCoordinates;
 
-
+//Vector --> key: [segment ID] value: [segmentStruct]
+extern std::vector<segmentStruct> segmentHighlight;
 #endif /* GLOBALS_H */
 
