@@ -13,5 +13,8 @@ Node::Node(int intersectionID, int reachingEdgeID, double shortestTime){
     outEdgeIDs = find_street_segments_of_intersection(intersectionID);
     reachingEdge = reachingEdgeID;
     bestTime = shortestTime;
+    crawlEnable = true;
 }
+
+
 

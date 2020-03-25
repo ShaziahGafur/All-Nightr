@@ -10,6 +10,7 @@ public:
     std::vector<int> outEdgeIDs;
     int reachingEdge;
     double bestTime;
+    bool crawlEnable;
     Node(int intersectionID, int reachingEdgeID, double shortestTime);
     
 };

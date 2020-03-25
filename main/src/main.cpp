@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
     
     //Quick test for find path:
     
-    find_path_between_intersections(109, 110, 5);
+//    find_path_between_intersections(109, 110, 5);
     
 
 

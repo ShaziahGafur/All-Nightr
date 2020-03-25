@@ -211,11 +211,12 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
         double waveCurrentTime = waveCurrent.travelTime;
         Node * waveCurrentNode = waveCurrent.node;
         
-        bool betterPathFlag = false;
+        bool betterPathFlag = waveCurrentNode->crawlEnable;
         
         //if better path was found (currently travelling by this wave had smaller time than the Node's prehistoric best time)
         if (waveCurrentTime < waveCurrentNode->bestTime){
-            betterPathFlag = true;
+//            betterPathFlag = true;
+            waveCurrentNode->crawlEnable = true;
             waveCurrentNode->bestTime = waveCurrentTime; //update Node's best time
             waveCurrentNode->reachingEdge = waveCurrent.edgeID; //update Node's reaching edge
             
@@ -266,6 +267,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 wavefront.push_back(wave(outerNode, *it, waveCurrentTime + newTravelTime)); //create new wavefront elemenet and add to queue
 
             }
+            waveCurrentNode->crawlEnable = false;// finished crawling. Reset crawlEnable to false
         }
     }
     
