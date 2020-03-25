@@ -135,7 +135,7 @@ void find_button(GtkWidget *widget, ezgl::application *application);
 void load_map_button(GtkWidget* widget, ezgl::application *application);
 void initial_setup(ezgl::application *application, bool /*new_window*/);
 void directions_button(GtkWidget* widget, ezgl::application *application);
-void done_directions_button(GtkWidget* widget, ezgl::application *application);
+void help_button(GtkWidget* widget, ezgl::application *application);
 
 /************************************************/
 
@@ -609,6 +609,7 @@ void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double 
 
 void initial_setup(ezgl::application *application, bool new_window)
 {
+
     //prepare full window title string
     std::string fullTitle = "All Nightr - " + MapName;
     //convert to char* type (to pass into gtk function)
@@ -617,9 +618,13 @@ void initial_setup(ezgl::application *application, bool new_window)
     gtk_window_set_title(mainWindowPointer, windowTitle);
     
     navigateScreen = false;
-  //Create a Find button and link it with find_button callback function
-    GtkButton* findButton = (GtkButton*) application->get_object("find");   
+    
+  // link it with find_button callback function
+    GtkButton* findButton = (GtkButton*) application->get_object("find");
     g_signal_connect(findButton,"clicked",G_CALLBACK(find_button),application);
+    GtkWidget *find_image = gtk_image_new_from_file("libstreetmap/resources/find_icon.png");
+    gtk_button_set_image(GTK_BUTTON(findButton), find_image);
+    gtk_button_set_label(GTK_BUTTON(findButton), NULL);
     
     //link load button to load_map call-back function
     GtkButton* loadButton = (GtkButton*) application->get_object("load_map");   
@@ -628,6 +633,16 @@ void initial_setup(ezgl::application *application, bool new_window)
    //link Get direction button to directions_button call-back function
     GtkButton* directionsButton = (GtkButton*) application->get_object("directions");   
     g_signal_connect(directionsButton, "clicked", G_CALLBACK(directions_button), application);
+    GtkWidget *directions_image = gtk_image_new_from_file("libstreetmap/resources/direction_icon.png");
+    gtk_button_set_image(GTK_BUTTON(directionsButton), directions_image);
+    gtk_button_set_label(GTK_BUTTON(directionsButton), NULL);
+    
+    //link help button to help call-back function
+    GtkButton* helpButton = (GtkButton*) application->get_object("help");   
+    g_signal_connect(helpButton, "clicked", G_CALLBACK(help_button), application);
+    GtkWidget *help_image = gtk_image_new_from_file("libstreetmap/resources/help_icon.png");
+    gtk_button_set_image(GTK_BUTTON(helpButton), help_image);
+    gtk_button_set_label(GTK_BUTTON(helpButton), NULL);
 }
 
 void find_button(GtkWidget* widget, ezgl::application *application){
@@ -1550,7 +1565,7 @@ void directions_button(GtkWidget* widget, ezgl::application *application){
     
 }
 
-void done_directions_button(GtkWidget* widget, ezgl::application *application){
+void help_button(GtkWidget* widget, ezgl::application *application){
     //clear message
     //clear path
 }
