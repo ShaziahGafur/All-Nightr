@@ -143,6 +143,7 @@ std::string get_operationHours(const OSMNode* poi_OSMentity);
 bool extract_streets_from_text(const char* text, std::string& street1, std::string& street2);
 //returns a vector with all of the possible intersections given a set of street_ids
 std::vector< std::vector<int> >  get_intersection_and_suggestions(std::vector<int>& street_ids_1, std::vector<int>& street_ids_2, std::string& suggested_streets);
+int get_intersection(std::vector<int>& street_ids_1, std::vector<int>& street_ids_2);
 
 //------------------------------------------------------------------------------
 // APPLICATION
@@ -153,6 +154,7 @@ void initial_setup(ezgl::application *application, bool /*new_window*/);
 void directions_button(GtkWidget* widget, ezgl::application *application);
 void done_button(GtkWidget* widget, ezgl::application *application);
 void help_button(GtkWidget* widget, ezgl::application *application);
+void go_button(GtkWidget* widget, ezgl::application *application);
 void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data);
 void hide_direction_entries(ezgl::application *application);
 void show_direction_entries(ezgl::application *application);
@@ -682,7 +684,12 @@ void initial_setup(ezgl::application *application, bool new_window)
     GtkButton* Done = (GtkButton*) application->get_object("done");
     g_signal_connect(Done, "clicked", G_CALLBACK(done_button), application);
     
-    //hide all unecessary widgets
+    //link Go button to done_button call-back function
+    GtkButton* directions_goButton = (GtkButton*) application->get_object("directions_go");
+    g_signal_connect(directions_goButton, "clicked", G_CALLBACK(go_button), application);
+    
+    //*hide all unnecessary widgets
+    //hide the Done button
     GtkWidget* done_widgetPtr = (GtkWidget*)application->get_object("done");
     gtk_widget_hide(done_widgetPtr);
     
@@ -1878,4 +1885,78 @@ void show_direction_entries(ezgl::application *application){
     
     GtkWidget* searchResults_widgetPtr = (GtkWidget*)application->get_object("SearchStreetsResults");
     gtk_widget_show(searchResults_widgetPtr);
+}
+
+void go_button(GtkWidget* widget, ezgl::application *application){
+    
+    std::pair<std::string, std::string> intersectionA;
+    std::pair<std::string, std::string> intersectionB;
+    
+    // Get the GtkEntry object
+    GtkEntry* text_entry = (GtkEntry *) application->get_object("TextInput");
+    
+    // Get the text written in the widget
+    const char* textA = gtk_entry_get_text(text_entry);
+    
+    // Get the GtkEntry object
+    text_entry = (GtkEntry *) application->get_object("directions_entry");
+    
+    // Get the text written in the widget
+    const char* textB = gtk_entry_get_text(text_entry);
+    
+    if(extract_streets_from_text(textA, intersectionA.first, intersectionA.second) == false){
+        application->update_message ("Please enter two street names (e.g. Main street and Danforth)"); 
+        return;
+    }
+    
+    if(extract_streets_from_text(textB, intersectionB.first, intersectionB.second) == false){
+        application->update_message ("Please enter two street names (e.g. Main street and Danforth)"); 
+        return;
+    }
+    
+    //obtains all of the possible streetIds that match the entered street names
+    std::vector<int> Astreet_ids_1 = find_street_ids_from_partial_street_name(intersectionA.first);
+    std::vector<int> Astreet_ids_2 = find_street_ids_from_partial_street_name(intersectionA.second);
+    
+    //obtains all of the possible streetIds that match the entered street names
+    std::vector<int> Bstreet_ids_1 = find_street_ids_from_partial_street_name(intersectionB.first);
+    std::vector<int> Bstreet_ids_2 = find_street_ids_from_partial_street_name(intersectionB.second);
+    
+    //a vector with all of the possible intersections given a set of street_ids
+    std::pair<int, int>intersectionIds{0,0};
+    
+    intersectionIds.first = get_intersection(Astreet_ids_1, Astreet_ids_1);
+    intersectionIds.second = get_intersection(Astreet_ids_1, Astreet_ids_1);
+
+    //sting which holds the primary intersection names
+    std::string intersectionNames = "";
+    
+    if (intersectionIds.first == 0 && intersectionIds.second == 0)
+        intersectionNames = "No results found";
+        
+        ///............
+}
+
+//returns a vector with all of the possible intersections given a set of street_ids
+int get_intersection(std::vector<int>& street_ids_1, std::vector<int>& street_ids_2){
+    
+    std::pair<int, int> twoStreets;
+    //a vector which holds all of the intersection possibilities
+    int streetIntersections = -1;
+    
+    //nested for-loop which finds intersections between all streetId's returned by partial_street_name function
+    //stops once a single intersection is found. (Other matches go to suggested streets)
+    for(int str1_idx = 0; (str1_idx < street_ids_1.size()) && (streetIntersections == -1); str1_idx++){
+        
+        twoStreets.first = street_ids_1[str1_idx];
+        
+        for(int str2_idx = 0; str2_idx < street_ids_2.size(); str2_idx++){
+            
+            twoStreets.second = street_ids_2[str2_idx];
+
+            streetIntersections = find_intersections_of_two_streets(twoStreets)[0];
+             
+        }
+    }
+    return streetIntersections;
 }
