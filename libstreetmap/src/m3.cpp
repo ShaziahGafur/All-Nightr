@@ -249,12 +249,12 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 //find "TO" intersection for segment and push node and edge used to get to node to bottom of wavefront
                 InfoStreetSegment segStruct = getInfoStreetSegment(*it);
                 if (segStruct.from == waveCurrentNode->ID){
-                    outerIntersectID = segStruct.to;
-                }
-                else{ //the inner Node = the 'to' of the segment
                     //check if one-way
                     if (segStruct.oneWay)
                         continue; //path down this segment is invalid, skip to next segment
+                    outerIntersectID = segStruct.to;
+                }
+                else{ //the inner Node = the 'to' of the segment
                     outerIntersectID = segStruct.from;
                 }
                 
