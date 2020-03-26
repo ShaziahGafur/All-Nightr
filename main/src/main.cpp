@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
 //        double actual;
     //Quick test for find path:
     
-    find_path_between_intersections(108, 115, 5);
+//    find_path_between_intersections(108, 115, 5);
 
     std::cout << "Closing map\n";
     close_map(); 

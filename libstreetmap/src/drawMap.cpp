@@ -96,6 +96,7 @@ double lat_from_y (double x);
 double y_from_lat (double lat);
 double x_from_lon (double lon);
 std::pair < double, double > latLonToCartesian (LatLon latLonPoint);
+double getRotationAngleForText(std::pair <double, double> xyFrom, std::pair <double, double> xyTo);
 double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, double> xyTo);
 
 //------------------------------------------------------------------------------
@@ -304,16 +305,30 @@ double lat_from_y (double y){
     return y / (DEGREE_TO_RADIAN * EARTH_RADIUS_METERS);
 }
 
-double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, double> xyTo){
+double getRotationAngleForText(std::pair <double, double> xyFrom, std::pair <double, double> xyTo){
     
     double rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first) / DEGREE_TO_RADIAN;
-
+//    std::cout<<"rotation angle value: "<<rotationAngle<<"\n";
     if (rotationAngle > 90) {
         rotationAngle = rotationAngle - 180;
     }
     if (rotationAngle < -90) {
         rotationAngle = rotationAngle + 180;
     }
+    
+    return rotationAngle;
+}
+
+double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, double> xyTo){
+    
+    double rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first) / DEGREE_TO_RADIAN;
+
+//    if (rotationAngle > 90) {
+//        rotationAngle = rotationAngle - 180;
+//    }
+//    if (rotationAngle < -90) {
+//        rotationAngle = rotationAngle + 180;
+//    }
     
     return rotationAngle;
 }
@@ -1139,7 +1154,7 @@ void draw_streets(ezgl::renderer *g){
                                 streetSegName = direction_symbol + "    " + streetSegName + "    " + direction_symbol;
                             }
 
-                            g->set_text_rotation(getRotationAngle(xyLeftMax, xyRightMax));
+                            g->set_text_rotation(getRotationAngleForText(xyLeftMax, xyRightMax));
                             g->set_color(ezgl::WHITE);
                             g->draw_text({xMiddleOfSegment, yMiddleOfSegment}, streetSegName, segmentLength, segmentLength);
                         }
@@ -1176,7 +1191,7 @@ void draw_street_name(ezgl::renderer* g, std::pair<double, double>& xyFrom, std:
         yMiddleOfSegment = 0.5 * (xyFrom.second + xyTo.second);
         
         //set rotation for text to draw
-        g->set_text_rotation(getRotationAngle(xyFrom, xyTo));
+        g->set_text_rotation(getRotationAngleForText(xyFrom, xyTo));
 
         //set default direction for one way street
         std::string direction_symbol = ">"; //symbol for one way street
