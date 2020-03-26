@@ -66,6 +66,8 @@ std::multimap<std::string, int> StreetNames;
 //Vector --> key: [segment ID] value: [segmentStruct]
 std::vector<segmentStruct> segmentHighlight;
 
+std::list<int> segmentsHighlighted; //for keeping track of which segment
+
 std::string MapName;
 //----------------------------------------------------------------
 

@@ -33,6 +33,10 @@ enum RoadType {
 
 //nightmode street color scheme
 //streets
+
+ezgl::color Colour_driving_highlight(252, 248, 3, 200); //bright yellow
+ezgl::color Colour_walking_highlight(3, 215, 252, 200); //bright blue 
+
 ezgl::color Colour_unclassified(114, 111, 85, 255); //yellow (1 = least opaque)
 ezgl::color Colour_motorway(100, 38, 7); // orange (3 = lightest)
 ezgl::color Colour_trunk(129, 68, 6, 255); // orange (2)
@@ -661,6 +665,15 @@ void initial_setup(ezgl::application *application, bool new_window)
 }
 
 void find_button(GtkWidget* widget, ezgl::application *application){
+    
+    //regardless of what mode it is, reset the segment highlights
+  while(!(segmentsHighlighted.empty())){
+        int segUnhighlightID = segmentsHighlighted.back();
+        segmentHighlight[segUnhighlightID].walking = false;
+        segmentHighlight[segUnhighlightID].driving = false;
+        segmentsHighlighted.pop_back();
+    }
+
     //two string variables needed to interpret input
     std::string street1, street2, suggested_streets;
     
@@ -729,6 +742,33 @@ void find_button(GtkWidget* widget, ezgl::application *application){
         gtk_text_buffer_set_text(buffer, suggested_streets.c_str(), -1);
 
     }
+    
+     //INCLUDE CODE BELOW ONCE MODE 2 IS SET UP
+
+    //else if mode 2 (Direction mode)
+    //update global variables to navigate screen to directions
+    
+//    int startID = 1, destID = 9;
+//    LatLon start = IntersectionCoordinates[startID];
+//    LatLon dest = IntersectionCoordinates[destID];
+//    std::pair <double, double> xyStart = latLonToCartesian(start);
+//    std::pair <double, double> xyDest = latLonToCartesian(dest);
+//    double xDiff = abs(xyStart.first - xyDest.first);
+//    double yDiff = abs(xyStart.second - xyDest.second);
+//    double xAvg = (xyStart.first + xyDest.first)/2;
+//    double yAvg = (xyStart.second + xyDest.second)/2;
+//    
+//    if (xDiff > yDiff){ //if greater dominance in x direction
+//        ezgl::rectangle directionsView({(xAvg-(xDiff*2/3)), yAvg},{(xAvg+(xDiff*2/3)), yAvg}); 
+//        new_world = directionsView;
+//    }
+//    else{
+//        ezgl::rectangle directionsView({xAvg, yAvg-(yDiff*2/3)},{xAvg, yAvg+(yDiff*2/3)}); 
+//        new_world = directionsView;
+//    }
+//        
+//    navigateScreen = true;
+    
 }
 
 //vertices are the feature points in xy coordinates, vertexCount = number of feature points
@@ -1054,6 +1094,15 @@ void draw_streets(ezgl::renderer *g){
             }     
             
             if (enableDraw){
+                
+                if (segmentHighlight[i].driving){
+//                    g->set_line_width (2);
+                    g->set_color (Colour_driving_highlight);
+                }
+                else if (segmentHighlight[i].walking){
+//                    g->set_line_width (2);
+                    g->set_color (Colour_walking_highlight);
+                }
                 
                 xyFrom = latLonToCartesian(intersections[segmentInfo.from].position);
                 xyTo = latLonToCartesian(intersections[segmentInfo.to].position);

@@ -27,7 +27,7 @@ void delay(int milliseconds);
 std::string printTime(double time);
 std::string printDistance(double distance);
 
-//global variable
+//          GLOBAL VARIABLES          //
 //key : int intersectionID, value: pointer to node
 std::unordered_map<int, Node*> nodesEncountered;
 double bestPathTravelTime;
@@ -313,15 +313,18 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
     //variable to store intersectionID
     int nextIntersectID = startID;
     //historic street seg & intersection needed for directions
-    int previousIntersectID = NO_EDGE, middleIntersectID = nextIntersectID, previousSegID = NO_EDGE;//Set to -1 for non-existent values (since initially looking at first Node)
+    int previousIntersectID = NO_EDGE, middleIntersectID = nextIntersectID;//Set to -1 for non-existent values (since initially looking at first Node)
     std::string directionInstruction = ""; //a single line of the directions
     //store previous LatLon?
     
     while (forwardSegID != NO_EDGE){
         middleIntersectID = nextIntersectID;
         
-//        std::cout<<"Forward seg id: "<<forwardSegID<<"\n";
-        path.push_back(forwardSegID);        
+//        std::cout<<"Forward seg id: "<<forwardSegID<<"\n";        
+        path.push_back(forwardSegID); //this segment is part of the path
+        segmentHighlight[forwardSegID].driving = true; //part of driving path
+        segmentsHighlighted.push_back(forwardSegID); //add this segment to the list of those highlighted
+        
         currentNode = nextNode;
         
         //advance nextNode
