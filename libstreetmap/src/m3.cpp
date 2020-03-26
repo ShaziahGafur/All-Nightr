@@ -190,7 +190,11 @@ std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> find
                                                                              const double turn_penalty,
                                                                              const double walking_speed, 
                                                                              const double walking_time_limit){
-    std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> vect;
+    
+    std::vector<StreetSegmentIndex> drivingPath = find_path_between_intersections(start_intersection, end_intersection, turn_penalty);
+    std::vector<StreetSegmentIndex> walkingPath;
+    
+    std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> vect = std::make_pair(drivingPath, walkingPath);
     
     return vect;
 }
