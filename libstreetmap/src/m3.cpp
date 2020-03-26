@@ -237,7 +237,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
             return true;
         }
         
-        if (waveCurrentNode->crawlEnable){ //If better path found, crawl to outer nodes
+        if (waveCurrentNode->crawlEnable){ //If better path found or new node, crawl to outer nodes
 //            std::cout<<"Crawling will occur"<<"\n";
             
             //iterate through edges of current node to add the nodes they're going TO to the wavefront
@@ -344,12 +344,15 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
         nextIntersectID = nextNode->ID; //update intersectionID as the intersection at nextNode
         
         //At this point, next, current, and previousIntersectID are all set
-        //There are 3 parts to direction:
-        //1. Navigation ("Turn Left/Right" / "Continue Straight" / "Make a U-turn" / "Head [bearing]" )
-        //2. "on"
-        //3. New street name
+        //There are 4 parts to direction:
+        //1. "In __ km / m"
+        //2. Navigation ("Turn Left/Right" / "Continue Straight" / "Make a U-turn" / "Head [bearing]" )
+        //3. "on"
+        //4. New street name
+        
+        //Order of parts computed: 2, 3, 4, 1
         directionInstruction = ""; //reset value of directionInstruction (single line in the directions)
-        //part #1:
+        //part #2:
         if(previousIntersectID ==NO_EDGE){ //if this is the first street seg of path
             directionInstruction += "Head ";
             LatLon midInter = IntersectionCoordinates[middleIntersectID];
@@ -403,13 +406,13 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
                 directionInstruction += "Make a Sharp Right ";//U-turn or Sharp Right turn
            
         }
-        //part #2:
+        //part #3:
         directionInstruction += "on ";
         
-        //part #3:
+        //part #4:
         directionInstruction += getStreetName(segStruct.streetID);
         
-        //part #4:
+        //part #1:
         directionInstruction +="\nIn "+printDistance(SegmentLengths[forwardSegID])+", ";
         
         directionsText+=directionInstruction;
@@ -426,12 +429,7 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
     directionsText = "Directions:\n\n"+directionsText + "You will arrive at your destination. Estimated time: " 
             + printTime(bestPathTravelTime);
 //    std::cout<<directionsText<<std::endl;
-    
-    
-//    //convert list to a vector
-//    std::vector<StreetSegmentIndex> pathVect;
-//    pathVect.reserve(path.size());
-//    std::copy(std::begin(path), std::end(path), std::back_inserter(pathVect));
+   
     
     return path;
 }
