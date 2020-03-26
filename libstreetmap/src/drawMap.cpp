@@ -40,6 +40,10 @@ enum Mode {
 
 //nightmode street color scheme
 //streets
+
+ezgl::color Colour_driving_highlight(252, 248, 3, 200); //bright yellow
+ezgl::color Colour_walking_highlight(3, 215, 252, 200); //bright blue 
+
 ezgl::color Colour_unclassified(114, 111, 85, 255); //yellow (1 = least opaque)
 ezgl::color Colour_motorway(100, 38, 7); // orange (3 = lightest)
 ezgl::color Colour_trunk(129, 68, 6, 255); // orange (2)
@@ -105,6 +109,7 @@ double lat_from_y (double x);
 double y_from_lat (double lat);
 double x_from_lon (double lon);
 std::pair < double, double > latLonToCartesian (LatLon latLonPoint);
+double getRotationAngleForText(std::pair <double, double> xyFrom, std::pair <double, double> xyTo);
 double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, double> xyTo);
 
 //------------------------------------------------------------------------------
@@ -315,16 +320,30 @@ double lat_from_y (double y){
     return y / (DEGREE_TO_RADIAN * EARTH_RADIUS_METERS);
 }
 
-double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, double> xyTo){
+double getRotationAngleForText(std::pair <double, double> xyFrom, std::pair <double, double> xyTo){
     
     double rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first) / DEGREE_TO_RADIAN;
-
+//    std::cout<<"rotation angle value: "<<rotationAngle<<"\n";
     if (rotationAngle > 90) {
         rotationAngle = rotationAngle - 180;
     }
     if (rotationAngle < -90) {
         rotationAngle = rotationAngle + 180;
     }
+    
+    return rotationAngle;
+}
+
+double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, double> xyTo){
+    
+    double rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first) / DEGREE_TO_RADIAN;
+
+//    if (rotationAngle > 90) {
+//        rotationAngle = rotationAngle - 180;
+//    }
+//    if (rotationAngle < -90) {
+//        rotationAngle = rotationAngle + 180;
+//    }
     
     return rotationAngle;
 }
@@ -660,6 +679,14 @@ void find_button(GtkWidget* widget, ezgl::application *application){
     //update global variable
     CurrentMode = find;
     
+    //regardless of what mode it is, reset the segment highlights
+  while(!(segmentsHighlighted.empty())){
+        int segUnhighlightID = segmentsHighlighted.back();
+        segmentHighlight[segUnhighlightID].walking = false;
+        segmentHighlight[segUnhighlightID].driving = false;
+        segmentsHighlighted.pop_back();
+    }
+
     //two string variables needed to interpret input
     std::string street1, street2, suggested_streets;
     
@@ -728,6 +755,33 @@ void find_button(GtkWidget* widget, ezgl::application *application){
         gtk_text_buffer_set_text(buffer, suggested_streets.c_str(), -1);
 
     }
+    
+     //INCLUDE CODE BELOW ONCE MODE 2 IS SET UP
+
+    //else if mode 2 (Direction mode)
+    //update global variables to navigate screen to directions
+    
+//    int startID = 1, destID = 9;
+//    LatLon start = IntersectionCoordinates[startID];
+//    LatLon dest = IntersectionCoordinates[destID];
+//    std::pair <double, double> xyStart = latLonToCartesian(start);
+//    std::pair <double, double> xyDest = latLonToCartesian(dest);
+//    double xDiff = abs(xyStart.first - xyDest.first);
+//    double yDiff = abs(xyStart.second - xyDest.second);
+//    double xAvg = (xyStart.first + xyDest.first)/2;
+//    double yAvg = (xyStart.second + xyDest.second)/2;
+//    
+//    if (xDiff > yDiff){ //if greater dominance in x direction
+//        ezgl::rectangle directionsView({(xAvg-(xDiff*2/3)), yAvg},{(xAvg+(xDiff*2/3)), yAvg}); 
+//        new_world = directionsView;
+//    }
+//    else{
+//        ezgl::rectangle directionsView({xAvg, yAvg-(yDiff*2/3)},{xAvg, yAvg+(yDiff*2/3)}); 
+//        new_world = directionsView;
+//    }
+//        
+//    navigateScreen = true;
+    
 }
 
 //vertices are the feature points in xy coordinates, vertexCount = number of feature points
@@ -1054,6 +1108,15 @@ void draw_streets(ezgl::renderer *g){
             
             if (enableDraw){
                 
+                if (segmentHighlight[i].driving){
+//                    g->set_line_width (2);
+                    g->set_color (Colour_driving_highlight);
+                }
+                else if (segmentHighlight[i].walking){
+//                    g->set_line_width (2);
+                    g->set_color (Colour_walking_highlight);
+                }
+                
                 xyFrom = latLonToCartesian(intersections[segmentInfo.from].position);
                 xyTo = latLonToCartesian(intersections[segmentInfo.to].position);
 
@@ -1153,7 +1216,7 @@ void draw_streets(ezgl::renderer *g){
                                 streetSegName = direction_symbol + "    " + streetSegName + "    " + direction_symbol;
                             }
 
-                            g->set_text_rotation(getRotationAngle(xyLeftMax, xyRightMax));
+                            g->set_text_rotation(getRotationAngleForText(xyLeftMax, xyRightMax));
                             g->set_color(ezgl::WHITE);
                             g->draw_text({xMiddleOfSegment, yMiddleOfSegment}, streetSegName, segmentLength, segmentLength);
                         }
@@ -1190,7 +1253,7 @@ void draw_street_name(ezgl::renderer* g, std::pair<double, double>& xyFrom, std:
         yMiddleOfSegment = 0.5 * (xyFrom.second + xyTo.second);
         
         //set rotation for text to draw
-        g->set_text_rotation(getRotationAngle(xyFrom, xyTo));
+        g->set_text_rotation(getRotationAngleForText(xyFrom, xyTo));
 
         //set default direction for one way street
         std::string direction_symbol = ">"; //symbol for one way street

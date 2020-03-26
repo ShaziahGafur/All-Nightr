@@ -86,6 +86,7 @@ extern std::vector<segmentStruct> segmentHighlight;
 //5. Directions & M3-related
 extern std::string directionsText;
 
+extern std::list<int> segmentsHighlighted; //for keeping track of which segment
 
 #endif /* GLOBALS_H */
 
