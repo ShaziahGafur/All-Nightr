@@ -153,6 +153,7 @@ void load_map_button(GtkWidget* widget, ezgl::application *application);
 void initial_setup(ezgl::application *application, bool /*new_window*/);
 void directions_button(GtkWidget* widget, ezgl::application *application);
 void done_button(GtkWidget* widget, ezgl::application *application);
+void go_button(GtkWidget* widget, ezgl::application *application);
 void help_button(GtkWidget* widget, ezgl::application *application);
 void go_button(GtkWidget* widget, ezgl::application *application);
 void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data);
@@ -661,6 +662,9 @@ void initial_setup(ezgl::application *application, bool new_window)
     GtkWidget *find_image = gtk_image_new_from_file("libstreetmap/resources/find_icon.png");
     gtk_button_set_image(GTK_BUTTON(findButton), find_image);
     gtk_button_set_label(GTK_BUTTON(findButton), NULL);
+   
+//    GtkButton* directions_goButton = (GtkButton*) application->get_object("directions_go");   
+//    g_signal_connect(go_button, "clicked", G_CALLBACK(go_button), application);
     
     //link load button to load_map call-back function
     GtkButton* loadButton = (GtkButton*) application->get_object("load_map");   
