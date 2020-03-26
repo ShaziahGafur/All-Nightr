@@ -211,7 +211,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
         double waveCurrentTime = waveCurrent.travelTime;
         Node * waveCurrentNode = waveCurrent.node;
         
-        bool betterPathFlag = true;
+//        bool betterPathFlag = true;
         
         //if better path was found (currently travelling by this wave had smaller time than the Node's prehistoric best time)
 //        std::cout<<"Best time: "<<waveCurrentNode->bestTime<<"\n";
@@ -223,7 +223,8 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
 //        std::cout<<"Works here!\n";
         
         if (waveCurrentTime < waveCurrentNode->bestTime){
-            betterPathFlag = true;
+//            betterPathFlag = true;
+            waveCurrentNode->crawlEnable = true;
             waveCurrentNode->bestTime = waveCurrentTime; //update Node's best time
             waveCurrentNode->reachingEdge = waveCurrent.edgeID; //update Node's reaching edge
             
@@ -235,7 +236,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
             return true;
         }
         
-        if (betterPathFlag){ //If better path found, crawl to outer nodes
+        if (waveCurrentNode->crawlEnable){ //If better path found, crawl to outer nodes
 //            std::cout<<"Crawling will occur"<<"\n";
             
             //iterate through edges of current node to add the nodes they're going TO to the wavefront
@@ -288,6 +289,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
 //                std::cout<<"Successful iteration\n";
 
             }
+            waveCurrentNode->crawlEnable = false; //crawling complete. Reset enable to false. 
         }
     }
     
@@ -309,6 +311,7 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
 
     //variable to store intersectionID
     int intersectionID = startID;
+    int previousIntersectID, previousSegID; //historic street seg needed for directions
     
     while (forwardSegID != NO_EDGE){
 //        std::cout<<"Forward seg id: "<<forwardSegID<<"\n";
@@ -338,7 +341,10 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
         forwardSegID = nextNode->reachingEdge;        
     }
     delete nextNode;
+    
+    directionsText = directionsText + "\n\nYou arrived at your destination. Estimated time: "<<bestPathTravelTime<<std::endl<<" mins.";
     std::cout<<"Directions are:\n"<<directionsText<<std::endl;
+    
     
 //    //convert list to a vector
 //    std::vector<StreetSegmentIndex> pathVect;
