@@ -35,7 +35,8 @@ enum Mode {
     base = 0,
     directions,
     help,
-    find
+    find,
+    load
 };
 
 //nightmode street color scheme
@@ -94,7 +95,8 @@ ezgl::rectangle new_world;
 bool navigateScreen; 
 
 //variable that keeps track of what state the GUI is currently in
-Mode CurrentMode;
+Mode CurrentMode = base;
+
 //current weekday. Used to determine hours of operation
 std::string Weekday;
 
@@ -152,6 +154,8 @@ void directions_button(GtkWidget* widget, ezgl::application *application);
 void done_button(GtkWidget* widget, ezgl::application *application);
 void help_button(GtkWidget* widget, ezgl::application *application);
 void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data);
+void hide_direction_entries(ezgl::application *application);
+void show_direction_entries(ezgl::application *application);
 
 /************************************************/
 
@@ -673,11 +677,29 @@ void initial_setup(ezgl::application *application, bool new_window)
     GtkWidget *help_image = gtk_image_new_from_file("libstreetmap/resources/help_icon.png");
     gtk_button_set_image(GTK_BUTTON(helpButton), help_image);
     gtk_button_set_label(GTK_BUTTON(helpButton), NULL);
+    
+    //link Done button to done_button call-back function
+    GtkButton* Done = (GtkButton*) application->get_object("done");
+    g_signal_connect(Done, "clicked", G_CALLBACK(done_button), application);
+    
+    //hide all unecessary widgets
+    GtkWidget* done_widgetPtr = (GtkWidget*)application->get_object("done");
+    gtk_widget_hide(done_widgetPtr);
+    
+    //to start with, extra directions text input is hidden
+    hide_direction_entries(application);
 }
 
 void find_button(GtkWidget* widget, ezgl::application *application){
     //update global variable
     CurrentMode = find;
+    
+    //show the Done button
+    GtkWidget* done_widgetPtr = (GtkWidget*)application->get_object("done");
+    gtk_widget_show(done_widgetPtr);
+    //show street suggestions
+    GtkWidget* searchResults_widgetPtr = (GtkWidget*)application->get_object("SearchStreetsResults");
+    gtk_widget_show(searchResults_widgetPtr);
     
     //regardless of what mode it is, reset the segment highlights
   while(!(segmentsHighlighted.empty())){
@@ -756,6 +778,7 @@ void find_button(GtkWidget* widget, ezgl::application *application){
 
     }
     
+
      //INCLUDE CODE BELOW ONCE MODE 2 IS SET UP
 
     //else if mode 2 (Direction mode)
@@ -1486,6 +1509,7 @@ std::string get_operationHours(const OSMNode* poi_OSMentity){
 
 void load_map_button(GtkWidget* widget, ezgl::application *application)
 {   
+    CurrentMode = load;
     // string variables needed to interpret input
     std::string city_input, country_input, new_map;
     std::string path_directory = "/cad2/ece297s/public/maps/";
@@ -1572,46 +1596,20 @@ void load_map_button(GtkWidget* widget, ezgl::application *application)
 void directions_button(GtkWidget* widget, ezgl::application *application){
     //update global variable
     CurrentMode = directions;
-    
-    //get inner grid pointer, to attach Done button to it
-    GtkGrid* InnerGrid = (GtkGrid*) application->get_object("InnerGrid");
 
-    //link Done button to done_button call-back function
-    GtkWidget* done =  gtk_button_new_with_label("done");  
-    gtk_widget_set_name(done, "done");
-    g_signal_connect(done, "clicked", G_CALLBACK(done_button), application);
-
+    //**Adjust Layout to Direction Mode
+    //show additional buttons/ text entry
+    show_direction_entries(application);
+    //show the Done button
+    GtkWidget* done_widgetPtr = (GtkWidget*)application->get_object("done");
+    gtk_widget_show(done_widgetPtr);
     
-    // Get the GtkEntry object name
-    const char* text = gtk_widget_get_name(done);
-    std::cout << text << "\n";
+    //Update search bar text
+    GtkEntry* TextInput_entry = (GtkEntry*) application->get_object("TextInput");
+    gtk_entry_set_placeholder_text(TextInput_entry, "Enter destination Intersection");
     
-    GtkButton* DoneButton = (GtkButton*) application->get_object("done");
-    gtk_grid_attach(GTK_GRID(InnerGrid), done, 0, 9, 3, 1);
-
     
-    //Adjust Layout to Direction Mode
-    // make room for new entry object
-    GtkWidget* text_entry = (GtkWidget*)application->get_object("TextInput");
-    gtk_widget_destroy(text_entry);
-    
-    //place the two new text entry bars
-    GtkEntry* entry1 = (GtkEntry*)gtk_entry_new();
-    gtk_entry_set_placeholder_text(entry1, "Starting Intersection:");
-    
-    GtkEntry* entry2 = (GtkEntry*)gtk_entry_new();
-    gtk_entry_set_placeholder_text(entry2, "Destination Intersection:");
-    
-    //pack new text entries into outer grid
-    GtkGrid* outer_grid = (GtkGrid*)application->get_object("Outergrid");
-    
-    GtkWidget* entry1_widgetPtr = (GtkWidget*)application->get_object("entry1");
-    gtk_grid_attach(GTK_GRID(outer_grid), entry1_widgetPtr, 0, 0, 1, 1);
-    
-    GtkWidget* entry2_widgetPtr = (GtkWidget*)application->get_object("entry2");
-    gtk_grid_attach(GTK_GRID(outer_grid), entry2_widgetPtr, 1, 0, 1, 1);
-    
-    application->refresh_drawing(); 
+    //application->refresh_drawing(); 
 
     
     /*
@@ -1780,23 +1778,23 @@ std::vector< std::vector<int> >  get_intersection_and_suggestions(std::vector<in
 void done_button(GtkWidget* widget, ezgl::application *application){
     
     if(CurrentMode == directions){
-        GtkWidget* entry1_widgetPtr = (GtkWidget*)application->get_object("entry1");
-        gtk_widget_destroy(entry1_widgetPtr);
         
-        GtkWidget* entry2_widgetPtr = (GtkWidget*)application->get_object("entry2");
-        gtk_widget_destroy(entry2_widgetPtr);
-        
-        //re-create the main text input bar
-        GtkWidget* TextInput = gtk_entry_new();
-        GtkGrid* outer_grid = (GtkGrid*)application->get_object("Outergrid");
-        gtk_grid_attach(GTK_GRID(outer_grid), TextInput, 0, 0, 2, 1);
-        
-        GtkEntry* TextInput_entry = (GtkEntry*)application->get_object("TextInput");
-        gtk_entry_set_placeholder_text(TextInput_entry, "Enter an intersection or Load a new map  (e.g. City, Country)...");
+        hide_direction_entries(application);
+                
     }
     else if (CurrentMode == find){
-        
+        clearIntersection_highlights();
+        //hide street name suggestions
+        GtkWidget* searchResults_widgetPtr = (GtkWidget*)application->get_object("SearchStreetsResults");
+        gtk_widget_hide(searchResults_widgetPtr);
     }
+    else if (CurrentMode == load){
+        //do nothing
+    }
+    
+    // clear search bar
+    GtkEntry* TextInput_entry = (GtkEntry*) application->get_object("TextInput");
+    gtk_entry_set_placeholder_text(TextInput_entry, "Enter an intersection name or Load a new map (e.g. tokyo, japan)...");
     
     //clear text dialog
     GtkWidget* view = (GtkWidget *)application->get_object("SearchStreetsResults");
@@ -1806,7 +1804,7 @@ void done_button(GtkWidget* widget, ezgl::application *application){
     gtk_text_buffer_set_text(buffer, "", -1);
     
     GtkWidget* done_widgetPtr = (GtkWidget*)application->get_object("done");
-    gtk_widget_destroy(done_widgetPtr);
+    gtk_widget_hide(done_widgetPtr);
 }
 
 void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data)
@@ -1820,4 +1818,64 @@ void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data)
         default:                    std::cout << "UNKNOWN ";
                                     break;
     }       
+}
+
+void hide_direction_entries(ezgl::application *application){
+    //to start with, extra directions text input is hidden
+    GtkWidget* directionsEntry_widgetPtr = (GtkWidget*)application->get_object("directions_entry");
+    gtk_widget_hide(directionsEntry_widgetPtr);
+    
+    GtkWidget* speedEntry_widgetPtr = (GtkWidget*)application->get_object("time_limit");
+    gtk_widget_hide(speedEntry_widgetPtr);
+    
+    GtkWidget* timeEntry_widgetPtr = (GtkWidget*)application->get_object("walking_speed");
+    gtk_widget_hide(timeEntry_widgetPtr);
+    
+    GtkWidget* speedLabel_widgetPtr = (GtkWidget*)application->get_object("walking_speed_label");
+    gtk_widget_hide(speedLabel_widgetPtr);
+    
+    GtkWidget* timeLabel_widgetPtr = (GtkWidget*)application->get_object("time_limit_label");
+    gtk_widget_hide(timeLabel_widgetPtr);
+    
+    GtkWidget* uberLabel_widgetPtr = (GtkWidget*)application->get_object("uber_label");
+    gtk_widget_hide(uberLabel_widgetPtr);
+    
+    GtkWidget* uberToggle_widgetPtr = (GtkWidget*)application->get_object("uber");
+    gtk_widget_hide(uberToggle_widgetPtr);
+    
+    GtkWidget* directionsGo_widgetPtr = (GtkWidget*)application->get_object("directions_go");
+    gtk_widget_hide(directionsGo_widgetPtr);
+    
+    GtkWidget* searchResults_widgetPtr = (GtkWidget*)application->get_object("SearchStreetsResults");
+    gtk_widget_hide(searchResults_widgetPtr);
+}
+
+void show_direction_entries(ezgl::application *application){
+        //to start with, extra directions text input is hidden
+    GtkWidget* directionsEntry_widgetPtr = (GtkWidget*)application->get_object("directions_entry");
+    gtk_widget_show(directionsEntry_widgetPtr);
+    
+    GtkWidget* speedEntry_widgetPtr = (GtkWidget*)application->get_object("time_limit");
+    gtk_widget_show(speedEntry_widgetPtr);
+    
+    GtkWidget* timeEntry_widgetPtr = (GtkWidget*)application->get_object("walking_speed");
+    gtk_widget_show(timeEntry_widgetPtr);
+    
+    GtkWidget* speedLabel_widgetPtr = (GtkWidget*)application->get_object("walking_speed_label");
+    gtk_widget_show(speedLabel_widgetPtr);
+    
+    GtkWidget* timeLabel_widgetPtr = (GtkWidget*)application->get_object("time_limit_label");
+    gtk_widget_show(timeLabel_widgetPtr);
+    
+    GtkWidget* uberLabel_widgetPtr = (GtkWidget*)application->get_object("uber_label");
+    gtk_widget_show(uberLabel_widgetPtr);
+    
+    GtkWidget* uberToggle_widgetPtr = (GtkWidget*)application->get_object("uber");
+    gtk_widget_show(uberToggle_widgetPtr);
+    
+    GtkWidget* directionsGo_widgetPtr = (GtkWidget*)application->get_object("directions_go");
+    gtk_widget_show(directionsGo_widgetPtr);
+    
+    GtkWidget* searchResults_widgetPtr = (GtkWidget*)application->get_object("SearchStreetsResults");
+    gtk_widget_show(searchResults_widgetPtr);
 }
