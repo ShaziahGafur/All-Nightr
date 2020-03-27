@@ -1946,8 +1946,18 @@ void go_button(GtkWidget* widget, ezgl::application *application){
     //sting which holds the primary intersection names
     std::string intersectionNames = "";
     
-    if (intersectionIds.first == 0 && intersectionIds.second == 0)
+    GtkWidget* view = (GtkWidget *)application->get_object("SearchStreetsResults");
+    GtkTextView * textViewPtr = GTK_TEXT_VIEW(view);
+    GtkTextBuffer* buffer = gtk_text_view_get_buffer(textViewPtr);
+    gtk_text_buffer_set_text(buffer, "  ", -1); 
+    
+    if (intersectionIds.first == 0 && intersectionIds.second == 0){
         intersectionNames = "No results found";
+    }
+    
+    else {
+        
+    }
         
         ///............
 }
