@@ -3,6 +3,7 @@
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include "m2.h"
+#include "m3.h"
 #include "ezgl/application.hpp"
 #include "ezgl/graphics.hpp"
 #include "ezgl/point.hpp"
@@ -52,6 +53,10 @@ ezgl::color Colour_primary(174, 133, 40, 255); // orange (1 = darkest)
 ezgl::color Colour_secondary(154, 92, 0, 255); //yellow (3 = lightest)
 ezgl::color Colour_tertiary(152, 122, 0, 255); // yellow (2 )
 ezgl::color Colour_residential(114, 111, 85, 255); // yellow (1 = darkest)
+
+
+#define default_turn_penalty 0.25 // (15s converted to minutes)
+
 //features
 //poi
 
@@ -1892,6 +1897,13 @@ void show_direction_entries(ezgl::application *application){
 }
 
 void go_button(GtkWidget* widget, ezgl::application *application){
+    //reset segmnent highlights
+    while(!(segmentsHighlighted.empty())){
+        int segUnhighlightID = segmentsHighlighted.back();
+        segmentHighlight[segUnhighlightID].walking = false;
+        segmentHighlight[segUnhighlightID].driving = false;
+        segmentsHighlighted.pop_back();
+    }
     
     std::pair<std::string, std::string> intersectionA;
     std::pair<std::string, std::string> intersectionB;
