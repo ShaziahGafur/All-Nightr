@@ -1953,10 +1953,24 @@ void go_button(GtkWidget* widget, ezgl::application *application){
     
     if (intersectionIds.first == 0 && intersectionIds.second == 0){
         intersectionNames = "No results found";
+        gtk_text_buffer_set_text(buffer, intersectionNames.c_str(), -1); 
     }
     
     else {
+        intersectionNames = getIntersectionName(intersectionIds.first) + " to " +getIntersectionName(intersectionIds.second);
         
+        //update global variables to navigate screen to directions
+    
+        int startID = intersectionIds.first, destID = intersectionIds.second;
+
+        LatLon start = IntersectionCoordinates[startID];
+        LatLon dest = IntersectionCoordinates[destID];
+        std::pair <double, double> xyStart = latLonToCartesian(start);
+        std::pair <double, double> xyDest = latLonToCartesian(dest);
+        double xDiff = abs(xyStart.first - xyDest.first);
+        double yDiff = abs(xyStart.second - xyDest.second);
+        double xAvg = (xyStart.first + xyDest.first)/2;
+        double yAvg = (xyStart.second + xyDest.second)/2;
     }
         
         ///............
