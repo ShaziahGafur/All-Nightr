@@ -1971,7 +1971,25 @@ void go_button(GtkWidget* widget, ezgl::application *application){
         double yDiff = abs(xyStart.second - xyDest.second);
         double xAvg = (xyStart.first + xyDest.first)/2;
         double yAvg = (xyStart.second + xyDest.second)/2;
+        
+        if (xDiff > yDiff){ //if greater dominance in x direction
+            ezgl::rectangle directionsView({(xAvg-(xDiff*2/3)), yAvg},{(xAvg+(xDiff*2/3)), yAvg}); 
+            new_world = directionsView;
+        }
+        else{
+            ezgl::rectangle directionsView({xAvg, yAvg-(yDiff*2/3)},{xAvg, yAvg+(yDiff*2/3)}); 
+            new_world = directionsView;
+        }
+
+        navigateScreen = true;
+        
+        //        std::vector<StreetSegmentIndex> path = find_path_between_intersections(startID, destID, default_turn_penalty);
     }
+    
+    application->update_message (intersectionNames); 
+        
+    // Redraw the graphics
+    application->refresh_drawing(); 
         
         ///............
 }
