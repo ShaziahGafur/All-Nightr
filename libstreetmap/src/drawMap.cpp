@@ -1982,8 +1982,9 @@ void go_button(GtkWidget* widget, ezgl::application *application){
         }
 
         navigateScreen = true;
+//        gtk_text_buffer_set_text(buffer, directionText.c_str(), -1); 
+//        std::vector<StreetSegmentIndex> path = find_path_between_intersections(startID, destID, default_turn_penalty);
         
-        //        std::vector<StreetSegmentIndex> path = find_path_between_intersections(startID, destID, default_turn_penalty);
     }
     
     application->update_message (intersectionNames); 
