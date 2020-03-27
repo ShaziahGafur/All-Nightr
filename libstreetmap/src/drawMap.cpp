@@ -158,7 +158,6 @@ void load_map_button(GtkWidget* widget, ezgl::application *application);
 void initial_setup(ezgl::application *application, bool /*new_window*/);
 void directions_button(GtkWidget* widget, ezgl::application *application);
 void done_button(GtkWidget* widget, ezgl::application *application);
-void go_button(GtkWidget* widget, ezgl::application *application);
 void help_button(GtkWidget* widget, ezgl::application *application);
 void go_button(GtkWidget* widget, ezgl::application *application);
 void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data);
