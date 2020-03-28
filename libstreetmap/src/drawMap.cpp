@@ -103,7 +103,7 @@ bool navigateScreen;
 Mode CurrentMode = base;
 
 //current weekday. Used to determine hours of operation
-std::string Weekday;
+//std::string Weekday;
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 /************  FUNCTION DECLARATIONS  ***********/
@@ -228,7 +228,7 @@ void draw_map(){
     //get the current weekday
     std::time_t now = std::time(0);
     std::stringstream date(ctime(&now));
-    date >> Weekday;
+//    date >> Weekday;
     
     //populate all global variables
     populateWaybyRoadType();
