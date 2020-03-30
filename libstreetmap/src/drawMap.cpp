@@ -3,6 +3,7 @@
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include "m2.h"
+#include "m3.h"
 #include "ezgl/application.hpp"
 #include "ezgl/graphics.hpp"
 #include "ezgl/point.hpp"
@@ -52,6 +53,10 @@ ezgl::color Colour_primary(174, 133, 40, 255); // orange (1 = darkest)
 ezgl::color Colour_secondary(154, 92, 0, 255); //yellow (3 = lightest)
 ezgl::color Colour_tertiary(152, 122, 0, 255); // yellow (2 )
 ezgl::color Colour_residential(114, 111, 85, 255); // yellow (1 = darkest)
+
+
+#define default_turn_penalty 0.25 // (15s converted to minutes)
+
 //features
 //poi
 
@@ -98,7 +103,7 @@ bool navigateScreen;
 Mode CurrentMode = base;
 
 //current weekday. Used to determine hours of operation
-std::string Weekday;
+//std::string Weekday;
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 /************  FUNCTION DECLARATIONS  ***********/
@@ -153,7 +158,6 @@ void load_map_button(GtkWidget* widget, ezgl::application *application);
 void initial_setup(ezgl::application *application, bool /*new_window*/);
 void directions_button(GtkWidget* widget, ezgl::application *application);
 void done_button(GtkWidget* widget, ezgl::application *application);
-void go_button(GtkWidget* widget, ezgl::application *application);
 void help_button(GtkWidget* widget, ezgl::application *application);
 void go_button(GtkWidget* widget, ezgl::application *application);
 void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data);
@@ -224,7 +228,7 @@ void draw_map(){
     //get the current weekday
     std::time_t now = std::time(0);
     std::stringstream date(ctime(&now));
-    date >> Weekday;
+//    date >> Weekday;
     
     //populate all global variables
     populateWaybyRoadType();
@@ -1880,6 +1884,13 @@ void show_direction_entries(ezgl::application *application){
 }
 
 void go_button(GtkWidget* widget, ezgl::application *application){
+    //reset segmnent highlights
+    while(!(segmentsHighlighted.empty())){
+        int segUnhighlightID = segmentsHighlighted.back();
+        segmentHighlight[segUnhighlightID].walking = false;
+        segmentHighlight[segUnhighlightID].driving = false;
+        segmentsHighlighted.pop_back();
+    }
     
     std::pair<std::string, std::string> intersectionA;
     std::pair<std::string, std::string> intersectionB;
@@ -1923,8 +1934,51 @@ void go_button(GtkWidget* widget, ezgl::application *application){
     //sting which holds the primary intersection names
     std::string intersectionNames = "";
     
-    if (intersectionIds.first == 0 && intersectionIds.second == 0)
+    GtkWidget* view = (GtkWidget *)application->get_object("SearchStreetsResults");
+    GtkTextView * textViewPtr = GTK_TEXT_VIEW(view);
+    GtkTextBuffer* buffer = gtk_text_view_get_buffer(textViewPtr);
+    gtk_text_buffer_set_text(buffer, "  ", -1); 
+    
+    if (intersectionIds.first == 0 && intersectionIds.second == 0){
         intersectionNames = "No results found";
+        gtk_text_buffer_set_text(buffer, intersectionNames.c_str(), -1); 
+    }
+    
+    else {
+        intersectionNames = getIntersectionName(intersectionIds.first) + " to " +getIntersectionName(intersectionIds.second);
+        
+        //update global variables to navigate screen to directions
+    
+        int startID = intersectionIds.first, destID = intersectionIds.second;
+
+        LatLon start = IntersectionCoordinates[startID];
+        LatLon dest = IntersectionCoordinates[destID];
+        std::pair <double, double> xyStart = latLonToCartesian(start);
+        std::pair <double, double> xyDest = latLonToCartesian(dest);
+        double xDiff = abs(xyStart.first - xyDest.first);
+        double yDiff = abs(xyStart.second - xyDest.second);
+        double xAvg = (xyStart.first + xyDest.first)/2;
+        double yAvg = (xyStart.second + xyDest.second)/2;
+        
+        if (xDiff > yDiff){ //if greater dominance in x direction
+            ezgl::rectangle directionsView({(xAvg-(xDiff*2/3)), yAvg},{(xAvg+(xDiff*2/3)), yAvg}); 
+            new_world = directionsView;
+        }
+        else{
+            ezgl::rectangle directionsView({xAvg, yAvg-(yDiff*2/3)},{xAvg, yAvg+(yDiff*2/3)}); 
+            new_world = directionsView;
+        }
+
+        navigateScreen = true;
+//        gtk_text_buffer_set_text(buffer, directionText.c_str(), -1); 
+//        std::vector<StreetSegmentIndex> path = find_path_between_intersections(startID, destID, default_turn_penalty);
+        
+    }
+    
+    application->update_message (intersectionNames); 
+        
+    // Redraw the graphics
+    application->refresh_drawing(); 
         
         ///............
 }

@@ -423,7 +423,7 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
         
         previousIntersectID = middleIntersectID; //advance prevoiusIntersectID
         //delete the current node (middle). No longer needed
-        delete currentNode;
+//        delete currentNode;
 
         //retrieve next segment (segment after nextNode)
         forwardSegID = nextNode->reachingEdge;        
@@ -433,7 +433,10 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
     directionsText = "Directions:\n\n"+directionsText + "You will arrive at your destination. Estimated time: " 
             + printTime(bestPathTravelTime);
 //    std::cout<<directionsText<<std::endl;
-   
+       
+    for (std::unordered_map<int, Node*>::iterator nodesIt = nodesEncountered.begin(); nodesIt != nodesEncountered.end(); ++nodesIt){
+        delete (*nodesIt).second;
+    }
     
     return path;
 }
