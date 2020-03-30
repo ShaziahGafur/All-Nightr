@@ -119,6 +119,13 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     if (pathFound){
         path = bfsTraceBack(intersect_id_start); //trace forwards, starting from the starting ID
     }
+    
+    //delete nodes
+    for (std::unordered_map<int, Node*>::iterator nodesIt = nodesEncountered.begin(); nodesIt != nodesEncountered.end(); ++nodesIt){
+        //deleted nextNode
+        delete (*nodesIt).second;
+    }
+    nodesEncountered.clear();
     //delete wavefront data structures
     return path;        
 }
@@ -426,17 +433,14 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
 //        delete currentNode;
 
         //retrieve next segment (segment after nextNode)
+        //invalid read of size 4
         forwardSegID = nextNode->reachingEdge;        
     }
-    delete nextNode;
     
     directionsText = "Directions:\n\n"+directionsText + "You will arrive at your destination. Estimated time: " 
             + printTime(bestPathTravelTime);
 //    std::cout<<directionsText<<std::endl;
        
-    for (std::unordered_map<int, Node*>::iterator nodesIt = nodesEncountered.begin(); nodesIt != nodesEncountered.end(); ++nodesIt){
-        delete (*nodesIt).second;
-    }
     
     return path;
 }
