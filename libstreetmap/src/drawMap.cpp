@@ -1,27 +1,7 @@
-#include "m1.h"
-#include "globals.h"
-#include "StreetsDatabaseAPI.h"
-#include "OSMDatabaseAPI.h"
-#include "m2.h"
-#include "m3.h"
-#include "ezgl/application.hpp"
-#include "ezgl/graphics.hpp"
-#include "ezgl/point.hpp"
-#include "intersection_data.h"
-#include "poiStruct.h"
-#include "poiStruct.cpp"
-#include <vector>
-#include <set>
-#include <unordered_set>
-#include <string>
-#include <cmath>
-#include <iostream>
-#include <sstream>
-#include <gtk/gtk.h>
-#include <time.h>
-#include <regex>
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
-/************  GLOBAL VARIABLES  *****************/
+#include "drawMap.h"
+
+///************  GLOBAL VARIABLES  *****************/
+
 enum RoadType {
     unclassified = 0,
     motorway, 
@@ -40,9 +20,10 @@ enum Mode {
     load
 };
 
-//nightmode street color scheme
-//streets
-
+//
+////nightmode street color scheme
+////streets
+//
 ezgl::color Colour_driving_highlight(252, 248, 3, 200); //bright yellow
 ezgl::color Colour_walking_highlight(3, 215, 252, 200); //bright blue 
 
@@ -54,9 +35,7 @@ ezgl::color Colour_secondary(154, 92, 0, 255); //yellow (3 = lightest)
 ezgl::color Colour_tertiary(152, 122, 0, 255); // yellow (2 )
 ezgl::color Colour_residential(114, 111, 85, 255); // yellow (1 = darkest)
 
-
-#define default_turn_penalty 0.25 // (15s converted to minutes)
-
+//
 //features
 //poi
 
@@ -102,70 +81,7 @@ bool navigateScreen;
 //variable that keeps track of what state the GUI is currently in
 Mode CurrentMode = base;
 
-//current weekday. Used to determine hours of operation
-//std::string Weekday;
-
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-/************  FUNCTION DECLARATIONS  ***********/
-void draw_map_blank_canvas ();
-void draw_main_canvas (ezgl::renderer *g);
-
-//  CONVERSIONS //
-double lon_from_x (double x);
-double lat_from_y (double x);
-double y_from_lat (double lat);
-double x_from_lon (double lon);
-std::pair < double, double > latLonToCartesian (LatLon latLonPoint);
-double getRotationAngleForText(std::pair <double, double> xyFrom, std::pair <double, double> xyTo);
-double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, double> xyTo);
-
-//------------------------------------------------------------------------------
-//  DRAWING //
-//also populates intersections vector
-void find_map_bounds();
-void drawFeature_byType(int feature_type, ezgl::renderer *g);
-void drawFeatures(ezgl::renderer *g);
-void draw_feature_names(ezgl::renderer *g);
-void draw_streets(ezgl::renderer *g);
-void draw_street_name(ezgl::renderer *g, std::pair<double, double> & xyFrom, std::pair<double, double> & xyTo, double& segmentLength, std::string& streetName, bool oneWay);
-void draw_intersections(ezgl::renderer *g);  
-void draw_points_of_interest(ezgl::renderer *g);
-void clearIntersection_highlights();
-
-//------------------------------------------------------------------------------
-// POPULATING GLOBAL VARIABLES //
-void populatePointsOfInterest();
-void populateWaybyRoadType();
-void populateFeatureIds_byType();
-void populateFeaturepoints_xy();
-void populateFeatureCentroids();
-
-//------------------------------------------------------------------------------
-// MISCELLANEOUS
-ezgl::point2d compute2DPolygonCentroid(int& featureId, std::vector<ezgl::point2d> &vertices, double& area);
-ezgl::point2d find_PolyLine_Middle(int featureId);
-std::string get_operationHours(const OSMNode* poi_OSMentity);
-bool extract_streets_from_text(const char* text, std::string& street1, std::string& street2);
-//returns a vector with all of the possible intersections given a set of street_ids
-std::vector< std::vector<int> >  get_intersection_and_suggestions(std::vector<int>& street_ids_1, std::vector<int>& street_ids_2, std::string& suggested_streets);
-int get_intersection(std::vector<int>& street_ids_1, std::vector<int>& street_ids_2);
-
-//------------------------------------------------------------------------------
-// APPLICATION
-void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click);
-void find_button(GtkWidget *widget, ezgl::application *application);
-void load_map_button(GtkWidget* widget, ezgl::application *application);
-void initial_setup(ezgl::application *application, bool /*new_window*/);
-void directions_button(GtkWidget* widget, ezgl::application *application);
-void done_button(GtkWidget* widget, ezgl::application *application);
-void help_button(GtkWidget* widget, ezgl::application *application);
-void go_button(GtkWidget* widget, ezgl::application *application);
-void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data);
-void hide_direction_entries(ezgl::application *application);
-void show_direction_entries(ezgl::application *application);
-
 /************************************************/
-
 
 /**
  * This function sets up fundamental variables for drawing the map, 
@@ -628,6 +544,36 @@ void drawFeature_byType(int feature_type, ezgl::renderer *g){
         }
     }
 }
+
+bool extract_streets_from_text(const char* text, std::string& street1, std::string& street2){
+    
+    //convert into a string
+    std::string text_input(text);
+    
+    //if text is empty or only white spaces
+    if (text_input.empty() || (text_input.find_first_not_of(' ') == std::string::npos)){ 
+        std::cout<<"Empty Find parameters\n";
+        return false;
+    }
+       
+    std::smatch m; //typedef std::match_results<string>
+    
+    //get street names to be used find function
+    //format (street1)(and or &)(street2)
+    std::regex ex("([a-zA-Z]+[\\s\\-[a-zA-Z]+]*)+\\s(and|&)\\s([a-zA-Z]+[\\s\\-[a-zA-Z]+]*)");
+    
+    bool found = std::regex_search(text_input, m, ex);
+     
+    if(found){
+        street1 = m[1].str();
+        street2 = m[3].str();
+        return true;
+    }
+    
+    else return false;
+
+}
+
 
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click){
     //x_click and y_click are the world coordinates where the mouse was clicked
@@ -1714,34 +1660,34 @@ void help_button(GtkWidget* widget, ezgl::application *application){
     g_signal_connect(GTK_DIALOG(dialog), "response", G_CALLBACK(on_dialog_response), NULL);
     
 }
-bool extract_streets_from_text(const char* text, std::string& street1, std::string& street2){
-    
-    //convert into a string
-    std::string text_input(text);
-    
-    //if text is empty or only white spaces
-    if (text_input.empty() || (text_input.find_first_not_of(' ') == std::string::npos)){ 
-        std::cout<<"Empty Find parameters\n";
-        return false;
-    }
-       
-    std::smatch m; //typedef std::match_results<string>
-    
-    //get street names to be used find function
-    //format (street1)(and or &)(street2)
-    std::regex ex("([a-zA-Z]+[\\s\\-[a-zA-Z]+]*)+\\s(and|&)\\s([a-zA-Z]+[\\s\\-[a-zA-Z]+]*)");
-    
-    bool found = std::regex_search(text_input, m, ex);
-     
-    if(found){
-        street1 = m[1].str();
-        street2 = m[3].str();
-        return true;
-    }
-    
-    else return false;
-
-}
+//bool extract_streets_from_text(const char* text, std::string& street1, std::string& street2){
+//    
+//    //convert into a string
+//    std::string text_input(text);
+//    
+//    //if text is empty or only white spaces
+//    if (text_input.empty() || (text_input.find_first_not_of(' ') == std::string::npos)){ 
+//        std::cout<<"Empty Find parameters\n";
+//        return false;
+//    }
+//       
+//    std::smatch m; //typedef std::match_results<string>
+//    
+//    //get street names to be used find function
+//    //format (street1)(and or &)(street2)
+//    std::regex ex("([a-zA-Z]+[\\s\\-[a-zA-Z]+]*)+\\s(and|&)\\s([a-zA-Z]+[\\s\\-[a-zA-Z]+]*)");
+//    
+//    bool found = std::regex_search(text_input, m, ex);
+//     
+//    if(found){
+//        street1 = m[1].str();
+//        street2 = m[3].str();
+//        return true;
+//    }
+//    
+//    else return false;
+//
+//}
 
 //returns a vector with all of the possible intersections given a set of street_ids
 std::vector< std::vector<int> >  get_intersection_and_suggestions(std::vector<int>& street_ids_1, std::vector<int>& street_ids_2, std::string& suggested_streets){
@@ -1924,6 +1870,8 @@ void go_button(GtkWidget* widget, ezgl::application *application){
     //obtains all of the possible streetIds that match the entered street names
     std::vector<int> Bstreet_ids_1 = find_street_ids_from_partial_street_name(intersectionB.first);
     std::vector<int> Bstreet_ids_2 = find_street_ids_from_partial_street_name(intersectionB.second);
+
+//    std::cout<<"\nAstreet_ids_1: "<<to_string(Astreet_ids_1)//<<"\tAstreet_ids_2: "<<to_string(Astreet_ids_2)<<"\nBstreet_ids_1: "<<to_string(Bstreet_ids_1)<<"\tBstreet_ids_2: "<<to_string(Bstreet_ids_2)<<"\n";
     
     //a vector with all of the possible intersections given a set of street_ids
     std::pair<int, int>intersectionIds{0,0};
@@ -1939,6 +1887,9 @@ void go_button(GtkWidget* widget, ezgl::application *application){
     GtkTextBuffer* buffer = gtk_text_view_get_buffer(textViewPtr);
     gtk_text_buffer_set_text(buffer, "  ", -1); 
     
+//    std::cout<<"Intersection Ids.first: "<<std::to_string(intersectionIds.first);
+//    std::cout<<"\tIntersection Ids.second: "<<std::to_string(intersectionIds.second<<std::endl;
+    
     if (intersectionIds.first == 0 && intersectionIds.second == 0){
         intersectionNames = "No results found";
         gtk_text_buffer_set_text(buffer, intersectionNames.c_str(), -1); 
@@ -1949,7 +1900,8 @@ void go_button(GtkWidget* widget, ezgl::application *application){
         
         //update global variables to navigate screen to directions
     
-        int startID = intersectionIds.first, destID = intersectionIds.second;
+        int startID = intersectionIds.first; 
+        int destID = intersectionIds.second;
 
         LatLon start = IntersectionCoordinates[startID];
         LatLon dest = IntersectionCoordinates[destID];
@@ -1970,8 +1922,9 @@ void go_button(GtkWidget* widget, ezgl::application *application){
         }
 
         navigateScreen = true;
-//        gtk_text_buffer_set_text(buffer, directionText.c_str(), -1); 
-//        std::vector<StreetSegmentIndex> path = find_path_between_intersections(startID, destID, default_turn_penalty);
+        std::vector<StreetSegmentIndex> path = find_path_between_intersections(startID, destID, default_turn_penalty);
+        gtk_text_buffer_set_text(buffer, directionsText.c_str(), -1); 
+
         
     }
     

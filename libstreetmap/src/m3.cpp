@@ -9,7 +9,8 @@
 #include <list> //remove once wavefront data structure updated
 #include "m3.h"
 #include "globals.h"
-#include "drawMap.cpp"
+//#include "drawMap.cpp"
+#include "drawMap.h"
 
 #define TAN_35 0.700  //used for determining direction
 #define TAN_55 1.428  
