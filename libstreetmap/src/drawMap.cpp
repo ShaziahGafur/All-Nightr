@@ -345,12 +345,12 @@ double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, do
     
     double rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first) / DEGREE_TO_RADIAN;
 
-//    if (rotationAngle > 90) {
-//        rotationAngle = rotationAngle - 180;
-//    }
-//    if (rotationAngle < -90) {
-//        rotationAngle = rotationAngle + 180;
-//    }
+    if (rotationAngle > 90) {
+        rotationAngle = rotationAngle - 180;
+    }
+    if (rotationAngle < -90) {
+        rotationAngle = rotationAngle + 180;
+    }
     
     return rotationAngle;
 }
@@ -662,9 +662,6 @@ void initial_setup(ezgl::application *application, bool new_window)
     GtkWidget *find_image = gtk_image_new_from_file("libstreetmap/resources/find_icon.png");
     gtk_button_set_image(GTK_BUTTON(findButton), find_image);
     gtk_button_set_label(GTK_BUTTON(findButton), NULL);
-   
-//    GtkButton* directions_goButton = (GtkButton*) application->get_object("directions_go");   
-//    g_signal_connect(go_button, "clicked", G_CALLBACK(go_button), application);
     
     //link load button to load_map call-back function
     GtkButton* loadButton = (GtkButton*) application->get_object("load_map");   
@@ -859,12 +856,7 @@ void draw_feature_names(ezgl::renderer *g){
     int feature_type;
 
     g->set_text_rotation(0);
-
-    //helpful for debugging
-    //std::cout << "max_width " << max_width << "\n";
-    //float width = max_width;
-    //g->fill_rectangle({feature_centroid.x-(width/2),feature_centroid.y-(width/2)}, {feature_centroid.x + (width/2), feature_centroid.y + (width/2)});
-
+    
     //loops through FeatureCentroids hashtable, consisting of feature centroid locations with unique names
     for( std::unordered_map< int, ezgl::point2d >::iterator it = FeatureCentroids.begin();  it != FeatureCentroids.end(); it++){
         
@@ -899,11 +891,7 @@ void draw_feature_names(ezgl::renderer *g){
             //draw feature name in centre of polygon
             g->draw_text((*it).second, getFeatureName((*it).first));
             
-//            g->fill_rectangle({(*it).second.x-50,(*it).second.y-50}, {(*it).second.x + 50, (*it).second.y + 50});
         }
-    
-
-       // g->fill_rectangle({FeatureCentroids.at(FeatureIds_uniqueNames[i]).x-(10),FeatureCentroids.at(FeatureIds_uniqueNames[i]).y-(10)}, {FeatureCentroids.at(FeatureIds_uniqueNames[i]).x + (10), FeatureCentroids.at(FeatureIds_uniqueNames[i]).y + (10)});
     }
 }
 

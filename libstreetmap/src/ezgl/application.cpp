@@ -277,8 +277,8 @@ void application::register_default_buttons_callbacks(ezgl::application *applicat
   g_signal_connect(shift_right_button, "clicked", G_CALLBACK(press_right), application);
 
   // Connect press_proceed function to the Proceed button
-  GObject *proceed_button = application->get_object("ProceedButton");
-  g_signal_connect(proceed_button, "clicked", G_CALLBACK(press_proceed), application);
+//  GObject *proceed_button = application->get_object("ProceedButton");
+//  g_signal_connect(proceed_button, "clicked", G_CALLBACK(press_proceed), application);
 }
 
 void application::update_message(std::string const &message)
