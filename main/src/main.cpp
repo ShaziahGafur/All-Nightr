@@ -22,6 +22,7 @@
 #include <string>
 #include "m1.h"
 #include "m2.h" //should this be included, since drawMap.cpp must include it too
+#include "drawMap.h"
 #include "globals.h"
 #include "m3.h"
 

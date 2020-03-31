@@ -9,7 +9,8 @@
 #include <list> //remove once wavefront data structure updated
 #include "m3.h"
 #include "globals.h"
-#include "drawMap.cpp"
+//#include "drawMap.cpp"
+#include "drawMap.h"
 
 #define TAN_35 0.700  //used for determining direction
 #define TAN_55 1.428  
@@ -19,6 +20,7 @@
 bool breadthFirstSearch(int startID, int destID, const double turn_penalty);
 std::vector<StreetSegmentIndex> bfsTraceBack(int destID);
 Node* getNodeByID(int intersectionID);
+double getDirectionAngle(int from, int to);
 
 void highlightStreetSegment (ezgl::renderer *g, int ID);
 void delay(int milliseconds);
@@ -119,6 +121,13 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     if (pathFound){
         path = bfsTraceBack(intersect_id_start); //trace forwards, starting from the starting ID
     }
+    
+    //delete nodes
+    for (std::unordered_map<int, Node*>::iterator nodesIt = nodesEncountered.begin(); nodesIt != nodesEncountered.end(); ++nodesIt){
+        //deleted nextNode
+        delete (*nodesIt).second;
+    }
+    nodesEncountered.clear();
     //delete wavefront data structures
     return path;        
 }
@@ -210,7 +219,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
     //declare list which will contain queue of nodes to check 
     std::list<wave> wavefront; //change data structure to heap
      //put source node into wavefront
-    wavefront.push_back(wave(sourceNodePtr, NO_EDGE, NO_TIME));
+    wavefront.push_back(wave(sourceNodePtr, NO_EDGE, NO_TIME, PERFECT_DIRECTION));
     
     //variable to be used later to store intersection ID as an int
     int  outerIntersectID;
@@ -224,7 +233,8 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
         double waveCurrentTime = waveCurrent.travelTime;
         Node * waveCurrentNode = waveCurrent.node;
         
-//        bool betterPathFlag = true;
+        //find degree angle from current node to destID
+        double idealDirection = getDirectionAngle(waveCurrentNode->ID, destID);
         
         //if better path was found (currently travelling by this wave had smaller time than the Node's prehistoric best time)
         if (waveCurrentTime < waveCurrentNode->bestTime){
@@ -289,9 +299,12 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                     newTravelTime = compute_path_travel_time(adjacentSegments, turn_penalty) - SegmentTravelTime[waveCurrentNode->reachingEdge]; 
                     newTravelTime += waveCurrentTime;
                 }               
+                
+                //calculate angle from outerNode to destID
+                double outerNodeDirection = getDirectionAngle(outerIntersectID, destID);
+                double directionDif = abs (idealDirection - outerNodeDirection);
+                wavefront.push_back(wave(outerNode, *it, newTravelTime, directionDif)); //create new wavefront elemenet and add to queue
 
-                wavefront.push_back(wave(outerNode, *it, newTravelTime)); //create new wavefront elemenet and add to queue
-//                std::cout<<"Successful iteration\n";
 
             }
             waveCurrentNode->crawlEnable = false; //crawling complete. Reset enable to false. 
@@ -426,17 +439,14 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
 //        delete currentNode;
 
         //retrieve next segment (segment after nextNode)
+        //invalid read of size 4
         forwardSegID = nextNode->reachingEdge;        
     }
-    delete nextNode;
     
     directionsText = "Directions:\n\n"+directionsText + "You will arrive at your destination. Estimated time: " 
             + printTime(bestPathTravelTime);
 //    std::cout<<directionsText<<std::endl;
        
-    for (std::unordered_map<int, Node*>::iterator nodesIt = nodesEncountered.begin(); nodesIt != nodesEncountered.end(); ++nodesIt){
-        delete (*nodesIt).second;
-    }
     
     return path;
 }
@@ -504,24 +514,16 @@ std::string printTime(double time){
     return text;
 }
 
-/*
-#ifdef VISUALIZE
-
-
-    ezgl::application* app;
-    ezgl::renderer *g = app -> get_renderer();
-    highlightStreetSegment (g, prevSegID);
-    app -> flush_drawing();
-    delay(50);
-
-#endif
-
-
-void delay(int milliseconds){
-    std::chrono::milliseconds duration(milliseconds);
-    std::this_thread::sleep_for(duration);
-}
-
-void highlightStreetSegment (ezgl::renderer *g, int ID){
+//returns direction angles in radians
+double getDirectionAngle(int from, int to){
+    int degree;
     
-}*/
+    LatLon fromLL = IntersectionCoordinates[from];
+    LatLon toLL = IntersectionCoordinates[to];
+    
+    std::pair < double, double > fromCart = latLonToCartesian (fromLL);
+    std::pair < double, double > toCart = latLonToCartesian (toLL);
+    
+    degree = atan2(fromCart.second - toCart.second, fromCart.first - toCart.first)/DEGREE_TO_RADIAN;
+    return degree;
+}
