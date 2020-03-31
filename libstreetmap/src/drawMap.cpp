@@ -1927,10 +1927,10 @@ void go_button(GtkWidget* widget, ezgl::application *application){
 //    std::cout<<"\nAstreet_ids_1: "<<std::to_string(Astreet_ids_1[0])<<"\tAstreet_ids_2: "<<std::to_string(Astreet_ids_2[0])<<"\nBstreet_ids_1: "<<std::to_string(Bstreet_ids_1[0])<<"\tBstreet_ids_2: "<<std::to_string(Bstreet_ids_2[0])<<"\n";
     
     //a vector with all of the possible intersections given a set of street_ids
-    std::pair<int, int>intersectionIds{0,0};
+    std::pair<int, int>intersectionIds{-1,-1};
     
-    intersectionIds.first = get_intersection(Astreet_ids_1, Astreet_ids_1);
-    intersectionIds.second = get_intersection(Astreet_ids_1, Astreet_ids_1);
+    intersectionIds.first = get_intersection(Astreet_ids_1, Astreet_ids_2);
+    intersectionIds.second = get_intersection(Bstreet_ids_1, Bstreet_ids_2);
 
     //sting which holds the primary intersection names
     std::string intersectionNames = "";
@@ -1943,7 +1943,7 @@ void go_button(GtkWidget* widget, ezgl::application *application){
 //    std::cout<<"Intersection Ids.first: "<<std::to_string(intersectionIds.first);
 //    std::cout<<"\tIntersection Ids.second: "<<std::to_string(intersectionIds.second)<<std::endl;
 //    
-    if (intersectionIds.first == 0 && intersectionIds.second == 0){ //fix needed: instead, allow a value of 0 and set -1 as an invalid #
+    if (intersectionIds.first == -1 || intersectionIds.second == -1){ //fix needed: instead, allow a value of 0 and set -1 as an invalid #
         intersectionNames = "No results found";
         gtk_text_buffer_set_text(buffer, intersectionNames.c_str(), -1); 
     }
@@ -1998,15 +1998,18 @@ int get_intersection(std::vector<int>& street_ids_1, std::vector<int>& street_id
     
     //nested for-loop which finds intersections between all streetId's returned by partial_street_name function
     //stops once a single intersection is found. (Other matches go to suggested streets)
-    for(int str1_idx = 0; (str1_idx < street_ids_1.size()) && (streetIntersections == -1); str1_idx++){
+    for(int str1_idx = 0; (str1_idx < street_ids_1.size()); str1_idx++){
         
         twoStreets.first = street_ids_1[str1_idx];
         
         for(int str2_idx = 0; str2_idx < street_ids_2.size(); str2_idx++){
             
             twoStreets.second = street_ids_2[str2_idx];
-
-            streetIntersections = find_intersections_of_two_streets(twoStreets)[0];
+            std::vector<int> intersectsFound = find_intersections_of_two_streets(twoStreets);
+            if (!intersectsFound.empty()){
+                streetIntersections = intersectsFound[0];
+                return streetIntersections;
+            }
              
         }
     }
