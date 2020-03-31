@@ -114,6 +114,8 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     
     //start and end intersections flipped 
     //to allow "Tracing forwards rather than "Tracing backwards"
+    std::cout<<"start at: "<<getIntersectionName(intersect_id_start)<<"\tFinsih: "<<getIntersectionName(intersect_id_end)<<"\n";
+    
     pathFound = breadthFirstSearch(intersect_id_end, intersect_id_start, turn_penalty); 
     
 //    std::cout<<"Path found: "<<pathFound<<std::endl;
