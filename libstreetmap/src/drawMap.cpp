@@ -35,6 +35,9 @@ enum RoadType {
 enum Mode {
     base = 0,
     directions,
+    directions_uber,
+    directions_click_select_destination,
+    directions_click_select_start,
     help,
     find,
     load
@@ -45,7 +48,6 @@ enum Mode {
 
 ezgl::color Colour_driving_highlight(252, 248, 3, 200); //bright yellow
 ezgl::color Colour_walking_highlight(3, 215, 252, 200); //bright blue 
-
 ezgl::color Colour_unclassified(114, 111, 85, 255); //yellow (1 = least opaque)
 ezgl::color Colour_motorway(100, 38, 7); // orange (3 = lightest)
 ezgl::color Colour_trunk(129, 68, 6, 255); // orange (2)
@@ -160,6 +162,7 @@ void directions_button(GtkWidget* widget, ezgl::application *application);
 void done_button(GtkWidget* widget, ezgl::application *application);
 void help_button(GtkWidget* widget, ezgl::application *application);
 void go_button(GtkWidget* widget, ezgl::application *application);
+void click_button(GtkWidget* widget, ezgl::application *application);
 void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data);
 void hide_direction_entries(ezgl::application *application);
 void show_direction_entries(ezgl::application *application);
@@ -632,18 +635,50 @@ void drawFeature_byType(int feature_type, ezgl::renderer *g){
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click){
     //x_click and y_click are the world coordinates where the mouse was clicked
     //will convert to latlon then use find_closest_intersection
-    //std::cout << "x: " << x_click << "y: " << y_click << std::endl;
-    LatLon lat_lon_click = LatLon(lat_from_y (y_click), lon_from_x (x_click));
+    int closestInt_id;
     
-    int closestInt_id = find_closest_intersection(lat_lon_click);
+    if((CurrentMode == directions_click_select_destination) || (CurrentMode == directions_click_select_start) || (CurrentMode == find) || (CurrentMode == base)){
+        
+        //variable needed to read text entries
+        GtkEntry* TextInput_entry;
+        
+        //convert clicked position to lat and lon
+        LatLon lat_lon_click = LatLon(lat_from_y (y_click), lon_from_x (x_click));
+
+        closestInt_id = find_closest_intersection(lat_lon_click);
+
+        if(CurrentMode == directions_click_select_destination){
+            // ***Fill in Search bars***
+            // destination bar
+            TextInput_entry = (GtkEntry*) app->get_object("TextInput");
+            gtk_entry_set_text(TextInput_entry, getIntersectionName(closestInt_id).c_str());
+            
+            //reset toggle button
+            GtkToggleButton* click_select_widgetPtr = (GtkToggleButton*)app->get_object("click_select");
+            gtk_toggle_button_set_active(click_select_widgetPtr, False);
+
+        }
+        else if(CurrentMode == directions_click_select_start){
+            //starting point bar
+            TextInput_entry = (GtkEntry*) app->get_object("directions_entry");
+            gtk_entry_set_text(TextInput_entry, getIntersectionName(closestInt_id).c_str());
+
+            //reset toggle button
+            GtkToggleButton* click_select_widgetPtr = (GtkToggleButton*)app->get_object("click_select");
+            gtk_toggle_button_set_active(click_select_widgetPtr, False);
+        } 
+        else{
+                clearIntersection_highlights();
+                
+                app->update_message (getIntersectionName(closestInt_id));    
+        }
+            
+    }
     
-    clearIntersection_highlights();
-    
+    //in every case, highlight the intersection
     Highlighted_intersections.push_back(closestInt_id);
     intersections[closestInt_id].highlight = true;
-    
-    app->update_message (getIntersectionName(closestInt_id));
-    
+
     app->refresh_drawing();
             
 }
@@ -685,6 +720,13 @@ void initial_setup(ezgl::application *application, bool new_window)
     gtk_button_set_image(GTK_BUTTON(helpButton), help_image);
     gtk_button_set_label(GTK_BUTTON(helpButton), NULL);
     
+    //link click (on intersection) button to click_button call-back function
+    GtkButton* clickButton = (GtkButton*) application->get_object("click_select");   
+    g_signal_connect(clickButton, "clicked", G_CALLBACK(click_button), application);
+    GtkWidget *click_image = gtk_image_new_from_file("libstreetmap/resources/click_icon.png");
+    gtk_button_set_image(GTK_BUTTON(clickButton), click_image);
+    gtk_button_set_label(GTK_BUTTON(clickButton), "Click on Intersection");
+    
     //link Done button to done_button call-back function
     GtkButton* Done = (GtkButton*) application->get_object("done");
     g_signal_connect(Done, "clicked", G_CALLBACK(done_button), application);
@@ -697,7 +739,6 @@ void initial_setup(ezgl::application *application, bool new_window)
     //hide the Done button
     GtkWidget* done_widgetPtr = (GtkWidget*)application->get_object("done");
     gtk_widget_hide(done_widgetPtr);
-    
     //to start with, extra directions text input is hidden
     hide_direction_entries(application);
 }
@@ -1600,16 +1641,15 @@ void directions_button(GtkWidget* widget, ezgl::application *application){
     //update global variable
     CurrentMode = directions;
 
-    //**Adjust Layout to Direction Mode
+    //**Adjust Layout to Direction Mode***
     //show additional buttons/ text entry
     show_direction_entries(application);
     //show the Done button
     GtkWidget* done_widgetPtr = (GtkWidget*)application->get_object("done");
     gtk_widget_show(done_widgetPtr);
-    
     //Update search bar text
     GtkEntry* TextInput_entry = (GtkEntry*) application->get_object("TextInput");
-    gtk_entry_set_placeholder_text(TextInput_entry, "Enter destination Intersection");
+    gtk_entry_set_placeholder_text(TextInput_entry, "Enter destination Intersection...");
     
     
     //application->refresh_drawing(); 
@@ -1780,13 +1820,17 @@ std::vector< std::vector<int> >  get_intersection_and_suggestions(std::vector<in
 //button returns to base mode, depending on which mode is active at the moment
 void done_button(GtkWidget* widget, ezgl::application *application){
     
-    if(CurrentMode == directions){
+    if( (CurrentMode == directions) || (CurrentMode == directions_click_select_destination) || (CurrentMode == directions_click_select_start) || (CurrentMode == directions_uber)){
         
         hide_direction_entries(application);
+        
+        if( (CurrentMode == directions_click_select_destination) || (CurrentMode == directions_click_select_start) ){
+            GtkToggleButton* click_select_widgetPtr = (GtkToggleButton*)application->get_object("click_select");
+            gtk_toggle_button_set_active(click_select_widgetPtr, False);
+        }
                 
     }
     else if (CurrentMode == find){
-        clearIntersection_highlights();
         //hide street name suggestions
         GtkWidget* searchResults_widgetPtr = (GtkWidget*)application->get_object("SearchStreetsResults");
         gtk_widget_hide(searchResults_widgetPtr);
@@ -1795,11 +1839,16 @@ void done_button(GtkWidget* widget, ezgl::application *application){
         //do nothing
     }
     
-    // clear search bar
+    //*In all cases...
+    //clear highlighted intersections
+    clearIntersection_highlights();
+    // clear search bars
     GtkEntry* TextInput_entry = (GtkEntry*) application->get_object("TextInput");
     gtk_entry_set_placeholder_text(TextInput_entry, "Enter an intersection name or Load a new map (e.g. tokyo, japan)...");
+    GtkEntry* directions_entry = (GtkEntry*) application->get_object("directions_entry");
+    gtk_entry_set_text(directions_entry, "");
     
-    //clear text dialog
+    //clear suggestedStreets dialog
     GtkWidget* view = (GtkWidget *)application->get_object("SearchStreetsResults");
     GtkTextView * textViewPtr = GTK_TEXT_VIEW(view);
     GtkTextBuffer* buffer = gtk_text_view_get_buffer(textViewPtr);
@@ -1851,6 +1900,9 @@ void hide_direction_entries(ezgl::application *application){
     
     GtkWidget* searchResults_widgetPtr = (GtkWidget*)application->get_object("SearchStreetsResults");
     gtk_widget_hide(searchResults_widgetPtr);
+    
+    GtkWidget* click_select_widgetPtr = (GtkWidget*)application->get_object("click_select");
+    gtk_widget_hide(click_select_widgetPtr);
 }
 
 void show_direction_entries(ezgl::application *application){
@@ -1881,6 +1933,9 @@ void show_direction_entries(ezgl::application *application){
     
     GtkWidget* searchResults_widgetPtr = (GtkWidget*)application->get_object("SearchStreetsResults");
     gtk_widget_show(searchResults_widgetPtr);
+    
+    GtkWidget* click_select_widgetPtr = (GtkWidget*)application->get_object("click_select");
+    gtk_widget_show(click_select_widgetPtr);
 }
 
 void go_button(GtkWidget* widget, ezgl::application *application){
@@ -2005,4 +2060,32 @@ int get_intersection(std::vector<int>& street_ids_1, std::vector<int>& street_id
         }
     }
     return streetIntersections;
+}
+
+void click_button(GtkWidget* widget, ezgl::application *application){
+    // variables needed to check if entries are full
+    GtkEntry* text_entry;
+    std::string text_string;
+    
+    // check if user wishes to click on destination intersection
+    text_entry = (GtkEntry*) application ->get_object("TextInput"); 
+    text_string = gtk_entry_get_text(text_entry);
+    
+    if(text_string.empty()) {
+        CurrentMode = directions_click_select_destination;
+        return;
+    }
+
+   //once destination is filled, check if user wishes to click on starting intersection
+    text_entry = (GtkEntry*) application ->get_object("directions_entry");
+    text_string = gtk_entry_get_text(text_entry);
+        
+    if(text_string.empty())  {
+        CurrentMode = directions_click_select_start;
+        return;
+    }
+    
+    else
+        application->update_message("Please clear the search bars before clicking on an intersection");
+    
 }
