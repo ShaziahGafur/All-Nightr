@@ -445,8 +445,7 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
         forwardSegID = nextNode->reachingEdge;        
     }
     
-    directionsText = "Directions:\n\n"+directionsText + "You will arrive at your destination. Estimated time: " 
-            + printTime(bestPathTravelTime);
+    directionsText = "Directions: \n\n" + directionsText + "You will arrive at your destination.\n\n" + "Trip time: " + printTime(bestPathTravelTime);
 //    std::cout<<directionsText<<std::endl;
        
     

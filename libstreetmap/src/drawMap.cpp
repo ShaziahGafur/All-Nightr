@@ -695,9 +695,7 @@ void find_button(GtkWidget* widget, ezgl::application *application){
     //show the Done button
     GtkWidget* done_widgetPtr = (GtkWidget*)application->get_object("done");
     gtk_widget_show(done_widgetPtr);
-    //show street suggestions
-    GtkWidget* searchResults_widgetPtr = (GtkWidget*)application->get_object("SearchStreetsResults");
-    gtk_widget_show(searchResults_widgetPtr);
+
     
     //regardless of what mode it is, reset the segment highlights
   while(!(segmentsHighlighted.empty())){
@@ -760,9 +758,6 @@ void find_button(GtkWidget* widget, ezgl::application *application){
 
     application->update_message (intersectionNames); 
     
-    // Redraw the graphics
-    application->refresh_drawing(); 
-    
     GtkWidget* view = (GtkWidget *)application->get_object("SearchStreetsResults");
     GtkTextView * textViewPtr = GTK_TEXT_VIEW(view);
     GtkTextBuffer* buffer = gtk_text_view_get_buffer(textViewPtr);
@@ -771,38 +766,16 @@ void find_button(GtkWidget* widget, ezgl::application *application){
     //if there are alternative intersections
     if (suggested_streets.empty() == false){
         //append message
+        //show street suggestions
+        GtkWidget* searchResults_widgetPtr = (GtkWidget*)application->get_object("SearchStreetsResults");
+        gtk_widget_show(searchResults_widgetPtr);
         suggested_streets = "\nDid you mean?\n\n" + suggested_streets;
         gtk_text_buffer_set_text(buffer, suggested_streets.c_str(), -1);
 
     }
     
-
-     //INCLUDE CODE BELOW ONCE MODE 2 IS SET UP
-
-    //else if mode 2 (Direction mode)
-    //update global variables to navigate screen to directions
-    
-//    int startID = 1, destID = 9;
-//    LatLon start = IntersectionCoordinates[startID];
-//    LatLon dest = IntersectionCoordinates[destID];
-//    std::pair <double, double> xyStart = latLonToCartesian(start);
-//    std::pair <double, double> xyDest = latLonToCartesian(dest);
-//    double xDiff = abs(xyStart.first - xyDest.first);
-//    double yDiff = abs(xyStart.second - xyDest.second);
-//    double xAvg = (xyStart.first + xyDest.first)/2;
-//    double yAvg = (xyStart.second + xyDest.second)/2;
-//    
-//    if (xDiff > yDiff){ //if greater dominance in x direction
-//        ezgl::rectangle directionsView({(xAvg-(xDiff*2/3)), yAvg},{(xAvg+(xDiff*2/3)), yAvg}); 
-//        new_world = directionsView;
-//    }
-//    else{
-//        ezgl::rectangle directionsView({xAvg, yAvg-(yDiff*2/3)},{xAvg, yAvg+(yDiff*2/3)}); 
-//        new_world = directionsView;
-//    }
-//        
-//    navigateScreen = true;
-    
+    // Redraw the graphics
+    application->refresh_drawing(); 
 }
 
 //vertices are the feature points in xy coordinates, vertexCount = number of feature points
@@ -1596,73 +1569,6 @@ void directions_button(GtkWidget* widget, ezgl::application *application){
     GtkEntry* TextInput_entry = (GtkEntry*) application->get_object("TextInput");
     gtk_entry_set_placeholder_text(TextInput_entry, "Enter destination Intersection...");
     
-    
-    //application->refresh_drawing(); 
-
-    
-    /*
-    //Get Intersections from Entries
-    // two string variables needed to interpret input
-    std::string street1, street2, suggested_streets;
-    
-    //Text prompt for directions mode 
-    std::string directions_prompt = "";
-    
-    int destinationId, sourceId;
-    
-    // Get the text written in the widget
-    const char* text = gtk_entry_get_text(entry1);
-    
-    if (extract_streets_from_text(text, street1, street2) == false)
-        //insert some kind of error message
-        return;
-    
-    //obtains all of the possible streetIds that match the entered street names
-    std::vector<int> street_ids_1 = find_street_ids_from_partial_street_name(street1);
-    std::vector<int> street_ids_2 = find_street_ids_from_partial_street_name(street2);
-    
-    //a vector with all of the possible intersections given a set of street_ids
-    std::vector< std::vector<int> > streetIntersections;
-    
-    streetIntersections = get_intersection_and_suggestions(street_ids_1, street_ids_2, suggested_streets);
-    
-    //string which holds the primary intersection names
-    std::string intersectionNames = "";
-    
-    if (streetIntersections.empty())
-        directions_prompt = "No results found";
-        
-    else{
-        //clear other highlighted intersections, 
-        clearIntersection_highlights();
-        
-        destinationId = streetIntersections[0][0];
-        
-        directions_prompt = getIntersectionName(streetIntersections[0][0]);
-
-        Highlighted_intersections.push_back(streetIntersections[0][0]);
-        intersections[streetIntersections[0][0]].highlight = true;
-        
-//        
-//        //update global variables to navigate screen to the intersection
-//        LatLon intersectionFound = getIntersectionPosition(streetIntersections[0][0]);
-//        ezgl::rectangle intersectionView({x_from_lon(intersectionFound.lon()-(intersectionViewLon/2)), y_from_lat(intersectionFound.lat())},{x_from_lon(intersectionFound.lon()+(intersectionViewLon/2)), y_from_lat(intersectionFound.lat())}); 
-//        new_world = intersectionView;
-//        navigateScreen = true;
-//    }
-
-    application->update_message ("Directions Mode"); 
-    
-    directions_prompt = "Destination: \n" + directions_prompt + "\n\n" + "Please enter starting location in search bar: ";
-    }
-    
-    GtkWidget* view = (GtkWidget *)application->get_object("SearchStreetsResults");
-    GtkTextView * textViewPtr = GTK_TEXT_VIEW(view);
-    GtkTextBuffer* buffer = gtk_text_view_get_buffer(textViewPtr);
-    
-    gtk_text_buffer_set_text(buffer, directions_prompt.c_str(), -1);
- */   
-    
 }
 
 void help_button(GtkWidget* widget, ezgl::application *application){
@@ -1686,9 +1592,13 @@ void help_button(GtkWidget* widget, ezgl::application *application){
     
     // Create a label and attach it to the content area of the dialog
     content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-    label = gtk_label_new("Welcome to All-Nightr! \n Using this app, you can locate intersections, find directions, and load different cities! \n\n Locating Intersections \n 1.\tType in the intersection into the search bar.\n2.\t"
-            "Hit the search icon to find your intersection!\n3.\tPress Done to clear the screen\n\n"
-            "Finding Directions\n1.\tPress the directions icon to enter into directions mode.\n2.\tType in your destination and starting point into the search bars.\n3.\tView your path.\n4.\tPress Done to clear the screen\n\n"
+    label = gtk_label_new("Welcome to All-Nightr! \nUsing this app, you can locate intersections, find directions, and load different cities! "
+            "\n\n Locating Intersections \n1.\tType the intersection into the search bar.\n"
+            "2.\tHit the search icon to find your intersection!\n"
+            "(OR click on the intersection of interest to find its name.)\n3.\tPress Done to clear the screen\n\n"
+            "Finding Directions\n1.\tPress the directions icon to enter into directions mode.\n"
+            "2.\tType in your destination and starting point into the search bars.\n(OR select the \"Click on Intersection\" option to find and click on an intersection yourself.)\n"
+            "3.\tClick \"Get Directions\" and view your path!\n4.\tPress Done to clear the screen\n\n"
             "Loading Cities\n1.\tType in the city and country into the search bar (e.g. city, country)\n2.\tPress the load map button to load your new map! ");
     gtk_container_add(GTK_CONTAINER(content_area), label);
     
@@ -1796,9 +1706,11 @@ void done_button(GtkWidget* widget, ezgl::application *application){
     GtkWidget* view = (GtkWidget *)application->get_object("SearchStreetsResults");
     GtkTextView * textViewPtr = GTK_TEXT_VIEW(view);
     GtkTextBuffer* buffer = gtk_text_view_get_buffer(textViewPtr);
-    
     gtk_text_buffer_set_text(buffer, "", -1);
     
+    //clear the directions variable
+    directionsText.clear();
+
     GtkWidget* done_widgetPtr = (GtkWidget*)application->get_object("done");
     gtk_widget_hide(done_widgetPtr);
 }
@@ -1883,6 +1795,10 @@ void show_direction_entries(ezgl::application *application){
 }
 
 void go_button(GtkWidget* widget, ezgl::application *application){
+    
+    //clear the directions variable
+    directionsText.clear();
+    
     //reset segmnent highlights
     while(!(segmentsHighlighted.empty())){
         int segUnhighlightID = segmentsHighlighted.back();
@@ -1926,7 +1842,7 @@ void go_button(GtkWidget* widget, ezgl::application *application){
 
 //    std::cout<<"\nAstreet_ids_1: "<<std::to_string(Astreet_ids_1[0])<<"\tAstreet_ids_2: "<<std::to_string(Astreet_ids_2[0])<<"\nBstreet_ids_1: "<<std::to_string(Bstreet_ids_1[0])<<"\tBstreet_ids_2: "<<std::to_string(Bstreet_ids_2[0])<<"\n";
     
-    //a vector with all of the possible intersections given a set of street_ids
+    //a vector with all of the FIRST intersection found in a given a set of street_ids
     std::pair<int, int>intersectionIds{-1,-1};
     
     intersectionIds.first = get_intersection(Astreet_ids_1, Astreet_ids_2);
@@ -1978,7 +1894,6 @@ void go_button(GtkWidget* widget, ezgl::application *application){
         std::vector<StreetSegmentIndex> path = find_path_between_intersections(startID, destID, default_turn_penalty);
         gtk_text_buffer_set_text(buffer, directionsText.c_str(), -1); 
 
-        
     }
     
     application->update_message (intersectionNames); 
@@ -1989,7 +1904,7 @@ void go_button(GtkWidget* widget, ezgl::application *application){
         ///............
 }
 
-//returns a vector with all of the possible intersections given a set of street_ids
+//returns a vector with the FIRST intersection found given a set of street_ids
 int get_intersection(std::vector<int>& street_ids_1, std::vector<int>& street_ids_2){
     
     std::pair<int, int> twoStreets;
