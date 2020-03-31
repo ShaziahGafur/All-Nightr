@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
 
     //You can now do something with the map data
     //Clean-up the map data and related data structures
-    draw_map();
+//    draw_map();
 //    std::vector<StreetSegmentIndex> path;
 //        double turn_penalty;
 //        double expected;

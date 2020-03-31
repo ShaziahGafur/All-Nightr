@@ -1871,7 +1871,7 @@ void go_button(GtkWidget* widget, ezgl::application *application){
     std::vector<int> Bstreet_ids_1 = find_street_ids_from_partial_street_name(intersectionB.first);
     std::vector<int> Bstreet_ids_2 = find_street_ids_from_partial_street_name(intersectionB.second);
 
-//    std::cout<<"\nAstreet_ids_1: "<<to_string(Astreet_ids_1)//<<"\tAstreet_ids_2: "<<to_string(Astreet_ids_2)<<"\nBstreet_ids_1: "<<to_string(Bstreet_ids_1)<<"\tBstreet_ids_2: "<<to_string(Bstreet_ids_2)<<"\n";
+//    std::cout<<"\nAstreet_ids_1: "<<std::to_string(Astreet_ids_1[0])<<"\tAstreet_ids_2: "<<std::to_string(Astreet_ids_2[0])<<"\nBstreet_ids_1: "<<std::to_string(Bstreet_ids_1[0])<<"\tBstreet_ids_2: "<<std::to_string(Bstreet_ids_2[0])<<"\n";
     
     //a vector with all of the possible intersections given a set of street_ids
     std::pair<int, int>intersectionIds{0,0};
@@ -1888,9 +1888,9 @@ void go_button(GtkWidget* widget, ezgl::application *application){
     gtk_text_buffer_set_text(buffer, "  ", -1); 
     
 //    std::cout<<"Intersection Ids.first: "<<std::to_string(intersectionIds.first);
-//    std::cout<<"\tIntersection Ids.second: "<<std::to_string(intersectionIds.second<<std::endl;
-    
-    if (intersectionIds.first == 0 && intersectionIds.second == 0){
+//    std::cout<<"\tIntersection Ids.second: "<<std::to_string(intersectionIds.second)<<std::endl;
+//    
+    if (intersectionIds.first == 0 && intersectionIds.second == 0){ //fix needed: instead, allow a value of 0 and set -1 as an invalid #
         intersectionNames = "No results found";
         gtk_text_buffer_set_text(buffer, intersectionNames.c_str(), -1); 
     }
