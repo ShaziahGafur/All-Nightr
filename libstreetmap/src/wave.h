@@ -20,11 +20,13 @@ struct wave{
     Node* node;
     int edgeID;
     double travelTime;
-    wave (Node* n, int id, double time) {node = n; edgeID = id; travelTime = time;}
+    double directionDif;
+    wave (Node* n, int id, double time, double degreeDif) {node = n; edgeID = id; travelTime = time; directionDif = degreeDif;}
 };
 
 #define NO_EDGE -1  //no edge id
 #define NO_TIME 0  //zero time
+#define PERFECT_DIRECTION 0  //zero time
 
 #endif /* WAVE_H */
 
