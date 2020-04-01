@@ -334,9 +334,14 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
     //historic street seg & intersection needed for directions
     int previousIntersectID = NO_EDGE, middleIntersectID = nextIntersectID;//Set to -1 for non-existent values (since initially looking at first Node)
     std::string directionInstruction = ""; //a single line of the directions
-    //store previous LatLon?
+    
+    //Make instructions more condensed by combining redundant instructions that say "Continue Straight" for the same street
+    int redundantStreetID = -1; //keep track of the redundant street ID
+    bool continuingStraight = false; //flag to keep track if the directions continuously follow straight
+    double distanceCombined = 0; //track the total distance to travel accross all redundant street segments
     
     while (forwardSegID != NO_EDGE){
+
         middleIntersectID = nextIntersectID;
         
 //        std::cout<<"Forward seg id: "<<forwardSegID<<"\n";        
@@ -401,7 +406,8 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
             
         }//end of (if this is the first segment)
         
-        else{
+        else{    
+//            double distanceOfInstruction = SegmentLengths[forwardSegID];
             LatLon prevInter = IntersectionCoordinates[previousIntersectID];
             LatLon midInter = IntersectionCoordinates[middleIntersectID];
             LatLon nextInter = IntersectionCoordinates[nextIntersectID];
@@ -413,16 +419,37 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
             double angle2 = getRotationAngle(xyMid, xyNext); //angle of second segment
             double angleDiff = angle2 - angle1; //compare the angle the next street with previous street
             
-            if (angleDiff > 165) //next street is angled at > 165 degrres counter-clockwise 
-                directionInstruction += "Make a Sharp Left ";//or Sharp Left turn
-            else if (angleDiff > 15) //next street is angled between 15 and 165 degrres counter-clockwise (Left turn)
+            if (angleDiff > 165){ //next street is angled at > 165 degrres counter-clockwise 
+                directionInstruction += "Make a Sharp Left ";//or U-turn
+//                continuingStraight = false;
+            }
+            else if (angleDiff > 15){ //next street is angled between 15 and 165 degrres counter-clockwise (Left turn)
                 directionInstruction += "Turn Left ";//Left turn
-            else if (angleDiff > -15) //next street is angled between 15 and -15 degrees 
-                directionInstruction += "Continue Straight ";//straight
-            else if (angleDiff > -165) //Right Turn 
+//                continuingStraight = false;
+            }
+            else if (angleDiff > -15 /*&& !continuingStraight*/){ //next street is angled between 15 and -15 degrees 
+                //if this is the first time that straight "turn" has been encountered
+                directionInstruction += "Continue Straight ";//Left turn
+//                redundantStreetID = getInfoStreetSegment(forwardSegID).streetID;
+                
+            }
+            else if (angleDiff > -165){ //Right Turn 
                 directionInstruction += "Turn Right ";//Right turn
-            else  //next street is angled < -165 degrres (clockwise) (Sharp right turn or U-turn)
+//                continuingStraight = false;
+            }
+            else{  //next street is angled < -165 degrres (clockwise) (Sharp right turn or U-turn)
                 directionInstruction += "Make a Sharp Right ";//U-turn or Sharp Right turn
+//                continuingStraight = false;
+            }
+//            if (continuingStraight){ //only occurs if straight "turn" is encountered AFTER the first time
+//                distanceCombined += SegmentLengths[forwardSegID];
+//            }
+//            else{
+//                
+//            }
+//            if (angleDiff > -15&&angleDiff <=-15){ //every time a straight "turn" is encountered
+//                continuingStraight = true;
+//            }
            
         }
         //part #3:
@@ -446,7 +473,7 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
     }
     
     directionsText = "Directions:\n\n"+directionsText + "You will arrive at your destination. Estimated time: " 
-            + printTime(bestPathTravelTime);
+            + printTime(bestPathTravelTime/60); //convert bestPathTravelTime from seconds to minutes
 //    std::cout<<directionsText<<std::endl;
        
     

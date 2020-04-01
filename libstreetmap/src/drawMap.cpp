@@ -263,14 +263,14 @@ double getRotationAngleForText(std::pair <double, double> xyFrom, std::pair <dou
 
 double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, double> xyTo){
     
-    double rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first) / DEGREE_TO_RADIAN;
+    double rotationAngle = atan2(xyTo.second - xyFrom.second, xyTo.first - xyFrom.first) / DEGREE_TO_RADIAN;
 
-    if (rotationAngle > 90) {
-        rotationAngle = rotationAngle - 180;
-    }
-    if (rotationAngle < -90) {
-        rotationAngle = rotationAngle + 180;
-    }
+//    if (rotationAngle > 90) {
+//        rotationAngle = rotationAngle - 180;
+//    }
+//    if (rotationAngle < -90) {
+//        rotationAngle = rotationAngle + 180;
+//    }
     
     return rotationAngle;
 }
