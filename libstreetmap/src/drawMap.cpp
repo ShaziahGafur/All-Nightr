@@ -263,15 +263,10 @@ double getRotationAngleForText(std::pair <double, double> xyFrom, std::pair <dou
 
 double getRotationAngle(std::pair <double, double> xyFrom, std::pair <double, double> xyTo){
     
-    double rotationAngle = atan2(xyTo.second - xyFrom.second, xyTo.first - xyFrom.first) / DEGREE_TO_RADIAN;
+   double rotationAngle = atan2(xyTo.second - xyFrom.second, xyTo.first - xyFrom.first) / DEGREE_TO_RADIAN;
 
-//    if (rotationAngle > 90) {
-//        rotationAngle = rotationAngle - 180;
-//    }
-//    if (rotationAngle < -90) {
-//        rotationAngle = rotationAngle + 180;
-//    }
-    
+    if (rotationAngle < 0)
+        rotationAngle+=360;
     return rotationAngle;
 }
 
@@ -1726,6 +1721,8 @@ std::vector< std::vector<int> >  get_intersection_and_suggestions(std::vector<in
 //button returns to base mode, depending on which mode is active at the moment
 void done_button(GtkWidget* widget, ezgl::application *application){
     
+    directionsText = ""; //reset text for directions to be empty
+    
     if(CurrentMode == directions){
         
         hide_direction_entries(application);
@@ -1830,6 +1827,7 @@ void show_direction_entries(ezgl::application *application){
 }
 
 void go_button(GtkWidget* widget, ezgl::application *application){
+    directionsText = ""; //reset text for directions to be empty
     //reset segmnent highlights
     while(!(segmentsHighlighted.empty())){
         int segUnhighlightID = segmentsHighlighted.back();

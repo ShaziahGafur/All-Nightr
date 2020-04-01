@@ -114,7 +114,7 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     
     //start and end intersections flipped 
     //to allow "Tracing forwards rather than "Tracing backwards"
-    std::cout<<"start at: "<<getIntersectionName(intersect_id_start)<<"\tFinsih: "<<getIntersectionName(intersect_id_end)<<"\n";
+//    std::cout<<"start at: "<<getIntersectionName(intersect_id_start)<<"\tFinsih: "<<getIntersectionName(intersect_id_end)<<"\n";
     
     pathFound = breadthFirstSearch(intersect_id_end, intersect_id_start, turn_penalty); 
     
@@ -385,24 +385,27 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
             std::pair <double, double> xyStart = latLonToCartesian(midInter);
             std::pair <double, double> xyNext = latLonToCartesian(nextInter); 
             double angle = getRotationAngle(xyStart, xyNext); //angle returned is in range [-180, 180]
-            if (angle <= -150)
-                directionInstruction += "West ";
-            else if (angle <= -120)
-                directionInstruction += "South West ";
-            else if (angle <= -60)
-                directionInstruction += "South ";
-            else if (angle <= -30)
-                directionInstruction += "South East ";
-            else if (angle <= 30)
+            
+                        std::cout<<"\nAngle "<<angle;//<<" for "<<getStreetName(segStruct.streetID);
+
+            if (angle <= 30)
                 directionInstruction += "East ";
             else if (angle <= 60)
                 directionInstruction += "North East ";
             else if (angle <= 120)
                 directionInstruction += "North ";
             else if (angle <= 150)
-                directionInstruction += "North West ";
-            else //if (angle <= 180)
+                directionInstruction += "North West";
+            else if (angle <= 210)
                 directionInstruction += "West ";
+            else if (angle <= 240)
+                directionInstruction += "South West";
+            else if (angle <= 300)
+                directionInstruction += "South ";
+            else if (angle <= 330)
+                directionInstruction += "South East";
+            else //if (angle <= 180)
+                directionInstruction += "East ";
             
         }//end of (if this is the first segment)
         
@@ -419,6 +422,25 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
             double angle2 = getRotationAngle(xyMid, xyNext); //angle of second segment
             double angleDiff = angle2 - angle1; //compare the angle the next street with previous street
             
+            bool flagBroken = false; //helper flag for when the street segment transitions from being redundant to NOT being redundant
+            if (continuingStraight){
+                if (segStruct.streetID==redundantStreetID && angleDiff > -15 && angleDiff <=15){ //if the continuingStraight flag should still be true
+                    distanceCombined += SegmentLengths[forwardSegID]; //increment the total distance that was skipped (redundant)
+                    
+                    //attempt to skip to next iteration of while loop (skip to the next segment)
+                    previousIntersectID = middleIntersectID; //advance prevoiusIntersectID
+                    forwardSegID = nextNode->reachingEdge; 
+                    continue;
+                }
+                else{ //If segment is no longer redundant, continuingStraight flag must be reset
+                    flagBroken = true;
+                    continuingStraight = false;
+                    directionInstruction += "\nIn " + printDistance(distanceCombined)+", ";
+                    distanceCombined = 0; //reset the total distance combined back to 0, for safety (redundancy has been dealt with)
+                }
+            }
+           
+            
             if (angleDiff > 165){ //next street is angled at > 165 degrres counter-clockwise 
                 directionInstruction += "Make a Sharp Left ";//or U-turn
 //                continuingStraight = false;
@@ -427,9 +449,29 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
                 directionInstruction += "Turn Left ";//Left turn
 //                continuingStraight = false;
             }
-            else if (angleDiff > -15 /*&& !continuingStraight*/){ //next street is angled between 15 and -15 degrees 
+            else if (angleDiff > -15 && !continuingStraight){ //next street is angled between 15 and -15 degrees (straight "turn")
+                //Two possible cases. Cases determined using flagBroken:
+                //Case 1: We reached a straight segment and consecutively, it is straight for the first time (if flagBroken is FALSE)
+                //Case 2: Special case were street segments remain straight, however the name has been changed (e.g. College St to Carlton St) (if flagBroken is TRUE) 
+                
+                directionInstruction += "Continue Straight ";//required to print in both cases
+                
+                if (!flagBroken){ //in this case, we do NOT want to reset the process of setting the flag for continuingStraight and checking for redundancy. 
+                    directionsText +=directionInstruction;
+                    redundantStreetID = segStruct.streetID;
+                    directionsText += "on " + getStreetName(redundantStreetID);
+                    distanceCombined = SegmentLengths[forwardSegID];
+                    continuingStraight = true;
+                    
+                    //attempt to skip to next iteration of while loop
+                    previousIntersectID = middleIntersectID; //advance prevoiusIntersectID
+                    forwardSegID = nextNode->reachingEdge;  
+                    continue;
+                }
+//                else{
+//                    
+//                }
                 //if this is the first time that straight "turn" has been encountered
-                directionInstruction += "Continue Straight ";//Left turn
 //                redundantStreetID = getInfoStreetSegment(forwardSegID).streetID;
                 
             }
@@ -472,7 +514,10 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
         forwardSegID = nextNode->reachingEdge;        
     }
     
-    directionsText = "Directions:\n\n"+directionsText + "You will arrive at your destination. Estimated time: " 
+    if (distanceCombined!=0) //special case if the path ends with a redundant street name. Part #1 (remaining distance) needs to be printed
+        directionsText += "\nIn " + printDistance(distanceCombined)+", ";
+    
+    directionsText = "Directions:\n\n"+directionsText + "You will arrive at your destination. \nEstimated time: " 
             + printTime(bestPathTravelTime/60); //convert bestPathTravelTime from seconds to minutes
 //    std::cout<<directionsText<<std::endl;
        
@@ -491,12 +536,13 @@ Node* getNodeByID(int intersectionID){
 }
 
 std::string printDistance(double distance){
+//    std::cout<<"Exact distance: "<<std::to_string(distance)<<"\n";
     std::string text = "";
     
     //first round distance up
     
     //x.eer -> x+1
-    if ((distance/1000)>1){ //greater than 1 km
+    if (distance > 900){ //greater than 900 m (will represent directions in km)
         int km = (int) (distance/1000);
         km++;//round up
 //        distance = km*1000;
@@ -522,7 +568,7 @@ std::string printDistance(double distance){
         text = std::to_string(((int)distance))+" m";
 
     }
-    else{ //if (distance >900){
+    else{ //very small distance, less than 1 m
         distance = 1;
         text = std::to_string((int)distance)+" m";
 
@@ -532,13 +578,14 @@ std::string printDistance(double distance){
 }
 
 std::string printTime(double time){
-    
+    std::cout<<"Exact time: "<<std::to_string(time)<<"\n";
     std::string text = "";
     if (time>60){
         int hrs = (int)(time/60);
         text+= std::to_string(hrs)+" hr ";
     }
     int mins = ((int)(time))%60;
+    mins++; //round up
     text+=std::to_string(mins)+" min";
     return text;
 }
