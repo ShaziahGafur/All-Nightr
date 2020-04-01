@@ -84,6 +84,7 @@ void go_button(GtkWidget* widget, ezgl::application *application);
 void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data);
 void hide_direction_entries(ezgl::application *application);
 void show_direction_entries(ezgl::application *application);
+void click_button(GtkWidget* widget, ezgl::application *application);
 
 #endif /* DRAWMAP_H */
 

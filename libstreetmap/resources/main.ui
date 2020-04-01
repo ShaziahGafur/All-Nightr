@@ -211,8 +211,9 @@
               <object class="GtkEntry" id="walking_speed">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="max_length">3</property>
-                <property name="width_chars">0</property>
+                <property name="margin_top">5</property>
+                <property name="margin_bottom">5</property>
+                <property name="width_chars">2</property>
                 <property name="placeholder_text" translatable="yes">m/s</property>
                 <property name="input_purpose">number</property>
               </object>
@@ -225,7 +226,9 @@
               <object class="GtkEntry" id="time_limit">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="width_chars">3</property>
+                <property name="margin_top">5</property>
+                <property name="margin_bottom">5</property>
+                <property name="width_chars">2</property>
                 <property name="placeholder_text" translatable="yes">min</property>
                 <property name="input_purpose">digits</property>
               </object>
@@ -239,6 +242,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="margin_left">2</property>
                 <child>
                   <placeholder/>
                 </child>
@@ -253,6 +257,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="margin_left">2</property>
                 <child>
                   <placeholder/>
                 </child>
@@ -267,6 +272,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="margin_left">2</property>
                 <child>
                   <placeholder/>
                 </child>
@@ -280,6 +286,8 @@
               <object class="GtkLabel" id="walking_speed_label">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="margin_top">8</property>
+                <property name="margin_bottom">5</property>
                 <property name="label" translatable="yes">Walk Speed</property>
                 <property name="wrap">True</property>
                 <property name="width_chars">10</property>
@@ -293,6 +301,8 @@
               <object class="GtkLabel" id="time_limit_label">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="margin_top">8</property>
+                <property name="margin_bottom">5</property>
                 <property name="label" translatable="yes">Time Limit</property>
                 <property name="width_chars">9</property>
               </object>
@@ -305,6 +315,8 @@
               <object class="GtkLabel" id="uber_label">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="margin_top">8</property>
+                <property name="margin_bottom">5</property>
                 <property name="label" translatable="yes">Uber</property>
                 <property name="width_chars">3</property>
               </object>
@@ -314,11 +326,15 @@
               </packing>
             </child>
             <child>
-              <object class="GtkSwitch" id="uber">
+              <object class="GtkCheckButton" id="uber">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
                 <property name="halign">center</property>
-                <property name="valign">center</property>
+                <property name="margin_left">5</property>
+                <property name="margin_top">5</property>
+                <property name="margin_bottom">5</property>
+                <property name="draw_indicator">True</property>
               </object>
               <packing>
                 <property name="left_attach">2</property>
@@ -340,34 +356,54 @@
               <object class="GtkEntry" id="TextInput">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="width_chars">90</property>
+                <property name="halign">end</property>
+                <property name="margin_right">2</property>
+                <property name="max_width_chars">1000</property>
                 <property name="placeholder_text" translatable="yes">Enter an intersection name or Load a new map (e.g. tokyo, japan)...</property>
                 <property name="input_purpose">alpha</property>
               </object>
               <packing>
                 <property name="left_attach">0</property>
                 <property name="top_attach">0</property>
+                <property name="width">2</property>
               </packing>
             </child>
             <child>
               <object class="GtkEntry" id="directions_entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="margin_right">2</property>
+                <property name="max_width_chars">1000</property>
                 <property name="placeholder_text" translatable="yes">Enter Starting Intersection...</property>
+                <property name="input_purpose">alpha</property>
               </object>
               <packing>
                 <property name="left_attach">0</property>
                 <property name="top_attach">1</property>
+                <property name="width">2</property>
               </packing>
             </child>
             <child>
               <object class="GtkButton" id="directions_go">
-                <property name="label" translatable="yes">Go!</property>
+                <property name="label" translatable="yes">Get Directions!</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="halign">start</property>
-                <property name="valign">start</property>
+                <property name="margin_right">2</property>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToggleButton" id="click_select">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <child>
+                  <placeholder/>
+                </child>
               </object>
               <packing>
                 <property name="left_attach">0</property>
