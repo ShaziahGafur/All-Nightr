@@ -21,7 +21,14 @@ struct wave{
     int edgeID;
     double travelTime;
     double directionDif;
-    wave (Node* n, int id, double time, double degreeDif) {node = n; edgeID = id; travelTime = time; directionDif = degreeDif;}
+    int waveIDTracker;
+    wave (Node* n, int id, double time, double degreeDif, int IDTracker) {node = n; edgeID = id; travelTime = time; directionDif = degreeDif; waveIDTracker = IDTracker;}
+};
+
+struct compareDirection{
+    bool operator()(wave const& p1, wave const& p2){
+        return (p1.directionDif > p2.directionDif);
+    }
 };
 
 #define NO_EDGE -1  //no edge id

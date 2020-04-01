@@ -220,12 +220,16 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
     
     //declare list which will contain queue of nodes to check 
     std::vector<wave> waveList; //change data structure to heap
-    std::priority_queue<weightPair, std::vector<weightPair>, std::greater<weightPair> > waveQueue; //hold all the weights with the IDs of the waves (to be accesed from vector)
+    std::priority_queue<wave, std::vector<wave>, compareDirection> waveQueue; //hold all the weights with the IDs of the waves (to be accesed from vector)
     int waveIDTracker = 0; //keep track of IDs of waves
     
+    //get direction from startID to destID -> it is the first ideal direction
+    double idealDirection = getDirectionAngle(startID, destID);
+    
      //put source node into wavefront
-    waveList.push_back(wave(sourceNodePtr, NO_EDGE, NO_TIME, PERFECT_DIRECTION));
-    waveQueue.push(std::make_pair(0, waveIDTracker)); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
+    wave sourceWave(sourceNodePtr, NO_EDGE, NO_TIME, idealDirection, waveIDTracker);
+    waveList.push_back(sourceWave);
+    waveQueue.push(sourceWave); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
     waveIDTracker++; //advance to next ID of wave
     
     //variable to be used later to store intersection ID as an int
@@ -234,18 +238,15 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
     //while there exists nodes in the queue, check these connected nodes
     while (!waveQueue.empty()){   
         //first deal with wave at top of list
-        wave waveCurrent = waveList[waveQueue.top().second]; //based on the ID with smallest weighting in priority queue, get that wave
+        wave waveCurrent = waveList[waveQueue.top().waveIDTracker]; //based on the ID with smallest weighting in priority queue, get that wave
         //remove top wave, it is being checked
         waveQueue.pop();
         double waveCurrentTime = waveCurrent.travelTime;
         Node * waveCurrentNode = waveCurrent.node;
-        
-        //find degree angle from current node to destID
-        double idealDirection = getDirectionAngle(waveCurrentNode->ID, destID);
-        
+        idealDirection = waveCurrent.directionDif;
+            
         //if better path was found (currently travelling by this wave had smaller time than the Node's prehistoric best time)
         if (waveCurrentTime < waveCurrentNode->bestTime){
-//            betterPathFlag = true;
             waveCurrentNode->crawlEnable = true;
             waveCurrentNode->bestTime = waveCurrentTime; //update Node's best time
             waveCurrentNode->reachingEdge = waveCurrent.edgeID; //update Node's reaching edge
@@ -255,7 +256,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
         //check if current node is destination node
         if (waveCurrent.node->ID == destID){
             bestPathTravelTime = waveCurrentTime; //set the time for the best path
-            waveQueue = std::priority_queue<weightPair, std::vector<weightPair>, std::greater<weightPair> >();
+            waveQueue = std::priority_queue<wave, std::vector<wave>, compareDirection >();
             waveList.clear();
             return true;
         }
@@ -311,10 +312,19 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 
                 //calculate angle from outerNode to destID
                 double outerNodeDirection = getDirectionAngle(outerIntersectID, destID);
-                double directionDif = abs (idealDirection - outerNodeDirection);
+                //idealDirection is from the innerNode's direction to destID
+                double directionDif =  (idealDirection - outerNodeDirection);
+                //check for values of directionDif
+                if (directionDif <= 180){
+                    directionDif = directionDif + 360;
+                }
+                else if (directionDif > 180){
+                    directionDif = directionDif - 360;
+                }
                 
-                waveList.push_back(wave(outerNode, *it, newTravelTime, directionDif)); //create new wavefront elemenet and add to queue
-                waveQueue.push(std::make_pair(SegmentLengths[*it], waveIDTracker)); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
+                wave currentWave(outerNode, *it, newTravelTime, directionDif, waveIDTracker);
+                waveList.push_back(currentWave); //create new wavefront elemenet and add to queue
+                waveQueue.push(currentWave); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
                 waveIDTracker++; //advance to next ID of wave
 
             }
@@ -322,7 +332,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
         }
     }
     
-    waveQueue = std::priority_queue<weightPair, std::vector<weightPair>, std::greater<weightPair> >();
+    waveQueue = std::priority_queue<wave, std::vector<wave>, compareDirection >();
     waveList.clear();
     //if no path is found
     directionsText = "No path found";
@@ -537,6 +547,6 @@ double getDirectionAngle(int from, int to){
     std::pair < double, double > fromCart = latLonToCartesian (fromLL);
     std::pair < double, double > toCart = latLonToCartesian (toLL);
     
-    degree = atan2(fromCart.second - toCart.second, fromCart.first - toCart.first)/DEGREE_TO_RADIAN;
+    degree = atan2(fromCart.second - toCart.second, fromCart.first - toCart.first);
     return degree;
 }
