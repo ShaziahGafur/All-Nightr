@@ -27,7 +27,8 @@ enum Mode {
 ////nightmode street color scheme
 ////streets
 //
-ezgl::color Colour_driving_highlight(252, 248, 3, 200); //bright yellow
+//ezgl::color Colour_driving_highlight(252, 248, 3, 200); //bright yellow
+ezgl::color Colour_driving_highlight(235, 9, 114, 200); //bright pink
 ezgl::color Colour_walking_highlight(3, 215, 252, 200); //bright blue 
 ezgl::color Colour_unclassified(114, 111, 85, 255); //yellow (1 = least opaque)
 ezgl::color Colour_motorway(100, 38, 7); // orange (3 = lightest)
@@ -1086,17 +1087,28 @@ void draw_streets(ezgl::renderer *g){
                                     g->set_color (Colour_unclassified);
             }     
             
+            if (segmentHighlight[segmentID].driving){
+                    g->set_line_width (3);
+                    g->set_color (Colour_driving_highlight);
+                    enableDraw = true;
+            }
+            else if (segmentHighlight[segmentID].walking){
+//                    g->set_line_width (2);
+                    enableDraw = true;
+                    g->set_color (Colour_walking_highlight);
+            }
+            
             if (enableDraw){
                 
-                if (segmentHighlight[i].driving){
-//                    g->set_line_width (2);
-                    g->set_color (Colour_driving_highlight);
-                }
-                else if (segmentHighlight[i].walking){
-//                    g->set_line_width (2);
-                    g->set_color (Colour_walking_highlight);
-                }
-                
+//                if (segmentHighlight[segmentID].driving){
+////                    g->set_line_width (5);
+//                    g->set_color (Colour_driving_highlight);
+//                }
+//                else if (segmentHighlight[segmentID].walking){
+////                    g->set_line_width (2);
+//                    g->set_color (Colour_walking_highlight);
+//                }
+//                
                 xyFrom = latLonToCartesian(intersections[segmentInfo.from].position);
                 xyTo = latLonToCartesian(intersections[segmentInfo.to].position);
 
@@ -1795,7 +1807,7 @@ void go_button(GtkWidget* widget, ezgl::application *application){
     //clear the directions variable
 //    directionsText.clear();
     
-    //reset segmnent highlights
+    //reset segment highlights
     while(!(segmentsHighlighted.empty())){
         int segUnhighlightID = segmentsHighlighted.back();
         segmentHighlight[segUnhighlightID].walking = false;

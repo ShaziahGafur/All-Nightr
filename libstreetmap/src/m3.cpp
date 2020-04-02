@@ -350,7 +350,7 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
     Node * nextNode = getNodeByID(startID);
     //get reaching edge segment from destination Node
     int forwardSegID = nextNode->reachingEdge;
-//    std::cout<<"Forward seg id: "<<forwardSegID<<"\n";
+    std::cout<<"Forward seg id: "<<forwardSegID<<"\n";
 
     //variable to store intersectionID
     int nextIntersectID = startID;
