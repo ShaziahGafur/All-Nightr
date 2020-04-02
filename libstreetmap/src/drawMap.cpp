@@ -253,7 +253,6 @@ double lat_from_y (double y){
 double getRotationAngleForText(std::pair <double, double> xyFrom, std::pair <double, double> xyTo){
     
     double rotationAngle = atan2(xyFrom.second - xyTo.second, xyFrom.first - xyTo.first) / DEGREE_TO_RADIAN;
-//    std::cout<<"rotation angle value: "<<rotationAngle<<"\n";
     if (rotationAngle > 90) {
         rotationAngle = rotationAngle - 180;
     }
@@ -1616,34 +1615,6 @@ void help_button(GtkWidget* widget, ezgl::application *application){
     g_signal_connect(GTK_DIALOG(dialog), "response", G_CALLBACK(on_dialog_response), NULL);
     
 }
-//bool extract_streets_from_text(const char* text, std::string& street1, std::string& street2){
-//    
-//    //convert into a string
-//    std::string text_input(text);
-//    
-//    //if text is empty or only white spaces
-//    if (text_input.empty() || (text_input.find_first_not_of(' ') == std::string::npos)){ 
-//        std::cout<<"Empty Find parameters\n";
-//        return false;
-//    }
-//       
-//    std::smatch m; //typedef std::match_results<string>
-//    
-//    //get street names to be used find function
-//    //format (street1)(and or &)(street2)
-//    std::regex ex("([a-zA-Z]+[\\s\\-[a-zA-Z]+]*)+\\s(and|&)\\s([a-zA-Z]+[\\s\\-[a-zA-Z]+]*)");
-//    
-//    bool found = std::regex_search(text_input, m, ex);
-//     
-//    if(found){
-//        street1 = m[1].str();
-//        street2 = m[3].str();
-//        return true;
-//    }
-//    
-//    else return false;
-//
-//}
 
 //returns a vector with all of the possible intersections given a set of street_ids
 std::vector< std::vector<int> >  get_intersection_and_suggestions(std::vector<int>& street_ids_1, std::vector<int>& street_ids_2, std::string& suggested_streets){
@@ -1847,8 +1818,6 @@ void go_button(GtkWidget* widget, ezgl::application *application){
     //obtains all of the possible streetIds that match the entered street names
     std::vector<int> Bstreet_ids_1 = find_street_ids_from_partial_street_name(intersectionB.first);
     std::vector<int> Bstreet_ids_2 = find_street_ids_from_partial_street_name(intersectionB.second);
-
-//    std::cout<<"\nAstreet_ids_1: "<<std::to_string(Astreet_ids_1[0])<<"\tAstreet_ids_2: "<<std::to_string(Astreet_ids_2[0])<<"\nBstreet_ids_1: "<<std::to_string(Bstreet_ids_1[0])<<"\tBstreet_ids_2: "<<std::to_string(Bstreet_ids_2[0])<<"\n";
     
     //a vector with all of the FIRST intersection found in a given a set of street_ids
     std::pair<int, int>intersectionIds{-1,-1};
@@ -1863,10 +1832,7 @@ void go_button(GtkWidget* widget, ezgl::application *application){
     GtkTextView * textViewPtr = GTK_TEXT_VIEW(view);
     GtkTextBuffer* buffer = gtk_text_view_get_buffer(textViewPtr);
     gtk_text_buffer_set_text(buffer, "  ", -1); 
-    
-//    std::cout<<"Intersection Ids.first: "<<std::to_string(intersectionIds.first);
-//    std::cout<<"\tIntersection Ids.second: "<<std::to_string(intersectionIds.second)<<std::endl;
-//    
+        
     if (intersectionIds.first == -1 || intersectionIds.second == -1){ //fix needed: instead, allow a value of 0 and set -1 as an invalid #
         intersectionNames = "No results found";
         gtk_text_buffer_set_text(buffer, intersectionNames.c_str(), -1); 

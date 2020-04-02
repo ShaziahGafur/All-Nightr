@@ -116,11 +116,9 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     
     //start and end intersections flipped 
     //to allow "Tracing forwards rather than "Tracing backwards"
-//    std::cout<<"start at: "<<getIntersectionName(intersect_id_start)<<"\tFinsih: "<<getIntersectionName(intersect_id_end)<<"\n";
     
     pathFound = breadthFirstSearch(intersect_id_end, intersect_id_start, turn_penalty); 
     
-//    std::cout<<"Path found: "<<pathFound<<std::endl;
     //If path is found, traceback path and store street segments
     if (pathFound){
         path = bfsTraceBack(intersect_id_start); //trace forwards, starting from the starting ID
@@ -264,7 +262,6 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
         }
         
         if (waveCurrentNode->crawlEnable){ //If better path found or new node, crawl to outer nodes
-//            std::cout<<"Crawling will occur"<<"\n";
             
             //iterate through edges of current node to add the nodes they're going TO to the wavefront
             std::vector<int>edges = waveCurrentNode->outEdgeIDs;
@@ -283,9 +280,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 else{ //the inner Node = the 'to' of the segment
                     outerIntersectID = segStruct.from;
                 }
-                
-//                std::cout<<"outer Intersect ID: "<<outerIntersectID<<"\n";
-                
+                                
                 std::unordered_map<int,Node*>::const_iterator nodeItr =  nodesEncountered.find(outerIntersectID);
                 Node* outerNode;
                 
@@ -350,7 +345,6 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
     Node * nextNode = getNodeByID(startID);
     //get reaching edge segment from destination Node
     int forwardSegID = nextNode->reachingEdge;
-    std::cout<<"Forward seg id: "<<forwardSegID<<"\n";
 
     //variable to store intersectionID
     int nextIntersectID = startID;
@@ -409,8 +403,6 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
             std::pair <double, double> xyNext = latLonToCartesian(nextInter); 
             double angle = getRotationAngle(xyStart, xyNext); //angle returned is in range [-180, 180]
             
-                        std::cout<<"\nAngle "<<angle;//<<" for "<<getStreetName(segStruct.streetID);
-
             if (angle <= 30)
                 directionInstruction += "East ";
             else if (angle <= 60)
@@ -433,7 +425,6 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
         }//end of (if this is the first segment)
         
         else{    
-//            double distanceOfInstruction = SegmentLengths[forwardSegID];
             LatLon prevInter = IntersectionCoordinates[previousIntersectID];
             LatLon midInter = IntersectionCoordinates[middleIntersectID];
             LatLon nextInter = IntersectionCoordinates[nextIntersectID];
@@ -466,11 +457,9 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
             
             if (angleDiff > 165){ //next street is angled at > 165 degrres counter-clockwise 
                 directionInstruction += "Make a Sharp Left ";//or U-turn
-//                continuingStraight = false;
             }
             else if (angleDiff > 15){ //next street is angled between 15 and 165 degrres counter-clockwise (Left turn)
                 directionInstruction += "Turn Left ";//Left turn
-//                continuingStraight = false;
             }
             else if (angleDiff > -15 && !continuingStraight){ //next street is angled between 15 and -15 degrees (straight "turn")
                 //Two possible cases. Cases determined using flagBroken:
@@ -491,31 +480,13 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
                     forwardSegID = nextNode->reachingEdge;  
                     continue;
                 }
-//                else{
-//                    
-//                }
-                //if this is the first time that straight "turn" has been encountered
-//                redundantStreetID = getInfoStreetSegment(forwardSegID).streetID;
-                
             }
             else if (angleDiff > -165){ //Right Turn 
                 directionInstruction += "Turn Right ";//Right turn
-//                continuingStraight = false;
             }
             else{  //next street is angled < -165 degrres (clockwise) (Sharp right turn or U-turn)
                 directionInstruction += "Make a Sharp Right ";//U-turn or Sharp Right turn
-//                continuingStraight = false;
             }
-//            if (continuingStraight){ //only occurs if straight "turn" is encountered AFTER the first time
-//                distanceCombined += SegmentLengths[forwardSegID];
-//            }
-//            else{
-//                
-//            }
-//            if (angleDiff > -15&&angleDiff <=-15){ //every time a straight "turn" is encountered
-//                continuingStraight = true;
-//            }
-           
         }
         //part #3:
         directionInstruction += "on ";
@@ -529,8 +500,6 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
         directionsText+=directionInstruction;
         
         previousIntersectID = middleIntersectID; //advance prevoiusIntersectID
-        //delete the current node (middle). No longer needed
-//        delete currentNode;
 
         //retrieve next segment (segment after nextNode)
         //invalid read of size 4
@@ -542,7 +511,6 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
     
     directionsText = "Directions:\n\n"+directionsText + "You will arrive at your destination. \nEstimated time: " 
             + printTime(bestPathTravelTime/60); //convert bestPathTravelTime from seconds to minutes
-//    std::cout<<directionsText<<std::endl;
        
     
     return path;
@@ -559,12 +527,10 @@ Node* getNodeByID(int intersectionID){
 }
 
 std::string printDistance(double distance){
-//    std::cout<<"Exact distance: "<<std::to_string(distance)<<"\n";
     std::string text = "";
     
     //first round distance up
     
-    //x.eer -> x+1
     if (distance > 900){ //greater than 900 m (will represent directions in km)
         int km = (int) (distance/1000);
         km++;//round up
@@ -601,7 +567,6 @@ std::string printDistance(double distance){
 }
 
 std::string printTime(double time){
-    std::cout<<"Exact time: "<<std::to_string(time)<<"\n";
     std::string text = "";
     if (time>60){
         int hrs = (int)(time/60);
