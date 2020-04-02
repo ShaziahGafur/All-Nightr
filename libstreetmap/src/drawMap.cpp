@@ -1856,11 +1856,11 @@ void go_button(GtkWidget* widget, ezgl::application *application){
         double yAvg = (xyStart.second + xyDest.second)/2;
         
         if (xDiff > yDiff){ //if greater dominance in x direction
-            ezgl::rectangle directionsView({(xAvg-(xDiff*2/3)), yAvg},{(xAvg+(xDiff*2/3)), yAvg}); 
+            ezgl::rectangle directionsView({(xAvg-(xDiff*2/3)), yAvg},{(xAvg+(xDiff*2/3)), yAvg}); //create x dimensions based on y dominance
             new_world = directionsView;
         }
-        else{
-            ezgl::rectangle directionsView({xAvg, yAvg-(yDiff*2/3)},{xAvg, yAvg+(yDiff*2/3)}); 
+        else{ //if greater dominance in the y direction
+            ezgl::rectangle directionsView({(xAvg-(yDiff)), yAvg},{(xAvg+(yDiff)), yAvg}); //attempt to create appropriate x dimensions based on the y dominance
             new_world = directionsView;
         }
 
