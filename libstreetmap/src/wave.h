@@ -31,6 +31,12 @@ struct compareDirection{
     }
 };
 
+struct compareWalkingTime{
+    bool operator()(wave const& p1, wave const& p2){
+        return (p1.travelTime > p2.travelTime);
+    }
+};
+
 #define NO_EDGE -1  //no edge id
 #define NO_TIME 0  //zero time
 #define PERFECT_DIRECTION 0  //zero time
