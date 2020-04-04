@@ -83,6 +83,10 @@ bool navigateScreen;
 
 //variable that keeps track of what state the GUI is currently in
 Mode CurrentMode = base;
+//variable that is holds the walking_speed as a string (updates when uberswitch is ON)
+double Walking_speed;
+//variable that is holds the time_limit as a string (updates when uberswitch is ON)
+double Time_limit;
 
 /************************************************/
 
@@ -1662,6 +1666,20 @@ void done_button(GtkWidget* widget, ezgl::application *application){
             GtkToggleButton* click_select_widgetPtr = (GtkToggleButton*)application->get_object("click_select");
             gtk_toggle_button_set_active(click_select_widgetPtr, False);
         }
+        if(CurrentMode == directions_uber){
+            //empty the entry boxes
+            GtkEntry* walking_speed_entry = (GtkEntry*)application->get_object("walking_speed");
+            gtk_entry_set_text(walking_speed_entry, "");
+            GtkEntry* time_limit_entry = (GtkEntry*)application->get_object("time_limit");
+            gtk_entry_set_text(time_limit_entry, "");
+            
+            //disallow further entry
+            GtkWidget* walk_speedEntry_widgetPtr = (GtkWidget*) application->get_object("walking_speed");
+            gtk_widget_set_can_focus(walk_speedEntry_widgetPtr, false);
+            GtkWidget* time_limitEntry_widgetPtr = (GtkWidget*) application->get_object("time_limit");
+            gtk_widget_set_can_focus(time_limitEntry_widgetPtr, false);
+            
+        }
                 
     }
     else if (CurrentMode == find){
@@ -1726,8 +1744,8 @@ void hide_direction_entries(ezgl::application *application){
     GtkWidget* uberLabel_widgetPtr = (GtkWidget*)application->get_object("uber_label");
     gtk_widget_hide(uberLabel_widgetPtr);
     
-    GtkWidget* uberToggle_widgetPtr = (GtkWidget*)application->get_object("uber");
-    gtk_widget_hide(uberToggle_widgetPtr);
+    GtkWidget* uberSwitch_widgetPtr = (GtkWidget*)application->get_object("uber");
+    gtk_widget_hide(uberSwitch_widgetPtr);
     
     GtkWidget* directionsGo_widgetPtr = (GtkWidget*)application->get_object("directions_go");
     gtk_widget_hide(directionsGo_widgetPtr);
@@ -1759,8 +1777,8 @@ void show_direction_entries(ezgl::application *application){
     GtkWidget* uberLabel_widgetPtr = (GtkWidget*)application->get_object("uber_label");
     gtk_widget_show(uberLabel_widgetPtr);
     
-    GtkWidget* uberToggle_widgetPtr = (GtkWidget*)application->get_object("uber");
-    gtk_widget_show(uberToggle_widgetPtr);
+    GtkWidget* uberSwitch_widgetPtr = (GtkWidget*)application->get_object("uber");
+    gtk_widget_show(uberSwitch_widgetPtr);
     
     GtkWidget* directionsGo_widgetPtr = (GtkWidget*)application->get_object("directions_go");
     gtk_widget_show(directionsGo_widgetPtr);
@@ -1865,9 +1883,37 @@ void go_button(GtkWidget* widget, ezgl::application *application){
         }
 
         navigateScreen = true;
-        std::vector<StreetSegmentIndex> path = find_path_between_intersections(startID, destID, default_turn_penalty);
-        gtk_text_buffer_set_text(buffer, directionsText.c_str(), -1); 
-
+        
+        //check if directions are to be drive only OR (drive + walk)
+        GtkSwitch* uberSwitch = (GtkSwitch*) application->get_object("uber");
+        
+        if(gtk_switch_get_active(uberSwitch) == false){ //if the uber switch is turned off => drive only
+            std::vector<StreetSegmentIndex> path = find_path_between_intersections(startID, destID, default_turn_penalty);
+            gtk_text_buffer_set_text(buffer, directionsText.c_str(), -1); 
+        }
+        else{
+                CurrentMode = directions_uber;
+    
+                //extract walking and time limit input from text entries
+                GtkEntry* walking_speed_entry = (GtkEntry*) application ->get_object("walking_speed"); 
+                std::string walking_speed_input  = gtk_entry_get_text(walking_speed_entry);   
+                if(walking_speed_input.empty()){
+                    application -> update_message("Please enter a walking speed");
+                    return;
+                }
+        
+                GtkEntry* time_limit_entry = (GtkEntry*) application ->get_object("time_limit"); 
+                std::string time_limit_input  = gtk_entry_get_text(time_limit_entry);
+                if(time_limit_input.empty()){
+                    application -> update_message("Please enter a time limit");
+                    return;
+                }
+                //convert string to int
+                Walking_speed = std::stoi(walking_speed_input);
+                Time_limit = std::stoi(time_limit_input);
+                std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> uber_path = find_path_with_walk_to_pick_up(startID, destID, default_turn_penalty, Walking_speed, Time_limit);
+                gtk_text_buffer_set_text(buffer, directionsText.c_str(), -1); 
+        }
     }
     
     application->update_message (intersectionNames); 
