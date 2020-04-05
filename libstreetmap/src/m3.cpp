@@ -130,17 +130,25 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     //to allow "Tracing forwards rather than "Tracing backwards"
     
     pathFound = breadthFirstSearch(intersect_id_end, intersect_id_start, turn_penalty); 
-    
+//                std::cout<<"Yo";
+
     //If path is found, traceback path and store street segments
     if (pathFound){
         path = bfsTraceBack(intersect_id_start); //trace forwards, starting from the starting ID
     }
+    
+//    std::cout<<std::endl;
+//        std::cout<<"Time required: "<<std::to_string(compute_path_travel_time(path, turn_penalty));
+//        std::cout<<"Hi";
     
     //delete nodes
     for (std::unordered_map<int, Node*>::iterator nodesIt = nodesEncountered.begin(); nodesIt != nodesEncountered.end(); ++nodesIt){
         //deleted nextNode
         delete (*nodesIt).second;
     }
+//    std::cout<<std::flush;    
+//    std::cout<<std::endl;
+//    std::cout<<"Hi";
     nodesEncountered.clear();
     //delete wavefront data structures
     return path;        
@@ -271,8 +279,11 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
             waveCurrentNode->crawlEnable = true;
             waveCurrentNode->bestTime = waveCurrentTime; //update Node's best time
             waveCurrentNode->reachingEdge = waveCurrent.edgeID; //update Node's reaching edge
-            
+//            std::cout<<"Better time found\n";
         }  
+//        else if (waveCurrentTime == waveCurrentNode->bestTime){
+//          std::cout<<"This Node is being travelled for first time\n";  
+//        }
         
         //check if current node is destination node
         if (waveCurrent.node->ID == destID){
@@ -287,6 +298,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
             //iterate through edges of current node to add the nodes they're going TO to the wavefront
             std::vector<int>edges = waveCurrentNode->outEdgeIDs;
             std::vector<int>::iterator it;
+            
             for(it = edges.begin(); it != edges.end(); ++it){
 //                std::cout<<"A seg id is:"<<(*it)<<"\n";
                 //make this a helper function?
@@ -305,9 +317,11 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 std::unordered_map<int,Node*>::const_iterator nodeItr =  nodesEncountered.find(outerIntersectID);
                 Node* outerNode;
                 
+                bool newNodeCreated = false;
                 if (nodeItr ==nodesEncountered.end()){ //if node does not exist yet
                     outerNode = new Node(outerIntersectID, *it, waveCurrentTime);//create a new Node
                     nodesEncountered.insert({outerIntersectID, outerNode});
+                    newNodeCreated = true;
 
                 }
                 else{ //if node exists, use the existing node
@@ -326,7 +340,10 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                     //result is the turn_penalty (if applicable) and 2nd street seg travel time               
                     newTravelTime = compute_path_travel_time(adjacentSegments, turn_penalty) - SegmentTravelTime[waveCurrentNode->reachingEdge]; 
                     newTravelTime += waveCurrentTime;
-                }               
+                }              
+                
+                if(newNodeCreated) //IMPORTANT: Verify that this is necessary
+                    outerNode->bestTime = newTravelTime;
                 
                 //calculate angle from outerNode to destID
                 double outerNodeDirection = getDirectionAngle(outerIntersectID, destID);
@@ -563,88 +580,99 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
     int  outerIntersectID;
        
     //while there exists nodes in the queue, check these connected nodes
-    while (!waveQueue.empty()){   
-        //first deal with wave at top of list
-        wave waveCurrent = waveList[waveQueue.top().waveIDTracker]; //based on the ID with smallest weighting in priority queue, get that wave
-        //remove top wave, it is being checked
-        waveQueue.pop();
-        double waveCurrentTime = waveCurrent.travelTime;
-        Node * waveCurrentNode = waveCurrent.node;
-//        idealDirection = waveCurrent.directionDif;
-            
-        //if better path was found (currently travelling by this wave had smaller time than the Node's prehistoric best time)
-        if (waveCurrentTime < waveCurrentNode->bestTime){
-            waveCurrentNode->crawlEnable = true;
-            waveCurrentNode->bestTime = waveCurrentTime; //update Node's best time
-            waveCurrentNode->reachingEdge = waveCurrent.edgeID; //update Node's reaching edge
-            
-        }  
+    while (!waveQueue.empty()){  
         
+        /*First, extract wave & node*/
+        //extract wave at top of list
+        wave waveCurrent = waveList[waveQueue.top().waveIDTracker]; //based on the ID with smallest weighting in priority queue, get that wave
+        waveQueue.pop(); //remove top wave, it is being checked
+        
+        /*Extract Node  Characteristics*/
+        Node * waveCurrentNode = waveCurrent.node; 
+        double waveCurrentTime = waveCurrent.travelTime;
+        
+        /*Check Corner Case: Destination can be reached within walking time limit*/
         //check if current node is destination node
         if (waveCurrent.node->ID == destID){
-            bestPathTravelTime = waveCurrentTime; //set the time for the best path
             waveQueue = std::priority_queue<wave, std::vector<wave>, compareWalkingTime >();
             waveList.clear();
             return true;
         }
-        
-        if (waveCurrentNode->crawlEnable){ //If better path found or new node, crawl to outer nodes
+                        
+        if (waveCurrentTime == walking_time_limit) //If Walking time limit has been "used up" for this node
+            continue; //skip to next wave
             
-            //iterate through edges of current node to add the nodes they're going TO to the wavefront
-            std::vector<int>edges = waveCurrentNode->outEdgeIDs;
-            std::vector<int>::iterator it;
-            for(it = edges.begin(); it != edges.end(); ++it){
-//                std::cout<<"A seg id is:"<<(*it)<<"\n";
-                //make this a helper function?
-                //find "TO" intersection for segment and push node and edge used to get to node to bottom of wavefront
-                InfoStreetSegment segStruct = getInfoStreetSegment(*it);
-                if (segStruct.from == waveCurrentNode->ID){
-                    //check if one-way
-                    if (segStruct.oneWay)
-                        continue; //path down this segment is invalid, skip to next segment
-                    outerIntersectID = segStruct.to;
-                }
-                else{ //the inner Node = the 'to' of the segment
-                    outerIntersectID = segStruct.from;
-                }
-                                
-                std::unordered_map<int,Node*>::const_iterator nodeItr =  nodesEncountered.find(outerIntersectID);
-                Node* outerNode;
-                
-                if (nodeItr ==nodesEncountered.end()){ //if node does not exist yet
-                    outerNode = new Node(outerIntersectID, *it, waveCurrentTime);//create a new Node
-                    nodesEncountered.insert({outerIntersectID, outerNode});
+        /*Assume that crawling can be performed on wave's Node (Node's travelling Time is < walking_time_limit */
 
-                }
-                else{ //if node exists, use the existing node
-                    outerNode = nodeItr->second;
+        /*Visit each outernode and evaluate walking time. Then decide whether to create wave and add to queue*/
+        std::vector<int>edges = waveCurrentNode->outEdgeIDs; //extract node's outer edges
+        std::vector<int>::iterator it;
+        for(it = edges.begin(); it != edges.end(); ++it){
+            //find "TO" intersection for segment and push node and edge used to get to node to bottom of wavefront
+            InfoStreetSegment segStruct = getInfoStreetSegment(*it);
+            if (segStruct.from == waveCurrentNode->ID){
+                //check if one-way
+                if (segStruct.oneWay)
+                    continue; //path down this segment is invalid, skip to next segment
+                outerIntersectID = segStruct.to;
+            }
+            else{ //the inner Node = the 'to' of the segment
+                outerIntersectID = segStruct.from;
+            }
+
+            std::unordered_map<int,Node*>::const_iterator nodeItr =  walkableNodes.find(outerIntersectID);
+            Node* outerNode;
+
+            if (nodeItr == walkableNodes.end()){ //if node does not exist yet
+                
+                //compute projected walking time for the node
+                double newTravelTime;
+                
+                if (waveCurrentNode->reachingEdge==-1){//corner case: current node is the start node, so there doesn't exist a reaching edge
+                    newTravelTime = SegmentLengths[*it]/walking_speed; //travel time is only the time of the current segment
                 }
                 
-                double newTravelTime;
-                if (waveCurrentNode->reachingEdge==-1){//corner case: current node is the start node, so there doesn't exist a reaching edge
-                    newTravelTime = SegmentTravelTime[*it]; //travel time is only the time of the current segment
-                }
                 else{//if previous segment (reaching edge) exists
                     std::vector<int> adjacentSegments; //hold street segmnts of the inner node and segment from inner to outer node
                     adjacentSegments.push_back(waveCurrentNode->reachingEdge); //segment to get to inner node
                     adjacentSegments.push_back(*it); //segment from inner to outer node
                     //calculate travel time of both adjacent segments, subtract off the 1st segment 
                     //result is the turn_penalty (if applicable) and 2nd street seg travel time               
-                    newTravelTime = compute_path_travel_time(adjacentSegments, turn_penalty) - SegmentTravelTime[waveCurrentNode->reachingEdge]; 
+                    newTravelTime = compute_path_walking_time(adjacentSegments, walking_speed, turn_penalty);
+                    newTravelTime-= SegmentLengths[waveCurrentNode->reachingEdge]/walking_speed;
                     newTravelTime += waveCurrentTime;
-                }               
+                }
                 
-//                //calculate angle from outerNode to destID
-//                double outerNodeDirection = getDirectionAngle(outerIntersectID, destID);
-//                //idealDirection is from the innerNode's direction to destID
-//                double directionDif =  (idealDirection - outerNodeDirection);
-//                //check for values of directionDif
-//                if (directionDif <= 180){
-//                    directionDif = directionDif + 360;
-//                }
-//                else if (directionDif > 180){
-//                    directionDif = directionDif - 360;
-//                }
+                if (newTravelTime > walking_time_limit) //Walking to this Node would take longer than walking_time_limit
+                    continue;
+                
+               /* Node* */outerNode = new Node(outerIntersectID, *it, newTravelTime);//create a new Node
+                walkableNodes.insert({outerIntersectID, outerNode});
+                //if within walking time: create node, wave, blah blah
+                //else: continue
+                
+                
+              
+
+            }
+            else{ //if node exists, use the existing node
+                outerNode = nodeItr->second;
+            }
+
+            double newTravelTime;
+            if (waveCurrentNode->reachingEdge==-1){//corner case: current node is the start node, so there doesn't exist a reaching edge
+                newTravelTime = SegmentTravelTime[*it]; //travel time is only the time of the current segment
+            }
+            else{//if previous segment (reaching edge) exists
+                std::vector<int> adjacentSegments; //hold street segmnts of the inner node and segment from inner to outer node
+                adjacentSegments.push_back(waveCurrentNode->reachingEdge); //segment to get to inner node
+                adjacentSegments.push_back(*it); //segment from inner to outer node
+                //calculate travel time of both adjacent segments, subtract off the 1st segment 
+                //result is the turn_penalty (if applicable) and 2nd street seg travel time               
+                newTravelTime = compute_path_travel_time(adjacentSegments, turn_penalty) - SegmentTravelTime[waveCurrentNode->reachingEdge]; 
+                newTravelTime += waveCurrentTime;
+            }               
+               
                 
                 wave currentWave(outerNode, *it, newTravelTime, 0, waveIDTracker);
                 waveList.push_back(currentWave); //create new wavefront elemenet and add to queue
@@ -654,7 +682,7 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
             }
             waveCurrentNode->crawlEnable = false; //crawling complete. Reset enable to false. 
         }
-    }
+    
     
     waveQueue = std::priority_queue<wave, std::vector<wave>, compareWalkingTime >();
     waveList.clear();
