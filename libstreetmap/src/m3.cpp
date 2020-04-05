@@ -18,24 +18,15 @@
 
 typedef std::pair<double, int> weightPair;
 
-//helper declarations
-bool breadthFirstSearch(int startID, int destID, const double turn_penalty);
-std::vector<StreetSegmentIndex> bfsTraceBack(int destID);
-Node* getNodeByID(int intersectionID);
-double getDirectionAngle(int from, int to);
-
-void highlightStreetSegment (ezgl::renderer *g, int ID);
-void delay(int milliseconds);
-
-//Printing Helper Functions
-std::string printTime(double time);
-std::string printDistance(double distance);
-
 //          GLOBAL VARIABLES          //
 //key : int intersectionID, value: pointer to node
 std::unordered_map<int, Node*> nodesEncountered;
 double bestPathTravelTime;
 //int prevSegID = 0;
+
+//bfsTraceBack is actually "tracing forward" since initially start and end IDs were flipped
+//Creates message for directions of path
+std::vector<StreetSegmentIndex> bfsTraceBack(int startID);
 
 std::string directionsText;
 
@@ -134,13 +125,6 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     return path;        
 }
         
-// Returns the time required to "walk" along the path specified, in seconds.
- // The path is given as a vector of street segment ids. The vector can be of
- // size = 0, and in this case, it the function should return 0. The walking
- // time is the sum of the length/ for each street segment, plus
- // the given turn penalty, in seconds, per turn implied by the path. If there
- // is no turn, then there is no penalty. As mentioned above, going from Bloor
- // Street West to Bloor street East is considered a turn 
 double compute_path_walking_time(const std::vector<StreetSegmentIndex>& path, 
                                  const double walking_speed, 
                                  const double turn_penalty){
@@ -213,13 +197,14 @@ std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> find
 
 bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
     
+    //for node n fscore[n] = gscore[n] + h[n]]
     bestPathTravelTime = 0;
     //Create Node for start Intersection
     Node* sourceNodePtr = new Node(startID, NO_EDGE, NO_TIME);
     nodesEncountered.insert({startID, sourceNodePtr}); //keep track of new start node and its ID (for deletion)
     
     //declare list which will contain queue of nodes to check 
-    std::vector<wave> waveList; //change data structure to heap
+    std::vector<wave> waveList;
     std::priority_queue<wave, std::vector<wave>, compareDirection> waveQueue; //hold all the weights with the IDs of the waves (to be accesed from vector)
     int waveIDTracker = 0; //keep track of IDs of waves
     
