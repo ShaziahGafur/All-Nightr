@@ -12,17 +12,14 @@
 #include "ezgl/graphics.hpp"
 #include "ezgl/point.hpp"
 
-//helper declarations
-Node* getNodeByID(int intersectionID);
+
 //returns direction angles in radians
 double getDirectionAngle(int from, int to);
 
 void highlightStreetSegment (ezgl::renderer *g, int ID);
 void delay(int milliseconds);
 
-//Printing Helper Functions
-std::string printTime(double time);
-std::string printDistance(double distance);
+
 
 //***********************************path functions**********************************************************
 // Returns the time required to travel along the path specified, in seconds.
@@ -58,8 +55,27 @@ std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> find
 
 double compute_path_walking_time(const std::vector<StreetSegmentIndex>& path, const double walking_speed, const double turn_penalty);
 
+// For Driving Path
 bool breadthFirstSearch(int startID, int destID, const double turn_penalty);
+//bfsTraceBack is actually "tracing forward" since initially start and end IDs were flipped
+//Creates message for directions of path
+std::vector<StreetSegmentIndex> bfsTraceBack(int destID); 
+Node* getNodeByID(int intersectionID);
 
+
+//For Walking Path
+bool walkingPathBFS(int startID, int destID, const double turn_penalty, const double walking_speed, const double walking_time_limit);
+Node* getWalkableNodeByID(int intersectionID);
+std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID); //Traces path from start to end, provides 
+
+//void delay(int milliseconds);
+
+
+//void highlightStreetSegment (ezgl::renderer *g, int ID);
+
+// Printing Helper Functions
+std::string printTime(double time);
+std::string printDistance(double distance);
 
 #endif /* M3_H */
 

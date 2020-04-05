@@ -15,18 +15,17 @@
 #define TAN_35 0.700  //used for determining direction
 #define TAN_55 1.428  
 #define ANGLE_Threshold 30
+#define MAX_DRIVING_TIME 999999999999999999
 
 typedef std::pair<double, int> weightPair;
+
 
 //          GLOBAL VARIABLES          //
 //key : int intersectionID, value: pointer to node
 std::unordered_map<int, Node*> nodesEncountered;
+std::unordered_map<int, Node*> walkableNodes;
 double bestPathTravelTime;
 //int prevSegID = 0;
-
-//bfsTraceBack is actually "tracing forward" since initially start and end IDs were flipped
-//Creates message for directions of path
-std::vector<StreetSegmentIndex> bfsTraceBack(int startID);
 
 std::string directionsText;
 
@@ -109,17 +108,18 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     //to allow "Tracing forwards rather than "Tracing backwards"
     
     pathFound = breadthFirstSearch(intersect_id_end, intersect_id_start, turn_penalty); 
-    
+
     //If path is found, traceback path and store street segments
     if (pathFound){
         path = bfsTraceBack(intersect_id_start); //trace forwards, starting from the starting ID
     }
-    
+   
     //delete nodes
     for (std::unordered_map<int, Node*>::iterator nodesIt = nodesEncountered.begin(); nodesIt != nodesEncountered.end(); ++nodesIt){
         //deleted nextNode
         delete (*nodesIt).second;
     }
+
     nodesEncountered.clear();
     //delete wavefront data structures
     return path;        
@@ -186,12 +186,68 @@ std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> find
                                                                              const double walking_speed, 
                                                                              const double walking_time_limit){
     
-    std::vector<StreetSegmentIndex> drivingPath = find_path_between_intersections(start_intersection, end_intersection, turn_penalty);
+    //Setting up return variables
     std::vector<StreetSegmentIndex> walkingPath;
+    std::vector<StreetSegmentIndex> drivingPath;
     
-    std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> vect = std::make_pair(drivingPath, walkingPath);
+    bool fullWalkPath = false;
+    const double walkingLimitSecs = walking_time_limit*60; //convert time limiit from mins to s
     
-    return vect;
+    fullWalkPath = walkingPathBFS(start_intersection,  
+                                end_intersection,
+                                turn_penalty,
+                                walking_speed, 
+                                walkingLimitSecs);
+    
+    if (fullWalkPath){ //no driving path needed. Walking time limit covers the full path
+        walkingPath = walkBFSTraceBack(end_intersection);
+        return std::make_pair(walkingPath, drivingPath);
+    }
+    
+    int numOfWalkableNodes = walkableNodes.size();//At least one node in map should exist (the start node)
+    
+    if (numOfWalkableNodes < 2){ //If there are no walkable nodes other than start node
+        //no walking path available. Full path should be driving only
+        drivingPath = find_path_between_intersections(start_intersection, end_intersection, turn_penalty);
+        return std::make_pair(walkingPath, drivingPath);
+    }
+    
+    double smallestDrivingTime = MAX_DRIVING_TIME; //initialize to large number so that shorter path time is found
+    int bestWalkableIntersect = -1; 
+//    bool drivingPathPossible = false; //check for corner case: there is no driving path available for all the walkable nodes
+
+    bool pathFound;
+    //for every walkable Intersection
+    for (std::unordered_map<int, Node*>::iterator nodesIt = walkableNodes.begin(); 
+            nodesIt != walkableNodes.end(); ++nodesIt){
+        pathFound = breadthFirstSearch(end_intersection, nodesIt->first, turn_penalty);
+        if (!pathFound)
+            continue;
+//        drivingPathPossible = true;
+        if (bestPathTravelTime < smallestDrivingTime){ //attempting to find the walkable Node with the smallest driving time
+            bestWalkableIntersect = nodesIt->first;
+            smallestDrivingTime = bestPathTravelTime;
+        }
+        
+        //reset nodesEncountered for the next driving path
+        
+        for (std::unordered_map<int, Node*>::iterator nodesEncounteredIt = nodesEncountered.begin(); 
+                nodesEncounteredIt != nodesEncountered.end(); ++nodesEncounteredIt){
+            delete (*nodesIt).second;
+
+        }
+        nodesEncountered.clear();
+    }
+    
+    if (bestWalkableIntersect != -1){
+        walkingPath = walkBFSTraceBack(bestWalkableIntersect);
+        pathFound = breadthFirstSearch(end_intersection, bestWalkableIntersect, turn_penalty); //there's no significance of holding this value of pathFound
+        drivingPath = bfsTraceBack(bestWalkableIntersect); //can assume that pathFound is true at this point 
+    }    
+    
+//    std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> vect = std::make_pair(walkingPath, drivingPath);
+    
+    return std::make_pair(walkingPath, drivingPath);
 }
 
 
@@ -235,7 +291,6 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
             waveCurrentNode->crawlEnable = true;
             waveCurrentNode->bestTime = waveCurrentTime; //update Node's best time
             waveCurrentNode->reachingEdge = waveCurrent.edgeID; //update Node's reaching edge
-            
         }  
         
         //check if current node is destination node
@@ -251,9 +306,8 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
             //iterate through edges of current node to add the nodes they're going TO to the wavefront
             std::vector<int>edges = waveCurrentNode->outEdgeIDs;
             std::vector<int>::iterator it;
+            
             for(it = edges.begin(); it != edges.end(); ++it){
-//                std::cout<<"A seg id is:"<<(*it)<<"\n";
-                //make this a helper function?
                 //find "TO" intersection for segment and push node and edge used to get to node to bottom of wavefront
                 InfoStreetSegment segStruct = getInfoStreetSegment(*it);
                 if (segStruct.from == waveCurrentNode->ID){
@@ -269,9 +323,11 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 std::unordered_map<int,Node*>::const_iterator nodeItr =  nodesEncountered.find(outerIntersectID);
                 Node* outerNode;
                 
+                bool newNodeCreated = false;
                 if (nodeItr ==nodesEncountered.end()){ //if node does not exist yet
                     outerNode = new Node(outerIntersectID, *it, waveCurrentTime);//create a new Node
                     nodesEncountered.insert({outerIntersectID, outerNode});
+                    newNodeCreated = true;
 
                 }
                 else{ //if node exists, use the existing node
@@ -289,8 +345,11 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                     //calculate travel time of both adjacent segments, subtract off the 1st segment 
                     //result is the turn_penalty (if applicable) and 2nd street seg travel time               
                     newTravelTime = compute_path_travel_time(adjacentSegments, turn_penalty) - SegmentTravelTime[waveCurrentNode->reachingEdge]; 
-                    newTravelTime += waveCurrentTime;
-                }               
+                    newTravelTime += waveCurrentNode->bestTime; //updated from +=waveCurrentTime
+                }              
+                
+                if(newNodeCreated) //IMPORTANT: Verify that this is necessary
+                    outerNode->bestTime = newTravelTime;
                 
                 //calculate angle from outerNode to destID
                 double outerNodeDirection = getDirectionAngle(outerIntersectID, destID);
@@ -346,19 +405,13 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
 
         middleIntersectID = nextIntersectID;
         
-//        std::cout<<"Forward seg id: "<<forwardSegID<<"\n";        
         path.push_back(forwardSegID); //this segment is part of the path
         segmentHighlight[forwardSegID].driving = true; //part of driving path
         segmentsHighlighted.push_back(forwardSegID); //add this segment to the list of those highlighted
-        
-//        currentNode = nextNode;
-        
+                
         //advance nextNode
         //find intersection-node the segment came to current node from and set it to next node
         InfoStreetSegment segStruct = getInfoStreetSegment(forwardSegID);
-//        std::cout<<"forward street id: "<<segStruct.streetID<<std::endl;
-        //save directions
-//        directionsText = directionsText + getStreetName(segStruct.streetID)+ "\n";
         
         if (segStruct.to == nextIntersectID){
             nextNode = getNodeByID(segStruct.from);
@@ -494,8 +547,331 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
     if (distanceCombined!=0) //special case if the path ends with a redundant street name. Part #1 (remaining distance) needs to be printed
         directionsText += "\nIn " + printDistance(distanceCombined)+", ";
     
-    directionsText = "Directions:\n\n"+directionsText + "You will arrive at your destination. \nEstimated time: " 
+    directionsText = "Driving Directions:\n\n"+directionsText + "You will arrive at your destination. \nEstimated time: " 
             + printTime(bestPathTravelTime/60); //convert bestPathTravelTime from seconds to minutes
+       
+    
+    return path;
+}
+
+bool walkingPathBFS(int startID, int destID, const double turn_penalty,
+        const double walking_speed,const double walking_time_limit){
+
+//    bestPathTravelTime = 0;
+    //Create Node for start Intersection
+    Node* sourceNodePtr = new Node(startID, NO_EDGE, NO_TIME);
+    walkableNodes.insert({startID, sourceNodePtr}); //keep track of new start node and its ID (for deletion)
+    
+    //declare list which will contain queue of nodes to check 
+    std::vector<wave> waveList; //change data structure to heap
+    std::priority_queue<wave, std::vector<wave>, compareWalkingTime> waveQueue; //hold all the weights with the IDs of the waves (to be accesed from vector)
+    int waveIDTracker = 0; //keep track of IDs of waves
+    
+    //get direction from startID to destID -> it is the first ideal direction
+//    double idealDirection = getDirectionAngle(startID, destID);
+    
+     //put source node into wavefront
+    wave sourceWave(sourceNodePtr, NO_EDGE, NO_TIME, 0, waveIDTracker);
+    waveList.push_back(sourceWave);
+    waveQueue.push(sourceWave); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
+    waveIDTracker++; //advance to next ID of wave
+    
+    //variable to be used later to store intersection ID as an int
+    int  outerIntersectID;
+       
+    //while there exists nodes in the queue, check these connected nodes
+    while (!waveQueue.empty()){  
+        
+        /*First, extract wave & node*/
+        //extract wave at top of list
+        wave waveCurrent = waveList[waveQueue.top().waveIDTracker]; //based on the ID with smallest weighting in priority queue, get that wave
+        waveQueue.pop(); //remove top wave, it is being checked
+        
+        /*Extract Node  Characteristics*/
+        Node * waveCurrentNode = waveCurrent.node; 
+        double waveCurrentTime = waveCurrent.travelTime;
+        
+        /*Check Corner Case: Destination can be reached within walking time limit*/
+        //check if current node is destination node
+        if (waveCurrent.node->ID == destID){
+            waveQueue = std::priority_queue<wave, std::vector<wave>, compareWalkingTime >();
+            waveList.clear();
+            return true;
+        }
+                        
+        if (waveCurrentTime == walking_time_limit) //If Walking time limit has been "used up" for this node
+            continue; //skip to next wave, no need to crawl to outer nodes
+            
+        /*Assume that crawling can be performed on wave's Node (Node's travelling Time is < walking_time_limit */
+
+        /*Visit each outernode and evaluate walking time. Then decide whether to create wave and add to queue*/
+        std::vector<int>edges = waveCurrentNode->outEdgeIDs; //extract node's outer edges
+        std::vector<int>::iterator it;
+        for(it = edges.begin(); it != edges.end(); ++it){
+            //find "TO" intersection for segment and push node and edge used to get to node to bottom of wavefront
+            InfoStreetSegment segStruct = getInfoStreetSegment(*it);
+            if (segStruct.from == waveCurrentNode->ID){
+                //check if one-way
+                if (segStruct.oneWay)
+                    continue; //path down this segment is invalid, skip to next segment
+                outerIntersectID = segStruct.to;
+            }
+            else{ //the inner Node = the 'to' of the segment
+                outerIntersectID = segStruct.from;
+            }
+
+            std::unordered_map<int,Node*>::const_iterator nodeItr =  walkableNodes.find(outerIntersectID);
+            Node* outerNode;
+
+            if (nodeItr == walkableNodes.end()){ //if node does not exist yet
+                
+                //compute projected walking time for the node
+                double newTravelTime;
+                
+                if (waveCurrentNode->reachingEdge==-1){//corner case: current node is the start node, so there doesn't exist a reaching edge
+                    newTravelTime = SegmentLengths[*it]/walking_speed; //travel time is only the time of the current segment
+                }
+                
+                else{//if previous segment (reaching edge) exists
+                    std::vector<int> adjacentSegments; //hold street segmnts of the inner node and segment from inner to outer node
+                    adjacentSegments.push_back(waveCurrentNode->reachingEdge); //segment to get to inner node
+                    adjacentSegments.push_back(*it); //segment from inner to outer node
+                    //calculate travel time of both adjacent segments, subtract off the 1st segment 
+                    //result is the turn_penalty (if applicable) and 2nd street seg travel time               
+                    newTravelTime = compute_path_walking_time(adjacentSegments, walking_speed, turn_penalty);
+                    newTravelTime-= SegmentLengths[waveCurrentNode->reachingEdge]/walking_speed;
+                    newTravelTime += waveCurrentTime;
+                }
+                
+                if (newTravelTime > walking_time_limit) //Walking to this Node would take longer than walking_time_limit
+                    continue;
+                
+               /* Node* */outerNode = new Node(outerIntersectID, *it, newTravelTime);//create a new Node
+                walkableNodes.insert({outerIntersectID, outerNode});
+                
+                //create wave + push to queue
+                //push to list   
+                
+                wave outerWave(outerNode, *it, newTravelTime, 0, waveIDTracker);
+                waveList.push_back(outerWave);
+                waveQueue.push(outerWave); 
+                waveIDTracker++; //advance to next ID of wave
+
+            }
+            else{ //if node exists, use the existing node
+                outerNode = nodeItr->second;
+//                int reachingSeg = outerNode->reachingEdge;
+                //compute projected walking time for the node
+                double newTravelTime;
+                
+                if (waveCurrentNode->reachingEdge==-1){//corner case: current node is the start node, so there doesn't exist a reaching edge
+                    newTravelTime = SegmentLengths[*it]/walking_speed; //travel time is only the time of the current segment
+                }
+                
+                else{//if previous segment (reaching edge) exists
+                    std::vector<int> adjacentSegments; //hold street segmnts of the inner node and segment from inner to outer node
+                    adjacentSegments.push_back(waveCurrentNode->reachingEdge); //segment to get to inner node
+                    adjacentSegments.push_back(*it); //segment from inner to outer node
+                    //calculate travel time of both adjacent segments, subtract off the 1st segment 
+                    //result is the turn_penalty (if applicable) and 2nd street seg travel time               
+                    newTravelTime = compute_path_walking_time(adjacentSegments, walking_speed, turn_penalty);
+                    newTravelTime-= SegmentLengths[waveCurrentNode->reachingEdge]/walking_speed;
+                    newTravelTime += waveCurrentNode->bestTime;
+                }
+                
+                if (outerNode->bestTime <= newTravelTime) //this new path to the visited node is not a shorter path (no need to crawl again))
+                    continue;
+                
+                //create wave + push to queue
+                //push to list   
+                
+                wave outerWave(outerNode, *it, newTravelTime, 0, waveIDTracker);
+                waveList.push_back(outerWave);
+                waveQueue.push(outerWave); 
+                waveIDTracker++; //advance to next ID of wave
+            }
+
+            }
+            waveCurrentNode->crawlEnable = false; //crawling complete. Reset enable to false. 
+        }
+    
+    
+    waveQueue = std::priority_queue<wave, std::vector<wave>, compareWalkingTime >();
+    waveList.clear();
+
+    return false; //driving component required
+    
+    
+}
+
+//Creates message for directions of path
+std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID){ //startID is the node from which we start to "Trace back" from
+    std::vector<StreetSegmentIndex> path;
+    //variable to traverse nodes
+//    Node* currentNode = NULL;
+    Node * nextNode = getWalkableNodeByID(pickupIntersectID);
+    //get reaching edge segment from destination Node
+    int forwardSegID = nextNode->reachingEdge;
+
+    //variable to store intersectionID
+    int nextIntersectID = pickupIntersectID;
+    //historic street seg & intersection needed for directions
+    int previousIntersectID = NO_EDGE, middleIntersectID = nextIntersectID;//Set to -1 for non-existent values (since initially looking at first Node)
+    std::string directionInstruction = ""; //a single line of the directions
+
+    //Make instructions more condensed by combining redundant instructions that say "Continue Straight" for the same street
+    int redundantStreetID = -1; //keep track of the redundant street ID
+    bool continuingStraight = false; //flag to keep track if the directions continuously follow straight
+    double distanceCombined = 0; //track the total distance to travel accross all redundant street segments
+    
+    while (forwardSegID != NO_EDGE){
+
+        middleIntersectID = nextIntersectID;
+        
+        path.push_back(forwardSegID); //this segment is part of the path
+        segmentHighlight[forwardSegID].walking = true; //part of driving path
+        segmentsHighlighted.push_back(forwardSegID); //add this segment to the list of those highlighted
+                
+        //advance nextNode
+        //find intersection-node the segment came to current node from and set it to next node
+        InfoStreetSegment segStruct = getInfoStreetSegment(forwardSegID);
+        
+        if (segStruct.to == nextIntersectID){
+            nextNode = getWalkableNodeByID(segStruct.from);
+        }
+        else{
+            nextNode = getWalkableNodeByID(segStruct.to);
+        }
+        
+        nextIntersectID = nextNode->ID; //update intersectionID as the intersection at nextNode
+        
+        //At this point, next, current, and previousIntersectID are all set
+        //There are 4 parts to direction:
+        //1. "In __ km / m"
+        //2. Navigation ("Turn Left/Right" / "Continue Straight" / "Make a U-turn" / "Head [bearing]" )
+        //3. "on"
+        //4. New street name
+        
+        //Order of parts computed: 2, 3, 4, 1
+        directionInstruction = ""; //reset value of directionInstruction (single line in the directions)
+        //part #2:
+        if(previousIntersectID ==NO_EDGE){ //if this is the first street seg of path
+            directionInstruction += "Head ";
+            LatLon midInter = IntersectionCoordinates[middleIntersectID];
+            LatLon nextInter = IntersectionCoordinates[nextIntersectID];
+            
+            std::pair <double, double> xyStart = latLonToCartesian(midInter);
+            std::pair <double, double> xyNext = latLonToCartesian(nextInter); 
+            double angle = getRotationAngle(xyStart, xyNext); //angle returned is in range [-180, 180]
+            
+            if (angle <= 30)
+                directionInstruction += "East ";
+            else if (angle <= 60)
+                directionInstruction += "North East ";
+            else if (angle <= 120)
+                directionInstruction += "North ";
+            else if (angle <= 150)
+                directionInstruction += "North West";
+            else if (angle <= 210)
+                directionInstruction += "West ";
+            else if (angle <= 240)
+                directionInstruction += "South West";
+            else if (angle <= 300)
+                directionInstruction += "South ";
+            else if (angle <= 330)
+                directionInstruction += "South East";
+            else //if (angle <= 180)
+                directionInstruction += "East ";
+            
+        }//end of (if this is the first segment)
+        
+        else{    
+            LatLon prevInter = IntersectionCoordinates[previousIntersectID];
+            LatLon midInter = IntersectionCoordinates[middleIntersectID];
+            LatLon nextInter = IntersectionCoordinates[nextIntersectID];
+            
+            std::pair <double, double> xyPrev = latLonToCartesian(prevInter);
+            std::pair <double, double> xyMid = latLonToCartesian(midInter);
+            std::pair <double, double> xyNext = latLonToCartesian(nextInter); 
+            double angle1 = getRotationAngle(xyPrev, xyMid); //angle of first segment with respect to x, y axis
+            double angle2 = getRotationAngle(xyMid, xyNext); //angle of second segment
+            double angleDiff = angle2 - angle1; //compare the angle the next street with previous street
+            
+            bool flagBroken = false; //helper flag for when the street segment transitions from being redundant to NOT being redundant
+            if (continuingStraight){
+                if (segStruct.streetID==redundantStreetID && angleDiff > -15 && angleDiff <=15){ //if the continuingStraight flag should still be true
+                    distanceCombined += SegmentLengths[forwardSegID]; //increment the total distance that was skipped (redundant)
+                    
+                    //attempt to skip to next iteration of while loop (skip to the next segment)
+                    previousIntersectID = middleIntersectID; //advance prevoiusIntersectID
+                    forwardSegID = nextNode->reachingEdge; 
+                    continue;
+                }
+                else{ //If segment is no longer redundant, continuingStraight flag must be reset
+                    flagBroken = true;
+                    continuingStraight = false;
+                    directionInstruction += "\nIn " + printDistance(distanceCombined)+", ";
+                    distanceCombined = 0; //reset the total distance combined back to 0, for safety (redundancy has been dealt with)
+                }
+            }
+           
+            
+            if (angleDiff > 165){ //next street is angled at > 165 degrres counter-clockwise 
+                directionInstruction += "Make a Sharp Left ";//or U-turn
+            }
+            else if (angleDiff > 15){ //next street is angled between 15 and 165 degrres counter-clockwise (Left turn)
+                directionInstruction += "Turn Left ";//Left turn
+            }
+            else if (angleDiff > -15 && !continuingStraight){ //next street is angled between 15 and -15 degrees (straight "turn")
+                //Two possible cases. Cases determined using flagBroken:
+                //Case 1: We reached a straight segment and consecutively, it is straight for the first time (if flagBroken is FALSE)
+                //Case 2: Special case were street segments remain straight, however the name has been changed (e.g. College St to Carlton St) (if flagBroken is TRUE) 
+                
+                directionInstruction += "Continue Straight ";//required to print in both cases
+                
+                if (!flagBroken){ //in this case, we do NOT want to reset the process of setting the flag for continuingStraight and checking for redundancy. 
+                    directionsText +=directionInstruction;
+                    redundantStreetID = segStruct.streetID;
+                    directionsText += "on " + getStreetName(redundantStreetID);
+                    distanceCombined = SegmentLengths[forwardSegID];
+                    continuingStraight = true;
+                    
+                    //attempt to skip to next iteration of while loop
+                    previousIntersectID = middleIntersectID; //advance prevoiusIntersectID
+                    forwardSegID = nextNode->reachingEdge;  
+                    continue;
+                }
+            }
+            else if (angleDiff > -165){ //Right Turn 
+                directionInstruction += "Turn Right ";//Right turn
+            }
+            else{  //next street is angled < -165 degrres (clockwise) (Sharp right turn or U-turn)
+                directionInstruction += "Make a Sharp Right ";//U-turn or Sharp Right turn
+            }
+        }
+        //part #3:
+        directionInstruction += "on ";
+        
+        //part #4:
+        directionInstruction += getStreetName(segStruct.streetID);
+        
+        //part #1:
+        directionInstruction +="\nIn "+printDistance(SegmentLengths[forwardSegID])+", ";
+        
+        directionsText+=directionInstruction;
+        
+        previousIntersectID = middleIntersectID; //advance prevoiusIntersectID
+
+        //retrieve next segment (segment after nextNode)
+        //invalid read of size 4
+        forwardSegID = nextNode->reachingEdge;        
+    }
+    
+    if (distanceCombined!=0) //special case if the path ends with a redundant street name. Part #1 (remaining distance) needs to be printed
+        directionsText += "\nIn " + printDistance(distanceCombined)+", ";
+    
+    directionsText = "Walking Directions:\n\n"+directionsText + "You will arrive at your destination. \nEstimated walking time: " 
+            + printTime(nextNode->bestTime/60); //convert bestPathTravelTime from seconds to minutes
        
     
     return path;
@@ -507,6 +883,15 @@ Node* getNodeByID(int intersectionID){
     
     //Use global structure to access node
     nodeOfID = nodesEncountered.find(intersectionID) -> second;
+    
+    return nodeOfID;
+}
+
+Node* getWalkableNodeByID(int intersectionID){
+    Node* nodeOfID;
+    
+    //Use global structure to access node
+    nodeOfID = walkableNodes.find(intersectionID) -> second;
     
     return nodeOfID;
 }
