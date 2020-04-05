@@ -132,25 +132,18 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     //to allow "Tracing forwards rather than "Tracing backwards"
     
     pathFound = breadthFirstSearch(intersect_id_end, intersect_id_start, turn_penalty); 
-//                std::cout<<"Yo";
 
     //If path is found, traceback path and store street segments
     if (pathFound){
         path = bfsTraceBack(intersect_id_start); //trace forwards, starting from the starting ID
     }
-    
-//    std::cout<<std::endl;
-//        std::cout<<"Time required: "<<std::to_string(compute_path_travel_time(path, turn_penalty));
-//        std::cout<<"Hi";
-    
+   
     //delete nodes
     for (std::unordered_map<int, Node*>::iterator nodesIt = nodesEncountered.begin(); nodesIt != nodesEncountered.end(); ++nodesIt){
         //deleted nextNode
         delete (*nodesIt).second;
     }
-//    std::cout<<std::flush;    
-//    std::cout<<std::endl;
-//    std::cout<<"Hi";
+
     nodesEncountered.clear();
     //delete wavefront data structures
     return path;        
@@ -328,11 +321,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
             waveCurrentNode->crawlEnable = true;
             waveCurrentNode->bestTime = waveCurrentTime; //update Node's best time
             waveCurrentNode->reachingEdge = waveCurrent.edgeID; //update Node's reaching edge
-//            std::cout<<"Better time found\n";
         }  
-//        else if (waveCurrentTime == waveCurrentNode->bestTime){
-//          std::cout<<"This Node is being travelled for first time\n";  
-//        }
         
         //check if current node is destination node
         if (waveCurrent.node->ID == destID){
@@ -349,8 +338,6 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
             std::vector<int>::iterator it;
             
             for(it = edges.begin(); it != edges.end(); ++it){
-//                std::cout<<"A seg id is:"<<(*it)<<"\n";
-                //make this a helper function?
                 //find "TO" intersection for segment and push node and edge used to get to node to bottom of wavefront
                 InfoStreetSegment segStruct = getInfoStreetSegment(*it);
                 if (segStruct.from == waveCurrentNode->ID){
@@ -448,19 +435,13 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
 
         middleIntersectID = nextIntersectID;
         
-//        std::cout<<"Forward seg id: "<<forwardSegID<<"\n";        
         path.push_back(forwardSegID); //this segment is part of the path
         segmentHighlight[forwardSegID].driving = true; //part of driving path
         segmentsHighlighted.push_back(forwardSegID); //add this segment to the list of those highlighted
-        
-//        currentNode = nextNode;
-        
+                
         //advance nextNode
         //find intersection-node the segment came to current node from and set it to next node
         InfoStreetSegment segStruct = getInfoStreetSegment(forwardSegID);
-//        std::cout<<"forward street id: "<<segStruct.streetID<<std::endl;
-        //save directions
-//        directionsText = directionsText + getStreetName(segStruct.streetID)+ "\n";
         
         if (segStruct.to == nextIntersectID){
             nextNode = getNodeByID(segStruct.from);
@@ -767,7 +748,7 @@ std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID){ //start
     //historic street seg & intersection needed for directions
     int previousIntersectID = NO_EDGE, middleIntersectID = nextIntersectID;//Set to -1 for non-existent values (since initially looking at first Node)
     std::string directionInstruction = ""; //a single line of the directions
-    
+
     //Make instructions more condensed by combining redundant instructions that say "Continue Straight" for the same street
     int redundantStreetID = -1; //keep track of the redundant street ID
     bool continuingStraight = false; //flag to keep track if the directions continuously follow straight
@@ -777,25 +758,19 @@ std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID){ //start
 
         middleIntersectID = nextIntersectID;
         
-//        std::cout<<"Forward seg id: "<<forwardSegID<<"\n";        
         path.push_back(forwardSegID); //this segment is part of the path
         segmentHighlight[forwardSegID].driving = true; //part of driving path
         segmentsHighlighted.push_back(forwardSegID); //add this segment to the list of those highlighted
-        
-//        currentNode = nextNode;
-        
+                
         //advance nextNode
         //find intersection-node the segment came to current node from and set it to next node
         InfoStreetSegment segStruct = getInfoStreetSegment(forwardSegID);
-//        std::cout<<"forward street id: "<<segStruct.streetID<<std::endl;
-        //save directions
-//        directionsText = directionsText + getStreetName(segStruct.streetID)+ "\n";
         
         if (segStruct.to == nextIntersectID){
-            nextNode = getNodeByID(segStruct.from);
+            nextNode = getWalkableNodeByID(segStruct.from);
         }
         else{
-            nextNode = getNodeByID(segStruct.to);
+            nextNode = getWalkableNodeByID(segStruct.to);
         }
         
         nextIntersectID = nextNode->ID; //update intersectionID as the intersection at nextNode
@@ -925,8 +900,8 @@ std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID){ //start
     if (distanceCombined!=0) //special case if the path ends with a redundant street name. Part #1 (remaining distance) needs to be printed
         directionsText += "\nIn " + printDistance(distanceCombined)+", ";
     
-    directionsText = "Walking Directions:\n\n"+directionsText + "You will arrive at your destination. \nEstimated time: " 
-            + printTime(bestPathTravelTime/60); //convert bestPathTravelTime from seconds to minutes
+    directionsText = "Walking Directions:\n\n"+directionsText + "You will arrive at your destination. \nEstimated walking time: " 
+            + printTime(nextNode->bestTime/60); //convert bestPathTravelTime from seconds to minutes
        
     
     return path;
