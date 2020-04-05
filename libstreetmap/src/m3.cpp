@@ -759,7 +759,7 @@ std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID){ //start
         middleIntersectID = nextIntersectID;
         
         path.push_back(forwardSegID); //this segment is part of the path
-        segmentHighlight[forwardSegID].driving = true; //part of driving path
+        segmentHighlight[forwardSegID].walking = true; //part of driving path
         segmentsHighlighted.push_back(forwardSegID); //add this segment to the list of those highlighted
                 
         //advance nextNode
