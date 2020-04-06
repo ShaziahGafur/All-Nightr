@@ -21,13 +21,15 @@ struct wave{
     int edgeID;
     double travelTime;
     double directionDif;
+    //double distancePercentage;
+    double hN;
     int waveIDTracker;
-    wave (Node* n, int id, double time, double degreeDif, int IDTracker) {node = n; edgeID = id; travelTime = time; directionDif = degreeDif; waveIDTracker = IDTracker;}
+    wave (Node* n, int id, double time, double dirDif, double heuristic, int IDTracker) {node = n; edgeID = id; travelTime = time; directionDif = dirDif; waveIDTracker = IDTracker; hN = heuristic;}
 };
 
-struct compareDirection{
+struct compareHeuristicFunction{
     bool operator()(wave const& p1, wave const& p2){
-        return (p1.directionDif > p2.directionDif);
+        return (p1.hN > p2.hN);
     }
 };
 
@@ -39,7 +41,8 @@ struct compareWalkingTime{
 
 #define NO_EDGE -1  //no edge id
 #define NO_TIME 0  //zero time
-#define PERFECT_DIRECTION 0  //zero time
+#define PERFECT_HEURISTIC 0  //perfect heuristic returns 0
+#define NO_DIRECTION_DIFFERENCE 0   
 
 #endif /* WAVE_H */
 

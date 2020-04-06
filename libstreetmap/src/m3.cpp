@@ -262,14 +262,21 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
     
     //declare list which will contain queue of nodes to check 
     std::vector<wave> waveList;
-    std::priority_queue<wave, std::vector<wave>, compareDirection> waveQueue; //hold all the weights with the IDs of the waves (to be accesed from vector)
+    std::priority_queue<wave, std::vector<wave>, compareHeuristicFunction> waveQueue; //hold all the weights with the IDs of the waves (to be accesed from vector)
     int waveIDTracker = 0; //keep track of IDs of waves
     
     //get direction from startID to destID -> it is the first ideal direction
     double idealDirection = getDirectionAngle(startID, destID);
     
+    //variable to be used later to store destination node's latlon coordinates
+    LatLon destLatLon= getIntersectionPosition(destID);
+    //calculate distance from source node to dest node for future calculations
+    LatLon sourceLatLon = getIntersectionPosition(startID);
+    std::pair<LatLon, LatLon> startToDestLatLon (sourceLatLon, destLatLon);
+    double distanceFromSourceToEnd = find_distance_between_two_points(startToDestLatLon);
+    
      //put source node into wavefront
-    wave sourceWave(sourceNodePtr, NO_EDGE, NO_TIME, idealDirection, waveIDTracker);
+    wave sourceWave(sourceNodePtr, NO_EDGE, NO_TIME, NO_DIRECTION_DIFFERENCE, PERFECT_HEURISTIC, waveIDTracker);
     waveList.push_back(sourceWave);
     waveQueue.push(sourceWave); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
     waveIDTracker++; //advance to next ID of wave
@@ -297,7 +304,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
         //check if current node is destination node
         if (waveCurrent.node->ID == destID){
             bestPathTravelTime = waveCurrentTime; //set the time for the best path
-            waveQueue = std::priority_queue<wave, std::vector<wave>, compareDirection >();
+            waveQueue = std::priority_queue<wave, std::vector<wave>, compareHeuristicFunction >();
             waveList.clear();
             return true;
         }
@@ -357,7 +364,6 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 //idealDirection is from the innerNode's direction to destID
                 double directionDif =  (idealDirection - outerNodeDirection);
                 //check for values of directionDif
-                std::cout << directionDif << std::endl;
                 if (directionDif <= -M_PI){
                     directionDif = directionDif + 2*M_PI;
                 }
@@ -365,7 +371,14 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                     directionDif = directionDif - 2*M_PI;
                 }
                 
-                wave currentWave(outerNode, *it, newTravelTime, directionDif, waveIDTracker);
+                //find distance from outerNode to destinatino node to decide order of priority queue
+                LatLon outerNodeLatLon = getIntersectionPosition(outerNode->ID);
+                std::pair <LatLon, LatLon> nodeToEnd (outerNodeLatLon, destLatLon);
+                double distanceFromNodeToEnd = find_distance_between_two_points(nodeToEnd);
+                //calculate percentage of distance from node to end to distance from source to end
+                double heuristic = directionDif / 2*M_PI + distanceFromNodeToEnd/distanceFromSourceToEnd;;
+                
+                wave currentWave(outerNode, *it, newTravelTime, heuristic, directionDif, waveIDTracker);
                 waveList.push_back(currentWave); //create new wavefront elemenet and add to queue
                 waveQueue.push(currentWave); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
                 waveIDTracker++; //advance to next ID of wave
@@ -375,7 +388,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
         }
     }
     
-    waveQueue = std::priority_queue<wave, std::vector<wave>, compareDirection >();
+    waveQueue = std::priority_queue<wave, std::vector<wave>, compareHeuristicFunction>();
     waveList.clear();
     //if no path is found
     directionsText = "No path found";
@@ -573,7 +586,7 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
 //    double idealDirection = getDirectionAngle(startID, destID);
     
      //put source node into wavefront
-    wave sourceWave(sourceNodePtr, NO_EDGE, NO_TIME, 0, waveIDTracker);
+    wave sourceWave(sourceNodePtr, NO_EDGE, NO_TIME, NO_DIRECTION_DIFFERENCE, PERFECT_HEURISTIC, waveIDTracker);
     waveList.push_back(sourceWave);
     waveQueue.push(sourceWave); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
     waveIDTracker++; //advance to next ID of wave
@@ -654,7 +667,7 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
                 //create wave + push to queue
                 //push to list   
                 
-                wave outerWave(outerNode, *it, newTravelTime, 0, waveIDTracker);
+                wave outerWave(outerNode, *it, newTravelTime, 0, waveIDTracker, 0);
                 waveList.push_back(outerWave);
                 waveQueue.push(outerWave); 
                 waveIDTracker++; //advance to next ID of wave
@@ -687,7 +700,7 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
                 //create wave + push to queue
                 //push to list   
                 
-                wave outerWave(outerNode, *it, newTravelTime, 0, waveIDTracker);
+                wave outerWave(outerNode, *it, newTravelTime, 0, waveIDTracker, 0);
                 waveList.push_back(outerWave);
                 waveQueue.push(outerWave); 
                 waveIDTracker++; //advance to next ID of wave
