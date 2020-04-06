@@ -671,7 +671,7 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
                 //create wave + push to queue
                 //push to list   
                 
-                wave outerWave(outerNode, *it, newTravelTime, 0, waveIDTracker, 0);
+                wave outerWave(outerNode, *it, newTravelTime, 0, 0, waveIDTracker);
                 waveList.push_back(outerWave);
                 waveQueue.push(outerWave); 
                 waveIDTracker++; //advance to next ID of wave
@@ -704,15 +704,15 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
                 //create wave + push to queue
                 //push to list   
                 
-                wave outerWave(outerNode, *it, newTravelTime, 0, waveIDTracker, 0);
+                wave outerWave(outerNode, *it, newTravelTime, 0, 0, waveIDTracker);
                 waveList.push_back(outerWave);
                 waveQueue.push(outerWave); 
                 waveIDTracker++; //advance to next ID of wave
             }
 
-            }
-            waveCurrentNode->crawlEnable = false; //crawling complete. Reset enable to false. 
         }
+            waveCurrentNode->crawlEnable = false; //crawling complete. Reset enable to false. 
+    }
     
     
     waveQueue = std::priority_queue<wave, std::vector<wave>, compareWalkingTime >();
