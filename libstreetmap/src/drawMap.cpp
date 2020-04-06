@@ -1656,6 +1656,7 @@ std::vector< std::vector<int> >  get_intersection_and_suggestions(std::vector<in
 
 //button returns to base mode, depending on which mode is active at the moment
 void done_button(GtkWidget* widget, ezgl::application *application){
+    walkingDirectionsText = "";
     directionsText = ""; //reset text for directions to be empty
 
     if( (CurrentMode == directions) || (CurrentMode == directions_click_select_destination) || (CurrentMode == directions_click_select_start) || (CurrentMode == directions_uber)){        
@@ -1792,6 +1793,7 @@ void show_direction_entries(ezgl::application *application){
 
 void go_button(GtkWidget* widget, ezgl::application *application){
     directionsText = ""; //reset text for directions to be empty
+    walkingDirectionsText = "";
     
     //clear the directions variable
 //    directionsText.clear();
@@ -1912,7 +1914,8 @@ void go_button(GtkWidget* widget, ezgl::application *application){
                 Walking_speed = std::stoi(walking_speed_input);
                 Time_limit = std::stoi(time_limit_input);
                 std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> uber_path = find_path_with_walk_to_pick_up(startID, destID, default_turn_penalty, Walking_speed, Time_limit);
-                gtk_text_buffer_set_text(buffer, directionsText.c_str(), -1); 
+                std::string fullText = walkingDirectionsText + "\n\n"+ directionsText;
+                gtk_text_buffer_set_text(buffer, fullText.c_str(), -1); 
         }
     }
     
