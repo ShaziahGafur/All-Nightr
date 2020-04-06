@@ -11,6 +11,7 @@
 #include "globals.h"
 //#include "drawMap.cpp"
 #include "drawMap.h"
+#include <math.h>
 
 #define TAN_35 0.700  //used for determining direction
 #define TAN_55 1.428  
@@ -356,11 +357,12 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 //idealDirection is from the innerNode's direction to destID
                 double directionDif =  (idealDirection - outerNodeDirection);
                 //check for values of directionDif
-                if (directionDif <= 180){
-                    directionDif = directionDif + 360;
+                std::cout << directionDif << std::endl;
+                if (directionDif <= -M_PI){
+                    directionDif = directionDif + 2*M_PI;
                 }
-                else if (directionDif > 180){
-                    directionDif = directionDif - 360;
+                else if (directionDif > M_PI){
+                    directionDif = directionDif - 2*M_PI;
                 }
                 
                 wave currentWave(outerNode, *it, newTravelTime, directionDif, waveIDTracker);
