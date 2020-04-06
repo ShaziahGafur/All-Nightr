@@ -68,6 +68,10 @@ int main(int argc, char** argv) {
     //Quick test for find path:
     
 //    find_path_between_intersections(108, 115, 5);
+//    std::cout<<getIntersectionName(100)+"\t To:"+getIntersectionName(150)+"\n";
+//    find_path_with_walk_to_pick_up(100, 150, 1, 2, 1200);
+                                                                             
+    
 
     std::cout << "Closing map\n";
     close_map(); 

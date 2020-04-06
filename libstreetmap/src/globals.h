@@ -84,7 +84,8 @@ extern std::vector<LatLon> IntersectionCoordinates;
 extern std::vector<segmentStruct> segmentHighlight;
 
 //5. Directions & M3-related
-extern std::string directionsText;
+extern std::string directionsText; //for driving only
+extern std::string walkingDirectionsText; //for walking
 
 extern std::list<int> segmentsHighlighted; //for keeping track of which segment
 

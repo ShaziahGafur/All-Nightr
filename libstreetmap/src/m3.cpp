@@ -31,6 +31,7 @@ double bestPathTravelTime;
 std::vector<double> heuristicDistanceVector;
 
 std::string directionsText;
+std::string walkingDirectionsText;
 
 // Returns the time required to travel along the path specified, in seconds.
 // The path is given as a vector of street segment ids, and this function can
@@ -584,12 +585,8 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
     std::priority_queue<wave, std::vector<wave>, compareWalkingTime> waveQueue; //hold all the weights with the IDs of the waves (to be accesed from vector)
     int waveIDTracker = 0; //keep track of IDs of waves
     
-    //get direction from startID to destID -> it is the first ideal direction
-    //double idealDirection = getDirectionAngle(startID, destID);
-    
-    //put source node into wavefront
-    wave sourceWave(sourceNodePtr, NO_EDGE, NO_TIME, 0, 0, waveIDTracker);
-    
+     //put source node into wavefront
+    wave sourceWave(sourceNodePtr, NO_EDGE, NO_TIME, NO_DIRECTION_DIFFERENCE, PERFECT_HEURISTIC, waveIDTracker);
     waveList.push_back(sourceWave);
     waveQueue.push(sourceWave); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
     waveIDTracker++; //advance to next ID of wave
@@ -643,7 +640,7 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
 
             if (nodeItr == walkableNodes.end()){ //if node does not exist yet
                 
-                //compute projected walking time for the node
+                //compute projected walking time for the node. Check if this node's travel time is within the limit
                 double newTravelTime;
                 
                 if (waveCurrentNode->reachingEdge == NO_EDGE){//corner case: current node is the start node, so there doesn't exist a reaching edge
@@ -721,176 +718,165 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
     return false; //driving component required
 }
 
-//Creates message for directions of path
-std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID){ //startID is the node from which we start to "Trace back" from
+/*
+ * Developes Walking path and Creates message for directions
+ * pickupIntersectID: the intersection we start tracing back from towards the startID  
+ * Strategy: trace back from pickupIntersectID using the same traceback logic discussed in class. 
+ * Print directions in reverse order as you are tracing each segment
+ * */
+std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID){ 
     std::vector<StreetSegmentIndex> path;
-    //variable to traverse nodes
-//    Node* currentNode = NULL;
-    Node * nextNode = getWalkableNodeByID(pickupIntersectID);
-    //get reaching edge segment from destination Node
-    int forwardSegID = nextNode->reachingEdge;
+    Node * prevNode;
+    prevNode = getWalkableNodeByID(pickupIntersectID); //prevNode points to node at pickup Intersection
+    int forwardSegID = prevNode->reachingEdge; //get the segment that leads to the pickup spot. 
+    //This will be the segment between middleIntersectionID and nextIntersectionID
 
-    //variable to store intersectionID
-    int nextIntersectID = pickupIntersectID;
-    //historic street seg & intersection needed for directions
-    int previousIntersectID = NO_EDGE, middleIntersectID = nextIntersectID;//Set to -1 for non-existent values (since initially looking at first Node)
-    std::string directionInstruction = ""; //a single line of the directions
+    int nextIntersectID = pickupIntersectID;    //variable to store intersection closest to pickup 
+    int previousIntersectID, middleIntersectID; //previousIntersectID stores intersection closest to the starting point (furthest from pickup)
+    //middleIntersectID stores intersection between previous and next
+    std::string directionInstruction = ""; //a single line of the directions text (e.g. Continue Straight on Bay street)
 
-    //Make instructions more condensed by combining redundant instructions that say "Continue Straight" for the same street
-    int redundantStreetID = -1; //keep track of the redundant street ID
-    bool continuingStraight = false; //flag to keep track if the directions continuously follow straight
-    double distanceCombined = 0; //track the total distance to travel accross all redundant street segments
+    //attempt to get the node at the other end of forwardSegID. Set this node to prevNode, which is used to set middleIntersectID
+    InfoStreetSegment segStruct = getInfoStreetSegment(forwardSegID);
+
+    if (segStruct.to == nextIntersectID){
+        prevNode = getWalkableNodeByID(segStruct.from);
+    }
+    else{
+        prevNode = getWalkableNodeByID(segStruct.to);
+    }
+
+    middleIntersectID = prevNode->ID; //set middleIntersectID to the intersection at the other end of forwardSegID
     
-    while (forwardSegID != NO_EDGE){
-
-        middleIntersectID = nextIntersectID;
+    //while we are dealing with a segment that is not the first segment
+    while (prevNode->reachingEdge != NO_EDGE){
         
-        path.push_back(forwardSegID); //this segment is part of the path
-        segmentHighlight[forwardSegID].walking = true; //part of driving path
+       forwardSegID = getWalkableNodeByID(nextIntersectID)->reachingEdge;  //focus on the segment between next and mid intersections       
+       int prevSegID = prevNode->reachingEdge; // a "dummy" variable representing the edge between prev and mid intersections
+               
+        path.push_back(forwardSegID); //add this segment to the path
+        segmentHighlight[forwardSegID].walking = true; //part of walking path
         segmentsHighlighted.push_back(forwardSegID); //add this segment to the list of those highlighted
                 
-        //advance nextNode
-        //find intersection-node the segment came to current node from and set it to next node
-        InfoStreetSegment segStruct = getInfoStreetSegment(forwardSegID);
+        //attempt to advance prevNode
+        segStruct = getInfoStreetSegment(prevSegID);
         
-        if (segStruct.to == nextIntersectID){
-            nextNode = getWalkableNodeByID(segStruct.from);
+        if (segStruct.to == middleIntersectID){
+            prevNode = getWalkableNodeByID(segStruct.from);
         }
         else{
-            nextNode = getWalkableNodeByID(segStruct.to);
+            prevNode = getWalkableNodeByID(segStruct.to);
         }
+        //prevNode is now at correct location. Set the previous Intersection value
+        previousIntersectID = prevNode->ID; 
         
-        nextIntersectID = nextNode->ID; //update intersectionID as the intersection at nextNode
-        
-        //At this point, next, current, and previousIntersectID are all set
+        //At this point, next, mid, and previous intersections are all set
         //There are 4 parts to direction:
         //1. "In __ km / m"
         //2. Navigation ("Turn Left/Right" / "Continue Straight" / "Make a U-turn" / "Head [bearing]" )
         //3. "on"
-        //4. New street name
+        //4. New street name (e.g. "College Street")
         
         //Order of parts computed: 2, 3, 4, 1
         directionInstruction = ""; //reset value of directionInstruction (single line in the directions)
-        //part #2:
-        if(previousIntersectID ==NO_EDGE){ //if this is the first street seg of path
-            directionInstruction += "Head ";
-            LatLon midInter = IntersectionCoordinates[middleIntersectID];
-            LatLon nextInter = IntersectionCoordinates[nextIntersectID];
-            
-            std::pair <double, double> xyStart = latLonToCartesian(midInter);
-            std::pair <double, double> xyNext = latLonToCartesian(nextInter); 
-            double angle = getRotationAngle(xyStart, xyNext); //angle returned is in range [-180, 180]
-            
-            if (angle <= 30)
-                directionInstruction += "East ";
-            else if (angle <= 60)
-                directionInstruction += "North East ";
-            else if (angle <= 120)
-                directionInstruction += "North ";
-            else if (angle <= 150)
-                directionInstruction += "North West";
-            else if (angle <= 210)
-                directionInstruction += "West ";
-            else if (angle <= 240)
-                directionInstruction += "South West";
-            else if (angle <= 300)
-                directionInstruction += "South ";
-            else if (angle <= 330)
-                directionInstruction += "South East";
-            else //if (angle <= 180)
-                directionInstruction += "East ";
-            
-        }//end of (if this is the first segment)
         
-        else{    
-            LatLon prevInter = IntersectionCoordinates[previousIntersectID];
-            LatLon midInter = IntersectionCoordinates[middleIntersectID];
-            LatLon nextInter = IntersectionCoordinates[nextIntersectID];
-            
-            std::pair <double, double> xyPrev = latLonToCartesian(prevInter);
-            std::pair <double, double> xyMid = latLonToCartesian(midInter);
-            std::pair <double, double> xyNext = latLonToCartesian(nextInter); 
-            double angle1 = getRotationAngle(xyPrev, xyMid); //angle of first segment with respect to x, y axis
-            double angle2 = getRotationAngle(xyMid, xyNext); //angle of second segment
-            double angleDiff = angle2 - angle1; //compare the angle the next street with previous street
-            
-            bool flagBroken = false; //helper flag for when the street segment transitions from being redundant to NOT being redundant
-            if (continuingStraight){
-                if (segStruct.streetID==redundantStreetID && angleDiff > -15 && angleDiff <=15){ //if the continuingStraight flag should still be true
-                    distanceCombined += SegmentLengths[forwardSegID]; //increment the total distance that was skipped (redundant)
-                    
-                    //attempt to skip to next iteration of while loop (skip to the next segment)
-                    previousIntersectID = middleIntersectID; //advance prevoiusIntersectID
-                    forwardSegID = nextNode->reachingEdge; 
-                    continue;
-                }
-                else{ //If segment is no longer redundant, continuingStraight flag must be reset
-                    flagBroken = true;
-                    continuingStraight = false;
-                    directionInstruction += "\nIn " + printDistance(distanceCombined)+", ";
-                    distanceCombined = 0; //reset the total distance combined back to 0, for safety (redundancy has been dealt with)
-                }
-            }
-           
-            
-            if (angleDiff > 165){ //next street is angled at > 165 degrres counter-clockwise 
-                directionInstruction += "Make a Sharp Left ";//or U-turn
-            }
-            else if (angleDiff > 15){ //next street is angled between 15 and 165 degrres counter-clockwise (Left turn)
-                directionInstruction += "Turn Left ";//Left turn
-            }
-            else if (angleDiff > -15 && !continuingStraight){ //next street is angled between 15 and -15 degrees (straight "turn")
-                //Two possible cases. Cases determined using flagBroken:
-                //Case 1: We reached a straight segment and consecutively, it is straight for the first time (if flagBroken is FALSE)
-                //Case 2: Special case were street segments remain straight, however the name has been changed (e.g. College St to Carlton St) (if flagBroken is TRUE) 
-                
-                directionInstruction += "Continue Straight ";//required to print in both cases
-                
-                if (!flagBroken){ //in this case, we do NOT want to reset the process of setting the flag for continuingStraight and checking for redundancy. 
-                    directionsText +=directionInstruction;
-                    redundantStreetID = segStruct.streetID;
-                    directionsText += "on " + getStreetName(redundantStreetID);
-                    distanceCombined = SegmentLengths[forwardSegID];
-                    continuingStraight = true;
-                    
-                    //attempt to skip to next iteration of while loop
-                    previousIntersectID = middleIntersectID; //advance prevoiusIntersectID
-                    forwardSegID = nextNode->reachingEdge;  
-                    continue;
-                }
-            }
-            else if (angleDiff > -165){ //Right Turn 
-                directionInstruction += "Turn Right ";//Right turn
-            }
-            else{  //next street is angled < -165 degrres (clockwise) (Sharp right turn or U-turn)
-                directionInstruction += "Make a Sharp Right ";//U-turn or Sharp Right turn
-            }
+        //part #2:   
+        LatLon prevInter = IntersectionCoordinates[previousIntersectID];
+        LatLon midInter = IntersectionCoordinates[middleIntersectID];
+        LatLon nextInter = IntersectionCoordinates[nextIntersectID];
+
+        std::pair <double, double> xyPrev = latLonToCartesian(prevInter);
+        std::pair <double, double> xyMid = latLonToCartesian(midInter);
+        std::pair <double, double> xyNext = latLonToCartesian(nextInter); 
+        double angle1 = getRotationAngle(xyPrev, xyMid); //angle of first segment with respect to x, y axis
+        double angle2 = getRotationAngle(xyMid, xyNext); //angle of second segment
+        double angleDiff = angle2 - angle1; //compare the angle the next street with previous street
+
+        if (angleDiff > 165){ //next street is angled at > 165 degrres counter-clockwise 
+            directionInstruction += "Make a Sharp Left ";//or U-turn
         }
+        else if (angleDiff > 15){ //next street is angled between 15 and 165 degrres counter-clockwise (Left turn)
+            directionInstruction += "Turn Left ";//Left turn
+        }
+        else if (angleDiff > -15){ //next street is angled between 15 and -15 degrees (straight "turn")
+            directionInstruction += "Continue Straight ";
+        }
+        else if (angleDiff > -165){ //Right Turn 
+            directionInstruction += "Turn Right ";//Right turn
+        }
+        else{  //next street is angled < -165 degrres (clockwise) (Sharp right turn or U-turn)
+            directionInstruction += "Make a Sharp Right ";//U-turn or Sharp Right turn
+        }
+            
         //part #3:
         directionInstruction += "on ";
         
         //part #4:
-        directionInstruction += getStreetName(segStruct.streetID);
+        directionInstruction += getStreetName(getInfoStreetSegment(forwardSegID).streetID);
         
         //part #1:
         directionInstruction +="\nIn "+printDistance(SegmentLengths[forwardSegID])+", ";
         
-        directionsText+=directionInstruction;
-        
-        previousIntersectID = middleIntersectID; //advance prevoiusIntersectID
+        directionsText= directionInstruction + directionsText; //insert instruction in the beginning of the text
 
-        //retrieve next segment (segment after nextNode)
-        //invalid read of size 4
-        forwardSegID = nextNode->reachingEdge;        
-    }
+        nextIntersectID = middleIntersectID;     //advance intersections   
+        middleIntersectID = previousIntersectID; 
+        
+    } //End of while loop for all segments other than the starting street segment
     
-    if (distanceCombined!=0) //special case if the path ends with a redundant street name. Part #1 (remaining distance) needs to be printed
-        directionsText += "\nIn " + printDistance(distanceCombined)+", ";
+    //Now deal with the starting street segment
+    forwardSegID = getWalkableNodeByID(nextIntersectID)->reachingEdge; 
+    path.push_back(forwardSegID);  //Add the starting segment to the path
+    segmentHighlight[forwardSegID].walking = true; //part of driving path
+    segmentsHighlighted.push_back(forwardSegID);
+    
+    //create the first instruction. E.g. "Head South on Yonge Street"
+    //part 2
+
+
+    directionInstruction = "Head ";
+    LatLon midInter = IntersectionCoordinates[middleIntersectID];
+    LatLon nextInter = IntersectionCoordinates[nextIntersectID];
+
+    std::pair <double, double> xyStart = latLonToCartesian(midInter);
+    std::pair <double, double> xyNext = latLonToCartesian(nextInter); 
+    double angle = getRotationAngle(xyStart, xyNext); //angle returned is in range [-180, 180]
+
+    if (angle <= 30)
+        directionInstruction += "East ";
+    else if (angle <= 60)
+        directionInstruction += "North East ";
+    else if (angle <= 120)
+        directionInstruction += "North ";
+    else if (angle <= 150)
+        directionInstruction += "North West";
+    else if (angle <= 210)
+        directionInstruction += "West ";
+    else if (angle <= 240)
+        directionInstruction += "South West";
+    else if (angle <= 300)
+        directionInstruction += "South ";
+    else if (angle <= 330)
+        directionInstruction += "South East";
+    else //if (angle <= 180)
+        directionInstruction += "East ";
+
+     segStruct = getInfoStreetSegment(forwardSegID);
+
+    //part #3:
+    directionInstruction += "on ";
+
+    //part #4:
+    directionInstruction += getStreetName(segStruct.streetID);
+
+    //part #1:
+    directionInstruction +="\nIn "+printDistance(SegmentLengths[forwardSegID])+", ";
+
+    directionsText= directionInstruction + directionsText; //insert instruction in the beginning of the text
     
     directionsText = "Walking Directions:\n\n"+directionsText + "You will arrive at your destination. \nEstimated walking time: " 
-            + printTime(nextNode->bestTime/60); //convert bestPathTravelTime from seconds to minutes
+            + printTime((getWalkableNodeByID(pickupIntersectID)->bestTime)/60); //convert bestPathTravelTime from seconds to minutes
        
-    
     return path;
 }
 
