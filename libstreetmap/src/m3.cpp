@@ -26,6 +26,8 @@ std::unordered_map<int, Node*> nodesEncountered;
 std::unordered_map<int, Node*> walkableNodes;
 double bestPathTravelTime;
 //int prevSegID = 0;
+//key: [intersectionId] value: [distance to destination intersectio]
+std::vector<double> heuristicDistanceVector;
 
 std::string directionsText;
 
@@ -264,7 +266,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
     std::priority_queue<wave, std::vector<wave>, compareDirection> waveQueue; //hold all the weights with the IDs of the waves (to be accesed from vector)
     int waveIDTracker = 0; //keep track of IDs of waves
     
-    //get direction from startID to destID -> it is the first ideal direction
+    //get direction from startID to destID -> it is the FIRST ideal direction
     double idealDirection = getDirectionAngle(startID, destID);
     
      //put source node into wavefront
@@ -950,7 +952,7 @@ std::string printTime(double time){
 
 //returns direction angles in radians
 double getDirectionAngle(int from, int to){
-    int degree;
+    double radians;
     
     LatLon fromLL = IntersectionCoordinates[from];
     LatLon toLL = IntersectionCoordinates[to];
@@ -958,6 +960,19 @@ double getDirectionAngle(int from, int to){
     std::pair < double, double > fromCart = latLonToCartesian (fromLL);
     std::pair < double, double > toCart = latLonToCartesian (toLL);
     
-    degree = atan2(fromCart.second - toCart.second, fromCart.first - toCart.first);
-    return degree;
+    radians = atan2(fromCart.second - toCart.second, fromCart.first - toCart.first);
+    return radians;
+}
+
+double populateHeuristicVector(int destId){
+
+    LatLon destId_latlon = IntersectionCoordinates[destId];
+    for(std::vector<LatLon>::iterator it = IntersectionCoordinates.begin(); it != IntersectionCoordinates.end(); it++){
+        
+        std::pair<LatLon, LatLon>destId_nodeId_LatLon{destId_latlon, (*it)};
+
+        for(std::vector<LatLon>::iterator it = IntersectionCoordinates.begin(); it != IntersectionCoordinates.end(); it++)
+            //compare against straight distance to destination
+            heuristicDistanceVector.push_back(find_distance_between_two_points(destId_nodeId_LatLon));
+    }
 }
