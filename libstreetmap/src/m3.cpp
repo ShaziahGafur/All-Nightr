@@ -359,7 +359,6 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 //idealDirection is from the innerNode's direction to destID
                 double directionDif =  (idealDirection - outerNodeDirection);
                 //check for values of directionDif
-                std::cout << directionDif << std::endl;
                 if (directionDif <= -M_PI){
                     directionDif = directionDif + 2*M_PI;
                 }
@@ -572,9 +571,9 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
     int waveIDTracker = 0; //keep track of IDs of waves
     
     //get direction from startID to destID -> it is the first ideal direction
-//    double idealDirection = getDirectionAngle(startID, destID);
+    //double idealDirection = getDirectionAngle(startID, destID);
     
-     //put source node into wavefront
+    //put source node into wavefront
     wave sourceWave(sourceNodePtr, NO_EDGE, NO_TIME, 0, waveIDTracker);
     waveList.push_back(sourceWave);
     waveQueue.push(sourceWave); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
@@ -591,7 +590,7 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
         wave waveCurrent = waveList[waveQueue.top().waveIDTracker]; //based on the ID with smallest weighting in priority queue, get that wave
         waveQueue.pop(); //remove top wave, it is being checked
         
-        /*Extract Node  Characteristics*/
+        //extract Node  Characteristics
         Node * waveCurrentNode = waveCurrent.node; 
         double waveCurrentTime = waveCurrent.travelTime;
         
@@ -603,7 +602,7 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
             return true;
         }
                         
-        if (waveCurrentTime == walking_time_limit) //If Walking time limit has been "used up" for this node
+        if (waveCurrentTime >= walking_time_limit) //If walking time limit has been "used up" for this node
             continue; //skip to next wave, no need to crawl to outer nodes
             
         /*Assume that crawling can be performed on wave's Node (Node's travelling Time is < walking_time_limit */
@@ -632,13 +631,13 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
                 //compute projected walking time for the node
                 double newTravelTime;
                 
-                if (waveCurrentNode->reachingEdge==-1){//corner case: current node is the start node, so there doesn't exist a reaching edge
+                if (waveCurrentNode->reachingEdge == NO_EDGE){//corner case: current node is the start node, so there doesn't exist a reaching edge
                     newTravelTime = SegmentLengths[*it]/walking_speed; //travel time is only the time of the current segment
                 }
                 
                 else{//if previous segment (reaching edge) exists
-                    std::vector<int> adjacentSegments; //hold street segmnts of the inner node and segment from inner to outer node
-                    adjacentSegments.push_back(waveCurrentNode->reachingEdge); //segment to get to inner node
+                    std::vector<int> adjacentSegments; //hold street segment nodes leading to source node as well as the connecting segment to the outer node
+                    adjacentSegments.push_back(waveCurrentNode->reachingEdge); //reaching edge of source node
                     adjacentSegments.push_back(*it); //segment from inner to outer node
                     //calculate travel time of both adjacent segments, subtract off the 1st segment 
                     //result is the turn_penalty (if applicable) and 2nd street seg travel time               
@@ -650,7 +649,8 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
                 if (newTravelTime > walking_time_limit) //Walking to this Node would take longer than walking_time_limit
                     continue;
                 
-               /* Node* */outerNode = new Node(outerIntersectID, *it, newTravelTime);//create a new Node
+                //otherwise, create a new node to add to wave
+                outerNode = new Node(outerIntersectID, *it, newTravelTime);//create a new Node
                 walkableNodes.insert({outerIntersectID, outerNode});
                 
                 //create wave + push to queue
@@ -704,8 +704,6 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
     waveList.clear();
 
     return false; //driving component required
-    
-    
 }
 
 //Creates message for directions of path
@@ -966,15 +964,11 @@ double getDirectionAngle(int from, int to){
     return radians;
 }
 
-double populateHeuristicVector(int destId){
-
-    LatLon destId_latlon = IntersectionCoordinates[destId];
-    for(std::vector<LatLon>::iterator it = IntersectionCoordinates.begin(); it != IntersectionCoordinates.end(); it++){
-        
-        std::pair<LatLon, LatLon>destId_nodeId_LatLon{destId_latlon, (*it)};
-
-        for(std::vector<LatLon>::iterator it = IntersectionCoordinates.begin(); it != IntersectionCoordinates.end(); it++)
-            //compare against straight distance to destination
-            heuristicDistanceVector.push_back(find_distance_between_two_points(destId_nodeId_LatLon));
-    }
-}
+//double populateHeuristicVector(int destId){
+//
+//    LatLon destId_latlon = IntersectionCoordinates[destId];
+//    for(std::vector<LatLon>::iterator it = IntersectionCoordinates.begin(); it != IntersectionCoordinates.end(); it++){
+//        
+//            heuristicDistanceVector.push_back(find_distance_between_two_points(destId_nodeId_LatLon));
+//    }
+//}
