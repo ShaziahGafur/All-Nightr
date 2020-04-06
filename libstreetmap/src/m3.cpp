@@ -378,7 +378,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 std::pair <LatLon, LatLon> nodeToEnd (outerNodeLatLon, destLatLon);
                 double distanceFromNodeToEnd = find_distance_between_two_points(nodeToEnd);
                 //calculate percentage of distance from node to end to distance from source to end
-                double heuristic = directionDif / 2*M_PI + distanceFromNodeToEnd/distanceFromSourceToEnd;;
+                double heuristic = 30*directionDif / 2*M_PI + 70*distanceFromNodeToEnd/distanceFromSourceToEnd;;
                 
                 wave currentWave(outerNode, *it, newTravelTime, heuristic, directionDif, waveIDTracker);
                 waveList.push_back(currentWave); //create new wavefront elemenet and add to queue
@@ -587,13 +587,9 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
     //get direction from startID to destID -> it is the first ideal direction
     //double idealDirection = getDirectionAngle(startID, destID);
     
-<<<<<<< HEAD
-     //put source node into wavefront
-    wave sourceWave(sourceNodePtr, NO_EDGE, NO_TIME, NO_DIRECTION_DIFFERENCE, PERFECT_HEURISTIC, waveIDTracker);
-=======
     //put source node into wavefront
-    wave sourceWave(sourceNodePtr, NO_EDGE, NO_TIME, 0, waveIDTracker);
->>>>>>> f8f3235f8d58367636e9b2390652cf7b7d9a706c
+    wave sourceWave(sourceNodePtr, NO_EDGE, NO_TIME, 0, 0, waveIDTracker);
+    
     waveList.push_back(sourceWave);
     waveQueue.push(sourceWave); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
     waveIDTracker++; //advance to next ID of wave
