@@ -95,12 +95,11 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
 
         //check if weight of any item exceeds the truck capacity
         if (itDeliveries-> itemWeight > truck_capacity) 
-            pathValid == false;
         itDeliveries++;
     }
     
     itDeliveries = deliveries.begin();  
-    while( (pathValid == true) && (itDeliveries != deliveries.end()) ){ 
+    while( itDeliveries != deliveries.end() ){ 
         
         //For first pick up, the start intersection must be a depot
         if (startId == NO_DELIVERY){
