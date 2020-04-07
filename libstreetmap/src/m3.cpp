@@ -374,8 +374,6 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
 //Creates message for directions of path
 std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node from which we start to "Trace back" from
     std::vector<StreetSegmentIndex> path;
-    //variable to traverse nodes
-//    Node* currentNode = NULL;
     Node * nextNode = getNodeByID(startID);
     //get reaching edge segment from destination Node
     int forwardSegID = nextNode->reachingEdge;
@@ -547,7 +545,6 @@ std::vector<StreetSegmentIndex> bfsTraceBack(int startID){ //startID is the node
 bool walkingPathBFS(int startID, int destID, const double turn_penalty,
         const double walking_speed,const double walking_time_limit){
 
-//    bestPathTravelTime = 0;
     //Create Node for start Intersection
     Node* sourceNodePtr = new Node(startID, NO_EDGE, NO_TIME);
     walkableNodes.insert({startID, sourceNodePtr}); //keep track of new start node and its ID (for deletion)
@@ -689,7 +686,7 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
 }
 
 /*
- * Developes Walking path and Creates message for directions
+ * Develops Walking path and Creates message for directions
  * pickupIntersectID: the intersection we start tracing back from towards the startID  
  * Strategy: trace back from pickupIntersectID using the same traceback logic discussed in class. 
  * Print directions in reverse order as you are tracing each segment
@@ -801,9 +798,7 @@ std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID){
     segmentsHighlighted.push_back(forwardSegID);
     
     //create the first instruction. E.g. "Head South on Yonge Street"
-    //part 2
-
-
+    //creating part #2:
     directionInstruction = "Head ";
     LatLon midInter = IntersectionCoordinates[middleIntersectID];
     LatLon nextInter = IntersectionCoordinates[nextIntersectID];
@@ -844,7 +839,7 @@ std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID){
 
     walkingDirectionsText = directionInstruction + walkingDirectionsText; //insert instruction in the beginning of the text
     
-    walkingDirectionsText = "Walking Directions:\n\n"+walkingDirectionsText + "You will arrive at your destination. \nEstimated walking time: " 
+    walkingDirectionsText = "Walking Directions:\n\n"+walkingDirectionsText + "You will arrive at the pickup spot. \nEstimated walking time: " 
             + printTime((getWalkableNodeByID(pickupIntersectID)->bestTime)/60); //convert bestPathTravelTime from seconds to minutes
        
     return path;
