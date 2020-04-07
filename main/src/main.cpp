@@ -73,7 +73,19 @@ int main(int argc, char** argv) {
 //    std::cout<<getIntersectionName(100)+"\t To:"+getIntersectionName(150)+"\n";
 //    find_path_with_walk_to_pick_up(100, 150, 1, 2, 1200);
 //    std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> path;
-//    path = find_path_with_walk_to_pick_up(29171, 87192, 24.69242195727185418, 3.75261393716713698, 41.02582674660070694);                                                                    
+//    path = find_path_with_walk_to_pick_up(29171, 87192, 24.69242195727185418, 3.75261393716713698, 41.02582674660070694);   
+    
+        std::vector<DeliveryInfo> deliveries;
+        std::vector<IntersectionIndex> depots;
+        std::vector<CourierSubpath> result_path;
+        float turn_penalty;
+        float truck_capacity;
+        
+        deliveries = {DeliveryInfo(12329, 12927, 50.03543), DeliveryInfo(15162, 71331, 60.50912), DeliveryInfo(147022, 141242, 35.54058)};
+        depots = {29107, 44932, 40220};
+        turn_penalty = 15.000000000;
+        truck_capacity = 13465.874023438;
+        result_path = traveling_courier(deliveries, depots, turn_penalty, truck_capacity); 
     
 
     std::cout << "Closing map\n";
