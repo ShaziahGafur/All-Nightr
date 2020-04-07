@@ -171,7 +171,7 @@ bool load_map(std::string map_streets_database_filename) {
         
         //Populate segment highlights
         populateSegmentHighlight();
-    
+         
     }
     return load_successful;
 }
@@ -284,7 +284,6 @@ int find_closest_intersection(LatLon my_position){
 //Returns: vector of street segments of an intersection
 //Uses intersectionStreetSegments vector with intersection id argument (if it exists)
 std::vector<int> find_street_segments_of_intersection(int intersection_id){
-    
     if ((intersection_id < getNumIntersections()) && (intersection_id >= 0)){
         return IntersectionStreetSegments[intersection_id];
     }
