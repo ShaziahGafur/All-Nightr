@@ -1,56 +1,24 @@
-
-//includes for m3 visualization
-#include "ezgl/application.hpp"
-#include "ezgl/graphics.hpp"
-#include "ezgl/point.hpp"
-#include <chrono>
-#include <thread>
-//#define VISUALIZE
-#include <list> //remove once wavefront data structure updated
-//#include "m3.h"
-#include "globals.h"
-//#include "drawMap.cpp"
-#include "drawMap.h"
-#include <math.h>
+#include "m3A.h"
 
 #define TAN_35 0.700  //used for determining direction
 #define TAN_55 1.428  
 #define ANGLE_Threshold 30
 #define MAX_DRIVING_TIME 999999999999999999
 
-typedef std::pair<double, int> weightPair;
+///************  GLOBAL VARIABLES  *****************/
 
-//helper declarations
-bool breadthFirstSearch(int startID, int destID, const double turn_penalty);
-std::vector<StreetSegmentIndex> bfsTraceBack(int destID);
-Node* getNodeByID(int intersectionID);
-
-//For Walking Path
-bool walkingPathBFS(int startID, int destID, const double turn_penalty, const double walking_speed, const double walking_time_limit);
-Node* getWalkableNodeByID(int intersectionID);
-std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID); //Traces path from start to end, provides 
-
-double getDirectionAngle(int from, int to);
-
-//Printing Helper Functions
-std::string printTime(double time);
-std::string printDistance(double distance);
-
-//          GLOBAL VARIABLES          //
 //key : int intersectionID, value: pointer to node
 std::unordered_map<int, Node*> nodesEncountered;
 std::unordered_map<int, Node*> walkableNodes;
 double bestPathTravelTime;
-//int prevSegID = 0;
+typedef std::pair<double, int> weightPair;
+
 //key: [intersectionId] value: [distance to destination intersectio]
 std::vector<double> heuristicDistanceVector;
 
-std::string directionsText;
-std::string walkingDirectionsText;
+std::string directionsText; //Full text for driving directions only
+std::string walkingDirectionsText; //Full text for walking directions only
 
-//Helper Function
-void clearWalkableNodes();
-void clearNodesEncountered();
 
 // Returns the time required to travel along the path specified, in seconds.
 // The path is given as a vector of street segment ids, and this function can
@@ -661,7 +629,6 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
                     newTravelTime-= SegmentLengths[waveCurrentNode->reachingEdge]/walking_speed;
                     newTravelTime += waveCurrentTime;
                 }
-                
                 if (newTravelTime > walking_time_limit) //Walking to this Node would take longer than walking_time_limit
                     continue;
                 
@@ -698,7 +665,6 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
                     newTravelTime-= SegmentLengths[waveCurrentNode->reachingEdge]/walking_speed;
                     newTravelTime += waveCurrentNode->bestTime;
                 }
-                
                 if (outerNode->bestTime <= newTravelTime) //this new path to the visited node is not a shorter path (no need to crawl again))
                     continue;
                 
@@ -821,7 +787,7 @@ std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID){
         //part #1:
         directionInstruction +="\nIn "+printDistance(SegmentLengths[forwardSegID])+", ";
         
-        directionsText= directionInstruction + directionsText; //insert instruction in the beginning of the text
+        walkingDirectionsText= directionInstruction + walkingDirectionsText; //insert instruction in the beginning of the text
 
         nextIntersectID = middleIntersectID;     //advance intersections   
         middleIntersectID = previousIntersectID; 
@@ -876,9 +842,9 @@ std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID){
     //part #1:
     directionInstruction +="\nIn "+printDistance(SegmentLengths[forwardSegID])+", ";
 
-    directionsText= directionInstruction + directionsText; //insert instruction in the beginning of the text
+    walkingDirectionsText = directionInstruction + walkingDirectionsText; //insert instruction in the beginning of the text
     
-    directionsText = "Walking Directions:\n\n"+directionsText + "You will arrive at your destination. \nEstimated walking time: " 
+    walkingDirectionsText = "Walking Directions:\n\n"+walkingDirectionsText + "You will arrive at your destination. \nEstimated walking time: " 
             + printTime((getWalkableNodeByID(pickupIntersectID)->bestTime)/60); //convert bestPathTravelTime from seconds to minutes
        
     return path;

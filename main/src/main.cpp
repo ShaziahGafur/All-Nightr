@@ -25,6 +25,7 @@
 #include "drawMap.h"
 #include "globals.h"
 #include "m3.h"
+#include "m3A.h"
 
 //Program exit codes
 constexpr int SUCCESS_EXIT_CODE = 0;        //Everyting went OK
@@ -63,15 +64,15 @@ int main(int argc, char** argv) {
 
     //You can now do something with the map data
     //Clean-up the map data and related data structures
-   // draw_map();
+    draw_map();
 
     //Quick test for find path:
     
 //    find_path_between_intersections(108, 115, 5);
 //    std::cout<<getIntersectionName(100)+"\t To:"+getIntersectionName(150)+"\n";
 //    find_path_with_walk_to_pick_up(100, 150, 1, 2, 1200);
-       std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> path;
-       path = find_path_with_walk_to_pick_up(29171, 87192, 24.69242195727185418, 3.75261393716713698, 41.02582674660070694);                                                                    
+//       std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> path;
+//       path = find_path_with_walk_to_pick_up(29171, 87192, 24.69242195727185418, 3.75261393716713698, 41.02582674660070694);                                                                    
     
 
     std::cout << "Closing map\n";
