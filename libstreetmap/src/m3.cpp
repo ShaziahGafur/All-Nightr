@@ -261,9 +261,6 @@ std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> find
 
 bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
     
-    //for node n fscore[n] = gscore[n] + h[n]]
-    double fscore = 0;
-    double gscore = 0;
     bestPathTravelTime = 0;
     //Create Node for start Intersection
     Node* sourceNodePtr = new Node(startID, NO_EDGE, NO_TIME);
@@ -386,11 +383,9 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 std::pair <LatLon, LatLon> nodeToEnd (outerNodeLatLon, destLatLon);
                 double distanceFromNodeToEnd = find_distance_between_two_points(nodeToEnd);
                 //calculate percentage of distance from node to end to distance from source to end
-                double heuristic = 5*directionDif / 2*M_PI + 50*distanceFromNodeToEnd/distanceFromSourceToEnd + 45*(MaxSpeedLimit - segStruct.speedLimit)/MaxSpeedLimit;
+                double heuristic = 10*directionDif / 2*M_PI + 70*distanceFromNodeToEnd/distanceFromSourceToEnd + 20*(MaxSpeedLimit - segStruct.speedLimit)/MaxSpeedLimit;
                 
-                fscore = heuristic + newTravelTime;
-                
-                wave currentWave(outerNode, *it, newTravelTime, fscore, directionDif, waveIDTracker);
+                wave currentWave(outerNode, *it, newTravelTime, heuristic, directionDif, waveIDTracker);
                 waveList.push_back(currentWave); //create new wavefront elemenet and add to queue
                 waveQueue.push(currentWave); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
                 waveIDTracker++; //advance to next ID of wave

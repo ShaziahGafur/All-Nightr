@@ -69,6 +69,8 @@ std::vector<segmentStruct> segmentHighlight;
 std::list<int> segmentsHighlighted; //for keeping track of which segment
 
 std::string MapName;
+
+float MaxSpeedLimit;
 //----------------------------------------------------------------
 
 //---Function Declarations----------------------------------------
@@ -814,6 +816,10 @@ void populateSegmentTravelTime(){
         //Retrieve speed limit info in m/sec
         segmentInfo = getInfoStreetSegment(street_segment_id);
         speedLimit_metersPerSec = 1000.0*(segmentInfo.speedLimit)/ 3600.0;
+        
+        //global variable used in m3 heuristics
+        if(segmentInfo.speedLimit > MaxSpeedLimit)
+            MaxSpeedLimit = segmentInfo.speedLimit;
         
         //calculate travel time (time = distance/velocity)
         streetSegmentTravelTime = (SegmentLengths[street_segment_id] / speedLimit_metersPerSec);

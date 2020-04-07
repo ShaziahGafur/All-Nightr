@@ -89,5 +89,7 @@ extern std::string walkingDirectionsText; //for walking
 
 extern std::list<int> segmentsHighlighted; //for keeping track of which segment
 
+extern float MaxSpeedLimit;
+
 #endif /* GLOBALS_H */
 
