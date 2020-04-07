@@ -7,7 +7,7 @@
 #include <thread>
 //#define VISUALIZE
 #include <list> //remove once wavefront data structure updated
-#include "m3.h"
+//#include "m3.h"
 #include "globals.h"
 //#include "drawMap.cpp"
 #include "drawMap.h"
@@ -20,6 +20,21 @@
 
 typedef std::pair<double, int> weightPair;
 
+//helper declarations
+bool breadthFirstSearch(int startID, int destID, const double turn_penalty);
+std::vector<StreetSegmentIndex> bfsTraceBack(int destID);
+Node* getNodeByID(int intersectionID);
+
+//For Walking Path
+bool walkingPathBFS(int startID, int destID, const double turn_penalty, const double walking_speed, const double walking_time_limit);
+Node* getWalkableNodeByID(int intersectionID);
+std::vector<StreetSegmentIndex> walkBFSTraceBack(int pickupIntersectID); //Traces path from start to end, provides 
+
+double getDirectionAngle(int from, int to);
+
+//Printing Helper Functions
+std::string printTime(double time);
+std::string printDistance(double distance);
 
 //          GLOBAL VARIABLES          //
 //key : int intersectionID, value: pointer to node
@@ -45,7 +60,7 @@ void clearNodesEncountered();
 // no turn, then there is no penalty. Note that whenever the street id changes
 // (e.g. going from Bloor Street West to Bloor Street East) we have a turn.
 double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, const double turn_penalty){    
-    
+   
     double travelTime = 0;
     //Error check if vector size is zero
     if (path.size() == 0){
@@ -657,7 +672,7 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
                 //create wave + push to queue
                 //push to list   
                 
-                wave outerWave(outerNode, *it, newTravelTime, 0, 0, waveIDTracker);
+                wave outerWave(outerNode, *it, newTravelTime, NO_DIRECTION_DIFFERENCE, PERFECT_HEURISTIC, waveIDTracker);
                 waveList.push_back(outerWave);
                 waveQueue.push(outerWave); 
                 waveIDTracker++; //advance to next ID of wave
@@ -669,7 +684,7 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
                 //compute projected walking time for the node
                 double newTravelTime;
                 
-                if (waveCurrentNode->reachingEdge==-1){//corner case: current node is the start node, so there doesn't exist a reaching edge
+                if (waveCurrentNode->reachingEdge==NO_EDGE){//corner case: current node is the start node, so there doesn't exist a reaching edge
                     newTravelTime = SegmentLengths[*it]/walking_speed; //travel time is only the time of the current segment
                 }
                 
@@ -690,7 +705,7 @@ bool walkingPathBFS(int startID, int destID, const double turn_penalty,
                 //create wave + push to queue
                 //push to list   
                 
-                wave outerWave(outerNode, *it, newTravelTime, 0, 0, waveIDTracker);
+                wave outerWave(outerNode, *it, newTravelTime, NO_DIRECTION_DIFFERENCE, PERFECT_HEURISTIC, waveIDTracker);
                 waveList.push_back(outerWave);
                 waveQueue.push(outerWave); 
                 waveIDTracker++; //advance to next ID of wave
