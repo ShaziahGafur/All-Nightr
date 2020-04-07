@@ -70,15 +70,20 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
     std::vector<unsigned> pickUpIndices; 
     struct CourierSubpath deliverySubpath; 
     
+    //store weight currently carried by truck
+    float totalWeight = 0;
+    
     //Chosen Depots
     //represents the IDs from the depots vector. Can assume that at least 1 depot exists, thus index 0 exists
-    int startDepot = 0, endDepot = 0; 
+    int startDepot = depots[0], endDepot = depots[0]; 
+    int deliveryIndice = 0;
+    int previousWeight = 0;
     
     std::vector<DeliveryInfo>::const_iterator itDeliveries = deliveries.begin();
     //for each delivery item
     while(itDeliveries != deliveries.end()){ 
         //check if weight of item exceeds the truck capacity
-        if (itDeliveries-> itemWeight > truck_capacity){ 
+        if (totalWeight > truck_capacity){ 
             //path is deemed invalid (according to Piazza)
             invalidPath = true; 
             break;
@@ -93,20 +98,22 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
                 invalidPath = true;
                 break;
              }
-            //add new path section to the full Path
-            //At this point, pickUpIndices is empty vector
+            //This is the first subpath from starting intersection to first delivery. Pick up indices should have the starting indice.
+            //not pickung up anything at starting thereofre empty pickUpIndices
+            pickUpIndices.clear();
             deliverySubpath = { startDepot, itDeliveries->pickUp, drivingPath, pickUpIndices}; 
             fullPath.push_back(deliverySubpath);
         }
         //We are dealing with a pickup that is NOT the first (previous intersection visited was the drop-off of another delivery)
         else{
-            //Find directions from previous intersection to a new pick
+            //Find directions from previous drop off intersection to a new pick
             drivingPath = find_path_between_intersections(prevIntersectID, itDeliveries->pickUp, turn_penalty); 
             if (drivingPath.empty()){
                 invalidPath = true;
                 break;
              }
             //At this point, pickUpIndices is empty vector
+            pickUpIndices.clear();
             deliverySubpath = {prevIntersectID, itDeliveries->pickUp, drivingPath, pickUpIndices}; 
             fullPath.push_back(deliverySubpath);
         }
@@ -118,16 +125,19 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
            invalidPath = true;
            break;
         }
-        //In this  sub path, a pick-up occurred at the starting intersection, so add this to the vector 
+        //add weight to truck
+        totalWeight = totalWeight + itDeliveries->itemWeight > truck_capacity;
+        //In this  sub path, a pick-up occurred at the starting intersection of sub path, so add this to the vector 
         //add new path section to the full Path
-        pickUpIndices.push_back(itDeliveries->pickUp); 
+        pickUpIndices.push_back(deliveryIndice); 
         //At this point, pickUpIndices is empty vector
         deliverySubpath = {itDeliveries->pickUp, itDeliveries->dropOff, drivingPath, pickUpIndices}; 
         fullPath.push_back(deliverySubpath);
         //save the value of the most recent Intersection visited
         prevIntersectID = itDeliveries->dropOff; 
         pickUpIndices.clear();
-        itDeliveries++;   
+        itDeliveries++;  
+        deliveryIndice++;
     }
     
     if (invalidPath)
@@ -141,12 +151,13 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
         //return empty vector
        return std::vector<CourierSubpath>(); 
     }
-    //for safety
-    pickUpIndices.clear(); 
+     
 
     //add new path section to the full Path
     deliverySubpath = {prevIntersectID, endDepot, drivingPath, pickUpIndices}; 
     //At this point, pickUpIndices is empty vector
+    //for safety
+    pickUpIndices.clear();
     fullPath.push_back(deliverySubpath);
     
     return fullPath;
