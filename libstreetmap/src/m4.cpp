@@ -1,4 +1,6 @@
 #include "m4.h"
+#include "m3.h"
+
 
 #define NO_DELIVERY_NODE -1
 
@@ -63,7 +65,7 @@ std::vector<CourierSubpath> traveling_courier(
     //Set-up
     bool invalidPath = false; //keep track of status of path. Path is invalid if: 1) driving path does not exist or 2) an item weight exceeds truck capacity
     std::vector<CourierSubpath> fullPath; //Full path from starting Depot to end Depot
-    std::vector<StreetSegmentIndex> drivingPath; //Incremental path, from a specific intersection to another intersection
+    std::vector<int> drivingPath; //Incremental path, from a specific intersection to another intersection
     int prevIntersectID = NO_DELIVERY_NODE; //An invalid ID, indicating the previous Intersection was not a delivery pick up or drop off
     std::vector<int> pickUpIndices; //required for Courier path object
     struct CourierSubpath deliveryPath; 
@@ -85,7 +87,7 @@ std::vector<CourierSubpath> traveling_courier(
                 break;
              }
              //add new path section to the full Path
-            deliveryPath = {startDepot, it->pickUp, drivingPath, pickUpIndices}; //At this point, pickUpIndices is empty vector
+            deliveryPath = {.start_intersection=startDepot, .end_intersection=it->pickUp, .subpath=drivingPath, .pickUp_indices=pickUpIndices}; //At this point, pickUpIndices is empty vector
             fullPath.push_back(deliveryPath);
         }
         else{//We are dealing with a pickup that is NOT the first (previous intersection visited was the drop-off of another delivery)
