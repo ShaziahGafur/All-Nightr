@@ -273,6 +273,8 @@ std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> find
 bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
     
     //for node n fscore[n] = gscore[n] + h[n]]
+    double fscore = 0;
+    double gscore = 0;
     bestPathTravelTime = 0;
     //Create Node for start Intersection
     Node* sourceNodePtr = new Node(startID, NO_EDGE, NO_TIME);
@@ -316,12 +318,13 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
         if (waveCurrentTime < waveCurrentNode->bestTime){
             waveCurrentNode->crawlEnable = true;
             waveCurrentNode->bestTime = waveCurrentTime; //update Node's best time
-            waveCurrentNode->reachingEdge = waveCurrent.edgeID; //update Node's reaching edge
+            waveCurrentNode->reachingEdge = waveCurrent.edgeID; //update Node's best time reaching edge
         }  
         
         //check if current node is destination node
         if (waveCurrent.node->ID == destID){
-            bestPathTravelTime = waveCurrentTime; //set the time for the best path
+            bestPathTravelTime = waveCurrentTime; 
+            //path found, now clear
             waveQueue = std::priority_queue<wave, std::vector<wave>, compareHeuristicFunction >();
             waveList.clear();
             return true;
@@ -350,7 +353,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 Node* outerNode;
                 
                 bool newNodeCreated = false;
-                if (nodeItr ==nodesEncountered.end()){ //if node does not exist yet
+                if (nodeItr == nodesEncountered.end()){ //if node has not been visited yet
                     outerNode = new Node(outerIntersectID, *it, waveCurrentTime);//create a new Node
                     nodesEncountered.insert({outerIntersectID, outerNode});
                     newNodeCreated = true;
@@ -361,8 +364,8 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 }
                 
                 double newTravelTime;
-                if (waveCurrentNode->reachingEdge==-1){//corner case: current node is the start node, so there doesn't exist a reaching edge
-                    newTravelTime = SegmentTravelTime[*it]; //travel time is only the time of the current segment
+                if (waveCurrentNode->reachingEdge==NO_EDGE){//corner case: current node is the start node, so there doesn't exist a reaching edge
+                    newTravelTime = SegmentTravelTime[*it]; //travel time from source to outer node is only the time of the current segment
                 }
                 else{//if previous segment (reaching edge) exists
                     std::vector<int> adjacentSegments; //hold street segmnts of the inner node and segment from inner to outer node
@@ -371,7 +374,7 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                     //calculate travel time of both adjacent segments, subtract off the 1st segment 
                     //result is the turn_penalty (if applicable) and 2nd street seg travel time               
                     newTravelTime = compute_path_travel_time(adjacentSegments, turn_penalty) - SegmentTravelTime[waveCurrentNode->reachingEdge]; 
-                    newTravelTime += waveCurrentNode->bestTime; //updated from +=waveCurrentTime
+                    newTravelTime += waveCurrentNode->bestTime; //represents total time from source to outernode
                 }              
                 
                 if(newNodeCreated) //IMPORTANT: Verify that this is necessary
@@ -394,9 +397,11 @@ bool breadthFirstSearch(int startID, int destID, const double turn_penalty){
                 std::pair <LatLon, LatLon> nodeToEnd (outerNodeLatLon, destLatLon);
                 double distanceFromNodeToEnd = find_distance_between_two_points(nodeToEnd);
                 //calculate percentage of distance from node to end to distance from source to end
-                double heuristic = 30*directionDif / 2*M_PI + 70*distanceFromNodeToEnd/distanceFromSourceToEnd;;
+                double heuristic = 5*directionDif / 2*M_PI + 50*distanceFromNodeToEnd/distanceFromSourceToEnd + 45*(MaxSpeedLimit - segStruct.speedLimit)/MaxSpeedLimit;
                 
-                wave currentWave(outerNode, *it, newTravelTime, heuristic, directionDif, waveIDTracker);
+                fscore = heuristic + newTravelTime;
+                
+                wave currentWave(outerNode, *it, newTravelTime, fscore, directionDif, waveIDTracker);
                 waveList.push_back(currentWave); //create new wavefront elemenet and add to queue
                 waveQueue.push(currentWave); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
                 waveIDTracker++; //advance to next ID of wave
