@@ -48,6 +48,10 @@ std::vector<double> heuristicDistanceVector;
 std::string directionsText;
 std::string walkingDirectionsText;
 
+//Helper Function
+void clearWalkableNodes();
+void clearNodesEncountered();
+
 // Returns the time required to travel along the path specified, in seconds.
 // The path is given as a vector of street segment ids, and this function can
 // assume the vector either forms a legal path or has size == 0.  The travel
@@ -132,14 +136,7 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     if (pathFound){
         path = bfsTraceBack(intersect_id_start); //trace forwards, starting from the starting ID
     }
-   
-    //delete nodes
-    for (std::unordered_map<int, Node*>::iterator nodesIt = nodesEncountered.begin(); nodesIt != nodesEncountered.end(); ++nodesIt){
-        //deleted nextNode
-        delete (*nodesIt).second;
-    }
-
-    nodesEncountered.clear();
+    clearNodesEncountered();
     //delete wavefront data structures
     return path;        
 }
@@ -212,14 +209,11 @@ std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> find
     bool fullWalkPath = false;
     const double walkingLimitSecs = walking_time_limit*60; //convert time limiit from mins to s
     
-    fullWalkPath = walkingPathBFS(start_intersection,  
-                                end_intersection,
-                                turn_penalty,
-                                walking_speed, 
-                                walkingLimitSecs);
+    fullWalkPath = walkingPathBFS(start_intersection, end_intersection, turn_penalty, walking_speed, walkingLimitSecs);
     
     if (fullWalkPath){ //no driving path needed. Walking time limit covers the full path
-        walkingPath = walkBFSTraceBack(end_intersection);
+        walkingPath = walkBFSTraceBack(end_intersection);     
+        clearWalkableNodes();
         return std::make_pair(walkingPath, drivingPath);
     }
     
@@ -228,6 +222,7 @@ std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> find
     if (numOfWalkableNodes < 2){ //If there are no walkable nodes other than start node
         //no walking path available. Full path should be driving only
         drivingPath = find_path_between_intersections(start_intersection, end_intersection, turn_penalty);
+        clearWalkableNodes();
         return std::make_pair(walkingPath, drivingPath);
     }
     
@@ -237,8 +232,8 @@ std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> find
 
     bool pathFound;
     //for every walkable Intersection
-    for (std::unordered_map<int, Node*>::iterator nodesIt = walkableNodes.begin(); 
-            nodesIt != walkableNodes.end(); ++nodesIt){
+    std::unordered_map<int, Node*>::iterator nodesIt;
+    for ( nodesIt = walkableNodes.begin(); nodesIt != walkableNodes.end(); ++nodesIt){
         pathFound = breadthFirstSearch(end_intersection, nodesIt->first, turn_penalty);
         if (!pathFound)
             continue;
@@ -247,25 +242,19 @@ std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> find
             bestWalkableIntersect = nodesIt->first;
             smallestDrivingTime = bestPathTravelTime;
         }
-        
+      
         //reset nodesEncountered for the next driving path
-        
-        for (std::unordered_map<int, Node*>::iterator nodesEncounteredIt = nodesEncountered.begin(); 
-                nodesEncounteredIt != nodesEncountered.end(); ++nodesEncounteredIt){
-            delete (*nodesIt).second;
-
-        }
-        nodesEncountered.clear();
+        clearNodesEncountered();
     }
     
     if (bestWalkableIntersect != -1){
         walkingPath = walkBFSTraceBack(bestWalkableIntersect);
         pathFound = breadthFirstSearch(end_intersection, bestWalkableIntersect, turn_penalty); //there's no significance of holding this value of pathFound
         drivingPath = bfsTraceBack(bestWalkableIntersect); //can assume that pathFound is true at this point 
+        //reset nodesEncountered 
+        clearNodesEncountered();
     }    
-    
-//    std::pair<std::vector<StreetSegmentIndex>, std::vector<StreetSegmentIndex>> vect = std::make_pair(walkingPath, drivingPath);
-    
+    clearWalkableNodes();    
     return std::make_pair(walkingPath, drivingPath);
 }
 
@@ -993,3 +982,18 @@ double getDirectionAngle(int from, int to){
 //            heuristicDistanceVector.push_back(find_distance_between_two_points(destId_nodeId_LatLon));
 //    }
 //}
+
+//empty walkable nodes unordered map
+void clearWalkableNodes(){
+    for (std::unordered_map<int, Node*>::iterator walkableNodesIt = walkableNodes.begin(); walkableNodesIt != walkableNodes.end(); walkableNodesIt++){
+        delete (*walkableNodesIt).second;       //invalid read here, deleting something that has already been deleted?
+    }
+    walkableNodes.clear();
+}
+
+void clearNodesEncountered(){
+    for (std::unordered_map<int, Node*>::iterator nodesEncounteredIt = nodesEncountered.begin(); nodesEncounteredIt != nodesEncountered.end(); nodesEncounteredIt++){
+        delete (*nodesEncounteredIt).second;      
+    }
+        nodesEncountered.clear();
+}
