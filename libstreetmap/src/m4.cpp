@@ -55,80 +55,99 @@
 //  
 // If no valid route to make *all* the deliveries exists, this routine must
 // return an empty (size == 0) vector.
-std::vector<CourierSubpath> traveling_courier(
-		            const std::vector<DeliveryInfo>& deliveries,
-	       	        const std::vector<int>& depots, 
-		            const float turn_penalty, 
-		            const float truck_capacity){
+std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& deliveries, const std::vector<int>& depots, const float turn_penalty, const float truck_capacity){
     //Stub implementation
     
-    //Set-up
-    bool invalidPath = false; //keep track of status of path. Path is invalid if: 1) driving path does not exist or 2) an item weight exceeds truck capacity
-    std::vector<CourierSubpath> fullPath; //Full path from starting Depot to end Depot
-    std::vector<int> drivingPath; //Incremental path, from a specific intersection to another intersection
-    int prevIntersectID = NO_DELIVERY_NODE; //An invalid ID, indicating the previous Intersection was not a delivery pick up or drop off
-    std::vector<int> pickUpIndices; //required for Courier path object
-    struct CourierSubpath deliveryPath; 
+   //keep track of status of path. Path is invalid if: 1) driving path does not exist or 2) an item weight exceeds truck capacity
+    bool invalidPath = false; 
+    //Full path from starting Depot to end Depot
+    std::vector<CourierSubpath> fullPath;
+    //Incremental path, from a specific intersection to another intersection
+    std::vector<int> drivingPath; 
+    //An invalid ID, indicating the previous Intersection was not a delivery pick up or drop off
+    int prevIntersectID = NO_DELIVERY_NODE; 
+    //stores indices from delivery vector of deliveries picked up at start_intersection in CourierSubpath
+    std::vector<unsigned> pickUpIndices; 
+    struct CourierSubpath deliverySubpath; 
     
     //Chosen Depots
-    int startDepot = 0, endDepot = 0; //represents the IDs from the depots vector. Can assume that at least 1 depot exists, thus index 0 exists
+    //represents the IDs from the depots vector. Can assume that at least 1 depot exists, thus index 0 exists
+    int startDepot = 0, endDepot = 0; 
     
-    std::vector<DeliveryInfo>::const_iterator it = deliveries.begin();
-    while(it != deliveries.end()){ //for each delivery item
-        if (it->itemWeight > truck_capacity){ //check if weight of item exceeds the truck capacity
-            invalidPath = true; //path is deemed invalid (according to Piazza)
+    std::vector<DeliveryInfo>::const_iterator itDeliveries = deliveries.begin();
+    //for each delivery item
+    while(itDeliveries != deliveries.end()){ 
+        //check if weight of item exceeds the truck capacity
+        if (itDeliveries-> itemWeight > truck_capacity){ 
+            //path is deemed invalid (according to Piazza)
+            invalidPath = true; 
             break;
         }
         //Get the directions TO the pick up for the delivery
-        if (prevIntersectID == NO_DELIVERY_NODE){ //If we are dealing with the first pick up (the intersection before must be a depot)
-            drivingPath = find_path_between_intersections(startDepot, it->pickUp, turn_penalty); //Find directions from starting Depot to the first pickup
-            if (drivingPath.empty()){ //iif path does not exist
+        //If we are dealing with the first pick up (the intersection before must be a depot)
+        if (prevIntersectID == NO_DELIVERY_NODE){ 
+            //Find directions from starting Depot to the first pickup
+            drivingPath = find_path_between_intersections(startDepot, itDeliveries -> pickUp, turn_penalty); 
+            //if path does not exist
+            if (drivingPath.empty()){ 
                 invalidPath = true;
                 break;
              }
-             //add new path section to the full Path
-            deliveryPath = {.start_intersection=startDepot, .end_intersection=it->pickUp, .subpath=drivingPath, .pickUp_indices=pickUpIndices}; //At this point, pickUpIndices is empty vector
-            fullPath.push_back(deliveryPath);
+            //add new path section to the full Path
+            //At this point, pickUpIndices is empty vector
+            deliverySubpath = { startDepot, itDeliveries->pickUp, drivingPath, pickUpIndices}; 
+            fullPath.push_back(deliverySubpath);
         }
-        else{//We are dealing with a pickup that is NOT the first (previous intersection visited was the drop-off of another delivery)
-            drivingPath = find_path_between_intersections(prevIntersectID, it->pickUp, turn_penalty); //Find directions from previous intersection to a new pick
+        //We are dealing with a pickup that is NOT the first (previous intersection visited was the drop-off of another delivery)
+        else{
+            //Find directions from previous intersection to a new pick
+            drivingPath = find_path_between_intersections(prevIntersectID, itDeliveries->pickUp, turn_penalty); 
             if (drivingPath.empty()){
                 invalidPath = true;
                 break;
              }
-            deliveryPath = {prevIntersectID, it->pickUp, drivingPath, pickUpIndices}; //At this point, pickUpIndices is empty vector
-            fullPath.push_back(deliveryPath);
+            //At this point, pickUpIndices is empty vector
+            deliverySubpath = {prevIntersectID, itDeliveries->pickUp, drivingPath, pickUpIndices}; 
+            fullPath.push_back(deliverySubpath);
         }
         
         //Get directions FROM the pickup for the delivery TO its drop-off location
-        drivingPath = find_path_between_intersections(it->pickUp, it->dropOff, turn_penalty);//Find directions directly from the pickup to drop-off of the same delivery
+        //Find directions directly from the pickup to drop-off of the same delivery
+        drivingPath = find_path_between_intersections(itDeliveries->pickUp, itDeliveries->dropOff, turn_penalty);
         if (drivingPath.empty()){
            invalidPath = true;
            break;
         }
-        pickUpIndices.push_back(it->pickUp); //In this  sub path, a pick-up occurred at the starting intersection, so add this to the vector 
+        //In this  sub path, a pick-up occurred at the starting intersection, so add this to the vector 
         //add new path section to the full Path
-        deliveryPath = {it->pickUp, it->dropOff, drivingPath, pickUpIndices}; //At this point, pickUpIndices is empty vector
-        fullPath.push_back(deliveryPath);
-        prevIntersectID = it->dropOff; //save the value of the most recent Intersection visited
+        pickUpIndices.push_back(itDeliveries->pickUp); 
+        //At this point, pickUpIndices is empty vector
+        deliverySubpath = {itDeliveries->pickUp, itDeliveries->dropOff, drivingPath, pickUpIndices}; 
+        fullPath.push_back(deliverySubpath);
+        //save the value of the most recent Intersection visited
+        prevIntersectID = itDeliveries->dropOff; 
         pickUpIndices.clear();
-        it++;   
+        itDeliveries++;   
     }
     
     if (invalidPath)
-        return std::vector<CourierSubpath>(); //return empty vector
+        //return empty vector
+        return std::vector<CourierSubpath>(); 
     
     //Add the last part of the directions: the path from the last drop-off location to the end Depot
-    drivingPath = find_path_between_intersections(prevIntersectID, endDepot, turn_penalty);//Find directions directly from the pickup to drop-off of the same delivery
+    //Find directions directly from the pickup to drop-off of the same delivery
+    drivingPath = find_path_between_intersections(prevIntersectID, endDepot, turn_penalty);
     if (drivingPath.empty()){
-       return std::vector<CourierSubpath>(); //return empty vector
+        //return empty vector
+       return std::vector<CourierSubpath>(); 
     }
-
-    pickUpIndices.clear(); //for safety
+    //for safety
+    pickUpIndices.clear(); 
 
     //add new path section to the full Path
-    deliveryPath = {prevIntersectID, endDepot, drivingPath, pickUpIndices}; //At this point, pickUpIndices is empty vector
-    fullPath.push_back(deliveryPath);
+    deliverySubpath = {prevIntersectID, endDepot, drivingPath, pickUpIndices}; 
+    //At this point, pickUpIndices is empty vector
+    fullPath.push_back(deliverySubpath);
     
     return fullPath;
     
