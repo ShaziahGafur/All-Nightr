@@ -96,5 +96,8 @@ extern float MaxSpeedLimit;
 
 extern int Clicked_int_id;
 
+//Vector --> key: [nodeId] value: [Node]
+extern std::vector<Node> NodeVector;
+
 #endif /* GLOBALS_H */
 

@@ -10,18 +10,23 @@
 #include <thread>
 //#include <list> //remove once wavefront data structure updated
 #include "m3.h"
+#include "m1.h"
 #include "globals.h"
 #include "drawMap.h"
 #include <math.h>
+#include <waveElem.h>
 
 //M4 path finding helper functions
 bool djikstraBFS(int startID, std::vector<std::pair<int, std::string>> pickUpDropOffNodes, const double turn_penalty);
+//bool djikstraSearch(Node* sourceNode, int destID);
 std::vector<StreetSegmentIndex> find_path_djikstra(const IntersectionIndex intersect_id_start, const std::vector<std::pair<int, std::string>> pickUpDropOffNodes, const double turn_penalty);
 
 //Driving Path Helper functions
 bool breadthFirstSearch(int startID, int destID, const double turn_penalty);
 std::vector<StreetSegmentIndex> bfsTraceBack(int destID);
 Node* getNodeByID(int intersectionID);
+Node* getNodePtrById(int intersectionID);
+void populateNodeVector();
 
 //Walking Path Helper functions
 bool walkingPathBFS(int startID, int destID, const double turn_penalty, const double walking_speed, const double walking_time_limit);

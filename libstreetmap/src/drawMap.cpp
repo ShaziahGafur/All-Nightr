@@ -1794,10 +1794,15 @@ void show_direction_entries(ezgl::application *application){
 }
 
 void go_button(GtkWidget* widget, ezgl::application *application){
-    std::cout << Clicked_int_id;
+
     //holds start and destiantion intersections
     std::pair<int, int>intersectionIds{-1,-1};
 
+    //for debugging path
+//    intersectionIds.first = 80633;
+//    intersectionIds.second = 58410;
+//    std::cout << "start: " << getIntersectionName(89818) << "end: " << getIntersectionName(9088) << "\n"";
+    
     //if user clicks on intersection, should work whether or not the street names are valid
     if(CurrentMode == directions_click_select_destination)
         intersectionIds.first = Clicked_int_id;
@@ -1903,7 +1908,8 @@ void go_button(GtkWidget* widget, ezgl::application *application){
                 gtk_text_buffer_set_text(buffer, fullText.c_str(), -1); 
         }
     }
-    
+    //re-populate NodeVector to accept other directions
+    populateNodeVector();
     application->update_message (intersectionNames); 
         
     // Redraw the graphics
@@ -1919,9 +1925,6 @@ int get_intersection_from_text(GtkEntry* text_entry){
 
     // Get the text written in the widget
     const char* text = gtk_entry_get_text(text_entry);
-
-    // Get the text written in the widget
-    const char* textB = gtk_entry_get_text(text_entry);
 
     if(extract_streets_from_text(text, intersectionName.first, intersectionName.second) == false)
         return -1;
