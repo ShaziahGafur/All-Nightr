@@ -14,6 +14,10 @@
 #include "drawMap.h"
 #include <math.h>
 
+//M4 path finding helper functions
+bool djikstraBFS(int startID, std::vector<std::pair<int, std::string>> pickUpDropOffNodes, const double turn_penalty);
+std::vector<StreetSegmentIndex> find_path_djikstra(const IntersectionIndex intersect_id_start, const std::vector<std::pair<int, std::string>> pickUpDropOffNodes, const double turn_penalty);
+
 //Driving Path Helper functions
 bool breadthFirstSearch(int startID, int destID, const double turn_penalty);
 std::vector<StreetSegmentIndex> bfsTraceBack(int destID);

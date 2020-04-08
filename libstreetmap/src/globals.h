@@ -83,6 +83,9 @@ extern std::vector<LatLon> IntersectionCoordinates;
 //Vector --> key: [segment ID] value: [segmentStruct]
 extern std::vector<segmentStruct> segmentHighlight;
 
+//Vector --> key: [arbitrary] value: [intersectionID and string pair]
+extern std::vector<std::pair<int, std::string>> intersectionsReached;
+
 //5. Directions & M3-related
 extern std::string directionsText; //for driving only
 extern std::string walkingDirectionsText; //for walking
