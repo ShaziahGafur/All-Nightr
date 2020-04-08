@@ -81,10 +81,10 @@ int main(int argc, char** argv) {
         float turn_penalty;
         float truck_capacity;
         
-        deliveries = {DeliveryInfo(76795, 89322, 131.37521), DeliveryInfo(30782, 18180, 117.05125), DeliveryInfo(19261, 125171, 77.03854), DeliveryInfo(46399, 3050, 59.02165), DeliveryInfo(76795, 21865, 13.02049), DeliveryInfo(76795, 2854, 112.16380), DeliveryInfo(79282, 89690, 34.13472), DeliveryInfo(19261, 86061, 127.61972)};
-        depots = {76309, 119360, 98587};
+        deliveries = {DeliveryInfo(50955, 114599, 3.64505), DeliveryInfo(13864, 84826, 150.28346), DeliveryInfo(106836, 40478, 132.79056), DeliveryInfo(9037, 47950, 133.22345), DeliveryInfo(56819, 91575, 29.19379), DeliveryInfo(114780, 2526, 13.61199), DeliveryInfo(66440, 3042, 64.46082), DeliveryInfo(43487, 146131, 188.11136), DeliveryInfo(48026, 115825, 122.91425), DeliveryInfo(9088, 13180, 194.16504), DeliveryInfo(135696, 89864, 140.79376), DeliveryInfo(70817, 46762, 55.83173), DeliveryInfo(128368, 75909, 53.42627), DeliveryInfo(7107, 38918, 139.53435), DeliveryInfo(131450, 69208, 62.54547), DeliveryInfo(54341, 50187, 132.25157), DeliveryInfo(55780, 131937, 115.65539), DeliveryInfo(18428, 22635, 1.23825), DeliveryInfo(148729, 29698, 171.64159), DeliveryInfo(26717, 126555, 111.32867), DeliveryInfo(90722, 88823, 146.61469), DeliveryInfo(89818, 53919, 37.15287), DeliveryInfo(56077, 99475, 5.99976), DeliveryInfo(57606, 120679, 14.50743), DeliveryInfo(36647, 74187, 88.43934), DeliveryInfo(36147, 120472, 55.23724), DeliveryInfo(26866, 53224, 157.20303), DeliveryInfo(7832, 78160, 147.67279), DeliveryInfo(35474, 100371, 113.03408), DeliveryInfo(49900, 91799, 68.13067), DeliveryInfo(110047, 105659, 135.47527), DeliveryInfo(65531, 147042, 126.80992), DeliveryInfo(92846, 73209, 41.46676), DeliveryInfo(76847, 96421, 41.83722), DeliveryInfo(147775, 116379, 124.71667), DeliveryInfo(99955, 88995, 198.43752), DeliveryInfo(24143, 51489, 177.14240), DeliveryInfo(115112, 98300, 40.57933), DeliveryInfo(91958, 124878, 4.58260), DeliveryInfo(60411, 58215, 6.86531), DeliveryInfo(147089, 80441, 195.18217), DeliveryInfo(113021, 46252, 39.01222), DeliveryInfo(88253, 56464, 159.00911), DeliveryInfo(110603, 12428, 128.93202), DeliveryInfo(116429, 120125, 77.88078), DeliveryInfo(95180, 105909, 183.02200), DeliveryInfo(145225, 24659, 55.50504), DeliveryInfo(137276, 56686, 83.74704), DeliveryInfo(99914, 68916, 153.42888), DeliveryInfo(28583, 104773, 165.24220)};
+        depots = {13, 51601, 61505, 85936, 132265};
         turn_penalty = 15.000000000;
-        truck_capacity = 13573.001953125;
+        truck_capacity = 306.382446289;
 
         result_path = traveling_courier(deliveries, depots, turn_penalty, truck_capacity); 
     
