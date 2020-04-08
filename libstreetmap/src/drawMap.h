@@ -69,7 +69,7 @@ std::string get_operationHours(const OSMNode* poi_OSMentity);
 bool extract_streets_from_text(const char* text, std::string& street1, std::string& street2);
 //returns a vector with all of the possible intersections given a set of street_ids
 std::vector< std::vector<int> >  get_intersection_and_suggestions(std::vector<int>& street_ids_1, std::vector<int>& street_ids_2, std::string& suggested_streets);
-int get_intersection(std::vector<int>& street_ids_1, std::vector<int>& street_ids_2);
+int get_intersection_from_text(GtkEntry* text_entry);
 
 //------------------------------------------------------------------------------
 // APPLICATION
