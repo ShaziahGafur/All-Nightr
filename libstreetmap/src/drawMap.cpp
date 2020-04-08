@@ -88,6 +88,8 @@ double Walking_speed;
 //variable that is holds the time_limit as a string (updates when uberswitch is ON)
 double Time_limit;
 
+int Clicked_int_id;
+
 /************************************************/
 
 /**
@@ -579,7 +581,6 @@ bool extract_streets_from_text(const char* text, std::string& street1, std::stri
 void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click){
     //x_click and y_click are the world coordinates where the mouse was clicked
     //will convert to latlon then use find_closest_intersection
-    int closestInt_id;
     
     if((CurrentMode == directions_click_select_destination) || (CurrentMode == directions_click_select_start) || (CurrentMode == find) || (CurrentMode == base)){
         
@@ -589,13 +590,14 @@ void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double 
         //convert clicked position to lat and lon
         LatLon lat_lon_click = LatLon(lat_from_y (y_click), lon_from_x (x_click));
 
-        closestInt_id = find_closest_intersection(lat_lon_click);
+        //update global variable
+        Clicked_int_id = find_closest_intersection(lat_lon_click);
 
         if(CurrentMode == directions_click_select_destination){
             // ***Fill in Search bars***
             // destination bar
             TextInput_entry = (GtkEntry*) app->get_object("TextInput");
-            gtk_entry_set_text(TextInput_entry, getIntersectionName(closestInt_id).c_str());
+            gtk_entry_set_text(TextInput_entry, getIntersectionName(Clicked_int_id).c_str());
             
             //reset toggle button
             GtkToggleButton* click_select_widgetPtr = (GtkToggleButton*)app->get_object("click_select");
@@ -605,7 +607,7 @@ void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double 
         else if(CurrentMode == directions_click_select_start){
             //starting point bar
             TextInput_entry = (GtkEntry*) app->get_object("directions_entry");
-            gtk_entry_set_text(TextInput_entry, getIntersectionName(closestInt_id).c_str());
+            gtk_entry_set_text(TextInput_entry, getIntersectionName(Clicked_int_id).c_str());
 
             //reset toggle button
             GtkToggleButton* click_select_widgetPtr = (GtkToggleButton*)app->get_object("click_select");
@@ -614,14 +616,14 @@ void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double 
         else{
                 clearIntersection_highlights();
                 
-                app->update_message (getIntersectionName(closestInt_id));    
+                app->update_message (getIntersectionName(Clicked_int_id));    
         }
             
     }
     
     //in every case, highlight the intersection
-    Highlighted_intersections.push_back(closestInt_id);
-    intersections[closestInt_id].highlight = true;
+    Highlighted_intersections.push_back(Clicked_int_id);
+    intersections[Clicked_int_id].highlight = true;
 
     app->refresh_drawing();
             
@@ -1792,12 +1794,34 @@ void show_direction_entries(ezgl::application *application){
 }
 
 void go_button(GtkWidget* widget, ezgl::application *application){
+    std::cout << Clicked_int_id;
+    //holds start and destiantion intersections
+    std::pair<int, int>intersectionIds{-1,-1};
+
+    //if user clicks on intersection, should work whether or not the street names are valid
+    if(CurrentMode == directions_click_select_destination)
+        intersectionIds.first = Clicked_int_id;
+    
+    else if(CurrentMode == directions_click_select_start)
+        intersectionIds.second = Clicked_int_id;
+    
+    
+    
+    //check if the destination entry was typed in
+    if (intersectionIds.first == -1){
+        GtkEntry* text_entry = (GtkEntry *) application->get_object("TextInput");
+        intersectionIds.first = get_intersection_from_text(text_entry);
+    }
+    //check if that starting point entry was typed in
+    if (intersectionIds.second == -1){  
+        // Get the GtkEntry object
+        GtkEntry* text_entry = (GtkEntry *) application->get_object("directions_entry");
+        intersectionIds.second = get_intersection_from_text(text_entry);
+    }
+        
     directionsText = ""; //reset text for directions to be empty
     walkingDirectionsText = "";
-    
-    //clear the directions variable
-//    directionsText.clear();
-    
+
     //reset segment highlights
     while(!(segmentsHighlighted.empty())){
         int segUnhighlightID = segmentsHighlighted.back();
@@ -1805,45 +1829,6 @@ void go_button(GtkWidget* widget, ezgl::application *application){
         segmentHighlight[segUnhighlightID].driving = false;
         segmentsHighlighted.pop_back();
     }
-    
-    std::pair<std::string, std::string> intersectionA;
-    std::pair<std::string, std::string> intersectionB;
-    
-    // Get the GtkEntry object
-    GtkEntry* text_entry = (GtkEntry *) application->get_object("TextInput");
-    
-    // Get the text written in the widget
-    const char* textA = gtk_entry_get_text(text_entry);
-    
-    // Get the GtkEntry object
-    text_entry = (GtkEntry *) application->get_object("directions_entry");
-    
-    // Get the text written in the widget
-    const char* textB = gtk_entry_get_text(text_entry);
-    
-    if(extract_streets_from_text(textA, intersectionA.first, intersectionA.second) == false){
-        application->update_message ("Please enter two street names (e.g. Main street and Danforth)"); 
-        return;
-    }
-    
-    if(extract_streets_from_text(textB, intersectionB.first, intersectionB.second) == false){
-        application->update_message ("Please enter two street names (e.g. Main street and Danforth)"); 
-        return;
-    }
-    
-    //obtains all of the possible streetIds that match the entered street names
-    std::vector<int> Astreet_ids_1 = find_street_ids_from_partial_street_name(intersectionA.first);
-    std::vector<int> Astreet_ids_2 = find_street_ids_from_partial_street_name(intersectionA.second);
-    
-    //obtains all of the possible streetIds that match the entered street names
-    std::vector<int> Bstreet_ids_1 = find_street_ids_from_partial_street_name(intersectionB.first);
-    std::vector<int> Bstreet_ids_2 = find_street_ids_from_partial_street_name(intersectionB.second);
-    
-    //a vector with all of the FIRST intersection found in a given a set of street_ids
-    std::pair<int, int>intersectionIds{-1,-1};
-    
-    intersectionIds.first = get_intersection(Astreet_ids_1, Astreet_ids_2);
-    intersectionIds.second = get_intersection(Bstreet_ids_1, Bstreet_ids_2);
 
     //sting which holds the primary intersection names
     std::string intersectionNames = "";
@@ -1928,30 +1913,51 @@ void go_button(GtkWidget* widget, ezgl::application *application){
 }
 
 //returns a vector with the FIRST intersection found given a set of street_ids
-int get_intersection(std::vector<int>& street_ids_1, std::vector<int>& street_ids_2){
+int get_intersection_from_text(GtkEntry* text_entry){
+    
+    std::pair<std::string, std::string> intersectionName;
+
+    // Get the text written in the widget
+    const char* text = gtk_entry_get_text(text_entry);
+
+    // Get the text written in the widget
+    const char* textB = gtk_entry_get_text(text_entry);
+
+    if(extract_streets_from_text(text, intersectionName.first, intersectionName.second) == false)
+        return -1;
+
+    //obtains all of the possible streetIds that match the entered street names
+    std::vector<int> street_ids_1 = find_street_ids_from_partial_street_name(intersectionName.first);
+    std::vector<int> street_ids_2 = find_street_ids_from_partial_street_name(intersectionName.second);
     
     std::pair<int, int> twoStreets;
-    //a vector which holds all of the intersection possibilities
-    int streetIntersections = -1;
+    
+    //the first intersection found
+    int streetIntersection = -1;
+    
+    //holds all returned intersection of given street_id pair
+    std::vector<int> intersectsFound;
     
     //nested for-loop which finds intersections between all streetId's returned by partial_street_name function
     //stops once a single intersection is found. (Other matches go to suggested streets)
-    for(int str1_idx = 0; (str1_idx < street_ids_1.size()); str1_idx++){
+    for(int str1_idx = 0; str1_idx < street_ids_1.size(); str1_idx++){
         
         twoStreets.first = street_ids_1[str1_idx];
         
         for(int str2_idx = 0; str2_idx < street_ids_2.size(); str2_idx++){
             
             twoStreets.second = street_ids_2[str2_idx];
-            std::vector<int> intersectsFound = find_intersections_of_two_streets(twoStreets);
+            intersectsFound = find_intersections_of_two_streets(twoStreets);
+            
             if (!intersectsFound.empty()){
-                streetIntersections = intersectsFound[0];
-                return streetIntersections;
+                streetIntersection = intersectsFound[0];
+                return streetIntersection;
             }
              
         }
     }
-    return streetIntersections;
+    //none found
+    return -1;
 }
 
 void click_button(GtkWidget* widget, ezgl::application *application){

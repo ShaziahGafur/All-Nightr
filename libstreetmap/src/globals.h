@@ -91,5 +91,7 @@ extern std::list<int> segmentsHighlighted; //for keeping track of which segment
 
 extern float MaxSpeedLimit;
 
+extern int Clicked_int_id;
+
 #endif /* GLOBALS_H */
 
