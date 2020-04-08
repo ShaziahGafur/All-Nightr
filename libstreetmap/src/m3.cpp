@@ -964,7 +964,7 @@ std::vector<StreetSegmentIndex> find_path_djikstra(const IntersectionIndex inter
     
     
     pathFound = djikstraBFS(intersect_id_start, pickUpDropOffNodes, turn_penalty); 
-
+    
     //If path is found, traceback path and store street segments
     if (pathFound){
         //get last intersection
