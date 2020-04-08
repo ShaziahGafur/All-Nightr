@@ -81,10 +81,11 @@ int main(int argc, char** argv) {
         float turn_penalty;
         float truck_capacity;
         
-        deliveries = {DeliveryInfo(12329, 12927, 50.03543), DeliveryInfo(15162, 71331, 60.50912), DeliveryInfo(147022, 141242, 35.54058)};
-        depots = {29107, 44932, 40220};
+        deliveries = {DeliveryInfo(18461, 126220, 122.91624), DeliveryInfo(18461, 77238, 47.65577), DeliveryInfo(71346, 122474, 162.54781), DeliveryInfo(146187, 36121, 27.45177), DeliveryInfo(5162, 100304, 126.61769), DeliveryInfo(18461, 56999, 191.67456), DeliveryInfo(146187, 146650, 124.65140), DeliveryInfo(50528, 11072, 90.33015)};
+        depots = {15009, 115194, 22009};
         turn_penalty = 15.000000000;
-        truck_capacity = 13465.874023438;
+        truck_capacity = 10859.388671875;
+
         result_path = traveling_courier(deliveries, depots, turn_penalty, truck_capacity); 
     
 

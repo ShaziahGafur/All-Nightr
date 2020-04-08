@@ -955,6 +955,8 @@ void clearNodesEncountered(){
         nodesEncountered.clear();
 }
 
+
+
 std::vector<StreetSegmentIndex> find_path_djikstra(const IntersectionIndex intersect_id_start, const std::vector<std::pair<int, std::string>>pickUpDropOffNodes, const double turn_penalty){
     
     bool pathFound = false;
@@ -965,7 +967,9 @@ std::vector<StreetSegmentIndex> find_path_djikstra(const IntersectionIndex inter
 
     //If path is found, traceback path and store street segments
     if (pathFound){
-        path = bfsTraceBack(intersect_id_start); //trace forwards, starting from the starting ID
+        //get last intersection
+        int lastIntersection = intersectionsReached.back().first;
+        path = djikstraBFSTraceBack(lastIntersection); //trace forwards, starting from the starting ID
     }
     clearNodesEncountered();
     //delete wavefront data structures
@@ -1029,14 +1033,14 @@ bool djikstraBFS(int startID, std::vector<std::pair<int, std::string>> pickUpDro
             for(it = edges.begin(); it != edges.end(); ++it){
                 //find "TO" intersection for segment and push node and edge used to get to node to bottom of wavefront
                 InfoStreetSegment segStruct = getInfoStreetSegment(*it);
-                if (segStruct.from == waveCurrentNode->ID){
+                if (segStruct.to == waveCurrentNode->ID){
                     //check if one-way
                     if (segStruct.oneWay)
                         continue; //path down this segment is invalid, skip to next segment
-                    outerIntersectID = segStruct.to;
+                    outerIntersectID = segStruct.from;
                 }
                 else{ //the inner Node = the 'to' of the segment
-                    outerIntersectID = segStruct.from;
+                    outerIntersectID = segStruct.to;
                 }
                                 
                 std::unordered_map<int,Node*>::const_iterator nodeItr =  nodesEncountered.find(outerIntersectID);
@@ -1083,4 +1087,38 @@ bool djikstraBFS(int startID, std::vector<std::pair<int, std::string>> pickUpDro
     //if no path is found
     directionsText = "No path found";
     return false;
+}
+
+
+std::vector<StreetSegmentIndex> djikstraBFSTraceBack(int destID){ 
+    std::vector<StreetSegmentIndex> path;
+    Node * currentNode;
+    currentNode = getNodeByID(destID); //prevNode points to node at pickup Intersection
+    int prevSegID = currentNode->reachingEdge; //get the segment that leads to the destination
+
+//    int nextIntersectID = destID;     
+  //  int previousIntersectID, middleIntersectID; //previousIntersectID stores intersection closest to the starting point (furthest from pickup)
+    //middleIntersectID stores intersection between previous and next
+
+    //attempt to get the node at the other end of forwardSegID
+    InfoStreetSegment segStruct; 
+    int lastIntersectionID = destID;
+    
+    //while we are dealing with a segment that is not the first segment
+    while (prevSegID != NO_EDGE){
+        path.push_back(prevSegID);
+        
+        segStruct = getInfoStreetSegment(prevSegID);
+        
+        if (segStruct.to == lastIntersectionID){
+            currentNode = getNodeByID(segStruct.from);
+        }
+        else{
+            currentNode = getNodeByID(segStruct.to);
+        }
+        prevSegID = currentNode->reachingEdge;
+        lastIntersectionID = currentNode->ID;
+    }
+    std::reverse(path.begin(), path.end());
+    return path;
 }
