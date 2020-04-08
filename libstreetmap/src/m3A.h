@@ -20,6 +20,7 @@
 bool djikstraBFS(int startID, std::vector<std::pair<int, std::string>> pickUpDropOffNodes, const double turn_penalty);
 //bool djikstraSearch(Node* sourceNode, int destID);
 std::vector<StreetSegmentIndex> find_path_djikstra(const IntersectionIndex intersect_id_start, const std::vector<std::pair<int, std::string>> pickUpDropOffNodes, const double turn_penalty);
+std::vector<StreetSegmentIndex> djikstraBFSTraceBack(int destID);
 
 //Driving Path Helper functions
 bool breadthFirstSearch(int startID, int destID, const double turn_penalty);
