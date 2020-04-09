@@ -1908,8 +1908,7 @@ void go_button(GtkWidget* widget, ezgl::application *application){
                 gtk_text_buffer_set_text(buffer, fullText.c_str(), -1); 
         }
     }
-    //re-populate NodeVector to accept other directions
-    populateNodeVector();
+
     application->update_message (intersectionNames); 
         
     // Redraw the graphics
