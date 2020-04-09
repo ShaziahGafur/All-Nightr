@@ -14,12 +14,13 @@ std::vector<std::pair<int, std::string>> intersectionsReached;
 double bestPathTravelTime;
 typedef std::pair<double, int> weightPair;
 
-//key: [intersectionId] value: [distance to destination intersectio]
-std::vector<double> heuristicDistanceVector;
 
 std::string directionsText; //Full text for driving directions only
 std::string walkingDirectionsText; //Full text for walking directions only
 
+//bool which returns true if path found
+//corner case: if path found, and source == dest node then path will be empty, but find_path_djikstra_bool will be true
+bool find_path_djikstra_bool;
 
 // Returns the time required to travel along the path specified, in seconds.
 // The path is given as a vector of street segment ids, and this function can
@@ -109,7 +110,7 @@ double compute_path_travel_time(const std::vector<StreetSegmentIndex>& path, con
     //delete wavefront data structures
     return path;        
 }
-        
+ 
 double compute_path_walking_time(const std::vector<StreetSegmentIndex>& path, 
                                  const double walking_speed, 
                                  const double turn_penalty){
@@ -962,8 +963,9 @@ std::vector<StreetSegmentIndex> find_path_djikstra(const IntersectionIndex inter
     bool pathFound = false;
     std::vector<StreetSegmentIndex> path;
     
+    Node* sourceNode = getNodePtrById(intersect_id_start);
     
-    pathFound = djikstraBFS(intersect_id_start, pickUpDropOffNodes, turn_penalty); 
+    pathFound = djikstraBFS(sourceNode, pickUpDropOffNodes, turn_penalty); 
     
     //If path is found, traceback path and store street segments
     if (pathFound){
@@ -971,154 +973,132 @@ std::vector<StreetSegmentIndex> find_path_djikstra(const IntersectionIndex inter
         int lastIntersection = intersectionsReached.back().first;
         path = djikstraBFSTraceBack(lastIntersection); //trace forwards, starting from the starting ID
     }
+
     clearNodesEncountered();
+    populateNodeVector();
     //delete wavefront data structures
     return path;        
 }
 
 //returns dest node that is reached first
-bool djikstraBFS(int startID, std::vector<std::pair<int, std::string>> pickUpDropOffNodes, const double turn_penalty){
+bool djikstraBFS(Node* sourceNode, std::vector<std::pair<int, std::string>> pickUpDropOffNodes, const double turn_penalty){
     
     bestPathTravelTime = 0;
-    //Create Node for start Intersection
-    Node* sourceNodePtr = new Node(startID, NO_EDGE, NO_TIME);
-    nodesEncountered.insert({startID, sourceNodePtr}); //keep track of new start node and its ID (for deletion)
     
-    //declare list which will contain queue of nodes to check 
-    std::list<wave> waveList;
+    //equal to turn_penalty if street_Ids change
+    double addTurnPenalty = 0;
     
-     //put source node into wavefront
-    wave sourceWave(sourceNodePtr, NO_EDGE, NO_TIME, 0, 0, 0);
-    waveList.push_back(sourceWave);
+    //declare list which will contain queue of nodes to check
+    std::priority_queue<waveElem, std::vector<waveElem>, compareTime> waveQueue;
+    
+        //put source node into wavefront
+    waveQueue.push( waveElem(sourceNode, NO_EDGE, NO_TIME) ); //0 length for reaching edge, 0 for ID in waveList as its the first wave 
      
-    //variable to be used later to store intersection ID as an int
-    int  outerIntersectID;
     bool endNodeFound = false;
        
     //while a node hasn't been found
-    while (!endNodeFound){   
-        //first deal with wave at top of list
-        wave waveCurrent = waveList.front(); //based on the ID with smallest weighting in priority queue, get that wave
-        //remove top wave, it is being checked
-        waveList.pop_front();
-        double waveCurrentTime = waveCurrent.travelTime;
-        Node * waveCurrentNode = waveCurrent.node;
+    while (!endNodeFound){ 
+        //nodes remaining to explore
+        while (!waveQueue.empty()){ 
+            //picl out most promising node
+            waveElem wave = waveQueue.top(); //gets wave with smallest weighting in priority queue
+            waveQueue.pop();        //remove element, it is being checked
             
-        //if better path was found (currently travelling by this wave had smaller time than the Node's prehistoric best time)
-        if (waveCurrentTime < waveCurrentNode->bestTime){
-            waveCurrentNode->crawlEnable = true;
-            waveCurrentNode->bestTime = waveCurrentTime; //update Node's best time
-            waveCurrentNode->reachingEdge = waveCurrent.edgeID; //update Node's best time reaching edge
-        }  
+            Node * currNode = wave.node;
+
+            //otherwise if better path or new node found, update bestTime, re-expand
+            //in first iteration, currentTravelTime == 0
+            if (wave.travelTime < currNode->bestTime){
+            
+                currNode->bestTime = wave.travelTime; //update Node's best time
+                currNode->reachingEdge = wave.edgeID; //update Node's best time reaching edge
+                
+                //check if any of the destination nodes have been found
+                for (std::vector<std::pair<int, std::string>>::iterator destNodesIt = pickUpDropOffNodes.begin(); destNodesIt != pickUpDropOffNodes.end(); destNodesIt++){
+                    if (currNode->ID == destNodesIt->first){
+                        bestPathTravelTime = wave.travelTime;
+                        //put intersection ID into global variable to tell courier function that it has been reached
+                        intersectionsReached.push_back(*destNodesIt);
+                        endNodeFound = true;
+                        //path found, now clear priority queue
+                        waveQueue = std::priority_queue< waveElem, std::vector<waveElem>, compareTime >();
+                        find_path_djikstra_bool = true;
+                        return true;
+                    }
+            }
         
-        //check if any of the destination nodes have been found
-        for (std::vector<std::pair<int, std::string>>::iterator destNodesIt = pickUpDropOffNodes.begin(); destNodesIt != pickUpDropOffNodes.end(); destNodesIt++){
-            if (waveCurrent.node->ID == destNodesIt->first){
-            bestPathTravelTime = waveCurrentTime; 
-            //path found, now clear
-            waveList.clear();
-            //put intersection ID into global variable to tell courier function that it has been reached
-            intersectionsReached.push_back(*destNodesIt);
-            endNodeFound = true;
-            return true;
-            }
-        }
-           
-        if (waveCurrentNode->crawlEnable){ //If better path found or new node, crawl to outer nodes
-            
-            //iterate through edges of current node to add the nodes they're going TO to the wavefront
-            std::vector<int>edges = waveCurrentNode->outEdgeIDs;
-            std::vector<int>::iterator it;
-            
-            for(it = edges.begin(); it != edges.end(); ++it){
-                //find "TO" intersection for segment and push node and edge used to get to node to bottom of wavefront
-                InfoStreetSegment segStruct = getInfoStreetSegment(*it);
-                if (segStruct.to == waveCurrentNode->ID){
+                //stores node ID as an int
+                int  to_nodeId;
+                for(std::vector<int>::iterator edgeIt = currNode->outEdgeIDs.begin(); edgeIt != currNode->outEdgeIDs.end(); edgeIt++){
+                
+                 //find other end of segment
+                InfoStreetSegment segStruct_out = getInfoStreetSegment(*edgeIt);
+                if (segStruct_out.to == currNode->ID){
                     //check if one-way
-                    if (segStruct.oneWay)
+                    if (segStruct_out.oneWay)
                         continue; //path down this segment is invalid, skip to next segment
-                    outerIntersectID = segStruct.from;
+                    to_nodeId = segStruct_out.from;
                 }
-                else{ //the inner Node = the 'to' of the segment
-                    outerIntersectID = segStruct.to;
-                }
+                else //the inner Node is the 'to' of the segment
+                    to_nodeId = segStruct_out.to;
                                 
-                std::unordered_map<int,Node*>::const_iterator nodeItr =  nodesEncountered.find(outerIntersectID);
-                Node* outerNode;
-                
-                bool newNodeCreated = false;
-                if (nodeItr == nodesEncountered.end()){ //if node has not been visited yet
-                    outerNode = new Node(outerIntersectID, *it, waveCurrentTime);//create a new Node
-                    nodesEncountered.insert({outerIntersectID, outerNode});
-                    newNodeCreated = true;
-
+                //if segments have different street Ids, add a turn penalty
+                if(currNode != sourceNode){
+                    InfoStreetSegment segStruct_node = getInfoStreetSegment(currNode->reachingEdge);
+                    if(segStruct_out.streetID != segStruct_node.streetID)
+                        addTurnPenalty = turn_penalty;
+                    else addTurnPenalty = 0;
                 }
-                else{ //if node exists, use the existing node
-                    outerNode = nodeItr->second;
+                //*push node and edge used to wavefront
+                waveQueue.push( waveElem(getNodePtrById(to_nodeId), (*edgeIt),  wave.travelTime + SegmentTravelTime[*edgeIt] + addTurnPenalty) );
                 }
-                
-                double newTravelTime;
-                if (waveCurrentNode->reachingEdge==NO_EDGE){//corner case: current node is the start node, so there doesn't exist a reaching edge
-                    newTravelTime = SegmentTravelTime[*it]; //travel time from source to outer node is only the time of the current segment
-                }
-                else{//if previous segment (reaching edge) exists
-                    std::vector<int> adjacentSegments; //hold street segmnts of the inner node and segment from inner to outer node
-                    adjacentSegments.push_back(waveCurrentNode->reachingEdge); //segment to get to inner node
-                    adjacentSegments.push_back(*it); //segment from inner to outer node
-                    //calculate travel time of both adjacent segments, subtract off the 1st segment 
-                    //result is the turn_penalty (if applicable) and 2nd street seg travel time               
-                    newTravelTime = compute_path_travel_time(adjacentSegments, turn_penalty) - SegmentTravelTime[waveCurrentNode->reachingEdge]; 
-                    newTravelTime += waveCurrentNode->bestTime; //represents total time from source to outernode
-                }              
-                
-                if(newNodeCreated) //IMPORTANT: Verify that this is necessary
-                    outerNode->bestTime = newTravelTime;
-                
-                //don't need last 3 arguments
-                wave currentWave(outerNode, *it, newTravelTime, 0, 0, 0);
-                waveList.push_back(currentWave); //create new wavefront elemenet and add to queue
-
             }
-            waveCurrentNode->crawlEnable = false; //crawling complete. Reset enable to false. 
         }
     }
-    
-    waveList.clear();
     //if no path is found
     directionsText = "No path found";
     return false;
 }
 
 
-std::vector<StreetSegmentIndex> djikstraBFSTraceBack(int destID){ 
+std::vector<StreetSegmentIndex> djikstraBFSTraceBack(int destID){
+   
     std::vector<StreetSegmentIndex> path;
-    Node * currentNode;
-    currentNode = getNodeByID(destID); //prevNode points to node at pickup Intersection
+    Node* currentNode = getNodePtrById(destID);
+
     int prevSegID = currentNode->reachingEdge; //get the segment that leads to the destination
+//
+////    int nextIntersectID = destID;     
+//  //  int previousIntersectID, middleIntersectID; //previousIntersectID stores intersection closest to the starting point (furthest from pickup)
+//    //middleIntersectID stores intersection between previous and next
 
-//    int nextIntersectID = destID;     
-  //  int previousIntersectID, middleIntersectID; //previousIntersectID stores intersection closest to the starting point (furthest from pickup)
-    //middleIntersectID stores intersection between previous and next
-
-    //attempt to get the node at the other end of forwardSegID
     InfoStreetSegment segStruct; 
     int lastIntersectionID = destID;
     
-    //while we are dealing with a segment that is not the first segment
+    std::cout << "Dest Id: " << lastIntersectionID;
+    
+//    //while we are dealing with a segment that is not the first segment
     while (prevSegID != NO_EDGE){
         path.push_back(prevSegID);
-        
+//        
         segStruct = getInfoStreetSegment(prevSegID);
-        
+
         if (segStruct.to == lastIntersectionID){
-            currentNode = getNodeByID(segStruct.from);
+            currentNode = getNodePtrById(segStruct.from);
         }
         else{
-            currentNode = getNodeByID(segStruct.to);
+            currentNode = getNodePtrById(segStruct.to);
         }
+        
         prevSegID = currentNode->reachingEdge;
         lastIntersectionID = currentNode->ID;
     }
     std::reverse(path.begin(), path.end());
     return path;
+}
+
+Node* getNodePtrById(int intersectionID){
+    //retreive from global structure
+    return &NodeVector[intersectionID];
+    
 }

@@ -71,6 +71,9 @@ std::list<int> segmentsHighlighted; //for keeping track of which segment
 std::string MapName;
 
 float MaxSpeedLimit;
+
+//Vector --> key: [nodeId] value: [Node]
+std::vector<Node> NodeVector;
 //----------------------------------------------------------------
 
 //---Function Declarations----------------------------------------
@@ -98,6 +101,8 @@ void populateSegmentHighlight();
 bool isStreetName(std::string streetName, std::string prefix, int prefixLength);
 //Used to extract map name as City Country, used in graphics (M3)
 std::string getMapName(std::string fullpath);
+//used in path-finding fxns
+void populateNodeVector();
 //------------------------------------------------------------------
 
 // load_map will be called with the name of the file that stores the "layer-2"
@@ -171,6 +176,10 @@ bool load_map(std::string map_streets_database_filename) {
         
         //Populate segment highlights
         populateSegmentHighlight();
+        
+        //Populate NodeVector used in path-finding
+        NodeVector.resize(getNumIntersections());
+        populateNodeVector();
          
     }
     return load_successful;
@@ -197,6 +206,8 @@ void close_map() {
     SegmentTravelTime.clear();
     
     IntersectionCoordinates.clear();
+    
+    NodeVector.clear();
     
     //Call close functions from StreetsDatabase API
     closeStreetDatabase(); 
@@ -920,4 +931,12 @@ std::string getMapName(std::string fullpath){
     fullpath = city + " " + country;
     
     return fullpath;
+}
+
+//vector used in m4 functions
+void populateNodeVector(){
+
+    for(unsigned i = 0; i < getNumIntersections(); i++){
+        NodeVector[i] = Node(i, NO_EDGE, std::numeric_limits<unsigned int>::max());
+    }
 }

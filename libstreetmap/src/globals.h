@@ -96,5 +96,15 @@ extern float MaxSpeedLimit;
 
 extern int Clicked_int_id;
 
+//Vector --> key: [nodeId] value: [Node]
+extern std::vector<Node> NodeVector;
+
+
+
+//**********  M4 *************
+//bool which returns true if path found
+//corner case: if path found, and source == dest node then path will be empty, but find_path_djikstra_bool will be true
+extern bool find_path_djikstra_bool;
+
 #endif /* GLOBALS_H */
 
