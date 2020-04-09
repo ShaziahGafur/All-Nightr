@@ -973,7 +973,7 @@ std::vector<StreetSegmentIndex> find_path_djikstra(const IntersectionIndex inter
         int lastIntersection = intersectionsReached.back().first;
         path = djikstraBFSTraceBack(lastIntersection); //trace forwards, starting from the starting ID
     }
-    NodeVector.clear();
+
     clearNodesEncountered();
     populateNodeVector();
     //delete wavefront data structures

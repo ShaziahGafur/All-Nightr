@@ -12,6 +12,7 @@ public:
     double bestTime;
     bool crawlEnable;
     Node(int intersectionID, int reachingEdgeID, double shortestTime);
+    Node();
     
 };
 

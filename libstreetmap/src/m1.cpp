@@ -178,6 +178,7 @@ bool load_map(std::string map_streets_database_filename) {
         populateSegmentHighlight();
         
         //Populate NodeVector used in path-finding
+        NodeVector.resize(getNumIntersections());
         populateNodeVector();
          
     }
@@ -934,7 +935,8 @@ std::string getMapName(std::string fullpath){
 
 //vector used in m4 functions
 void populateNodeVector(){
+
     for(unsigned i = 0; i < getNumIntersections(); i++){
-        NodeVector.push_back( Node(i, NO_EDGE, std::numeric_limits<unsigned int>::max()) );
+        NodeVector[i] = Node(i, NO_EDGE, std::numeric_limits<unsigned int>::max());
     }
 }
