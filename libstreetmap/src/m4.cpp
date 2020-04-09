@@ -136,6 +136,9 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
                 invalidPath = true;
                 break;
              }
+            //otherwise, path was legal, rest global variable
+            find_path_djikstra_bool = false;
+            
             //This is the first subpath from starting intersection to first delivery. Pick up indices should have the starting indice.
             //get intersection id that was reached in djikstra find_path and use it to put the subpath into struct and full path vector
             //set the current string
@@ -144,18 +147,33 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
             
             //to be safe
             pickUpIndices.clear();
-            deliverySubpath = { startDepot, intersectionFound, drivingPath, pickUpIndices }; 
+            deliverySubpath = { startDepot, intersectionFound, drivingPath, pickUpIndices}; 
             fullPath.push_back(deliverySubpath);
             
+            
+            //=======================This part looks messy but really its just adding the drop off intersection to the vector of places to checkout, and the for loops
+            //=======================are to prevent duplicates. I tried with sets, but its messy to use those when the value is a pair, but if you have a better way, go for it
             
             deliveryIndice = 0;
             //the first intersection found must be a pick up intersection, so add its drop off location into vector of intersections to be reached
             for (std::vector<DeliveryInfo>::const_iterator itDeliveries = deliveries.begin(); itDeliveries != deliveries.end(); itDeliveries++){
                 if (itDeliveries->pickUp == intersectionFound){
-                    std::pair<int, std::string> doff ((*itDeliveries).dropOff, "dropoff");
+                    std::pair<int, std::string> doff ((*itDeliveries).dropOff, "dropoff");                   
+                    //lots of for loops
+                    duplicate = false;
+                    for (std::vector<std::pair<int, std::string>>::iterator it = pickUpDropOffLocations.begin(); it != pickUpDropOffLocations.end(); it++){
+                        if (it->first == itDeliveries->dropOff){
+                            duplicate = true;
+                            break;
+                        }
+                    }
+                    if(!duplicate){
+                        pickUpDropOffLocations.push_back(doff);
+                        duplicate = false;
+                    }
                     
                     //we find a pick up location so add its delivery indice to prevPickUpIndices
-                    prevPickUpIndices.push_back(deliveryIndice); ///
+                    prevPickUpIndices.push_back(deliveryIndice); ///?
                 }  
                 deliveryIndice++;
             }            
@@ -170,6 +188,9 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
                 invalidPath = true;
                 break;
              }
+            //otherwise, path was legal, rest global variable
+            find_path_djikstra_bool = false;
+            
             //get intersection id that was reached in djikstra
             intersectionFound = intersectionsReached.back().first;
 
@@ -181,14 +202,12 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
                     if (itDeliveries->pickUp == prevIntersectID){
                         //dropping off a package so subtract items weight
                         totalWeight = totalWeight - itDeliveries->itemWeight;   
-                        
-                        //append intersections in revisit vectors to pick up drop off vector
-                        pickUpDropOffLocations.insert(std::end(pickUpDropOffLocations), std::begin(revisitLocations), std::end(revisitLocations));
-                        //clear revisit locations
-                        revisitLocations.clear();
-                        break;
                     }
                 }
+                //append intersections in revisit vectors to pick up drop off vector
+                pickUpDropOffLocations.insert(std::end(pickUpDropOffLocations), std::begin(revisitLocations), std::end(revisitLocations));
+                //clear revisit locations
+                revisitLocations.clear();
                 pickUpIndices.clear();
             }
             
