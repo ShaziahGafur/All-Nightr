@@ -97,6 +97,7 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
     int prevIntersectID = NO_DELIVERY_NODE; 
     //stores indices from delivery vector of deliveries picked up at start_intersection in CourierSubpath
     std::vector<unsigned> pickUpIndices; 
+    std::vector<unsigned> prevPickUpIndices;
     struct CourierSubpath deliverySubpath; 
     
     //store weight currently carried by truck
@@ -105,11 +106,11 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
     //Chosen Depots
     //represents the IDs from the depots vector. Can assume that at least 1 depot exists, thus index 0 exists
     int startDepot = depots[0], endDepot = depots[0]; 
-    int deliveryIndice = 0;
-    int previousWeight = 0;
+    int deliveryIndice;
     int intersectionFound;
     std::string pUdOprev, pUdOcurrent;
     std::vector<unsigned> deliveriesPickedUp;
+    std::vector <std::pair<int, std::string>> revisitLocations;
     
     bool packagesLeft = true;
     
@@ -143,9 +144,12 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
             deliverySubpath = { startDepot, intersectionFound, drivingPath, pickUpIndices}; 
             fullPath.push_back(deliverySubpath);
             
+            
+            
             //=======================This part looks messy but really its just adding the drop off intersection to the vector of places to checkout, and the for loops
             //=======================are to prevent duplicates. I tried with sets, but its messy to use those when the value is a pair, but if you have a better way, go for it
             
+            deliveryIndice = 0;
             //the first intersection found must be a pick up intersection, so add its drop off location into vector of intersections to be reached
             for (std::vector<DeliveryInfo>::const_iterator itDeliveries = deliveries.begin(); itDeliveries != deliveries.end(); itDeliveries++){
                 if (itDeliveries->pickUp == intersectionFound){
@@ -162,8 +166,12 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
                         pickUpDropOffLocations.push_back(doff);
                         duplicate = false;
                     }
-                }
-            }
+                    
+                    //we find a pick up location so add its delivery indice to prevPickUpIndices
+                    prevPickUpIndices.push_back(deliveryIndice);
+                }  
+                deliveryIndice++;
+            }            
         }
             
         //We are dealing with a pickup or drop offthat is NOT the first
@@ -185,7 +193,12 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
                 for (std::vector<DeliveryInfo>::const_iterator itDeliveries = deliveries.begin(); itDeliveries != deliveries.end(); itDeliveries++){
                     if (itDeliveries->pickUp == prevIntersectID){
                         //dropping off a package so subtract items weight
-                        totalWeight = totalWeight - itDeliveries->itemWeight;                        
+                        totalWeight = totalWeight - itDeliveries->itemWeight;   
+                        
+                        //append intersections in revisit vectors to pick up drop off vector
+                        pickUpDropOffLocations.insert(std::end(pickUpDropOffLocations), std::begin(revisitLocations), std::end(revisitLocations));
+                        //clear revisit locations
+                        revisitLocations.clear();
                         break;
                     }
                 }
@@ -213,11 +226,9 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
                         //if it does, do not pick up the item, do not add its weight to total weight, break and do not add the drop off location to pickupdropoff vector
                         //===== WE HAVE ISSUES WITH WHAT TO DO AFTER THIS. THE REST OF THE PICK UP LOCATIONS ARE BEING VISITED 
                         //======AND THEN ERASED FROM PICKUPDROPOFF VECTOR BUT THEN THEY ARE NEVER VISITED AGAIN SO THINGS DONT GET PICKED UP
-                        if(totalWeight + itDeliveries->itemWeight > truck_capacity){
-                            break;
-                        }
-                        totalWeight = totalWeight + itDeliveries->itemWeight;
-                        pickUpIndices.push_back(deliveryIndice);                         
+                        pickUpIndices.insert(std::begin(pickUpIndices), std::begin(prevPickUpIndices), std::end(prevPickUpIndices));
+                        prevPickUpIndices.clear();
+                        //pickUpIndices.push_back(deliveryIndice);                         
                     }
                     deliveryIndice++;
                 }                
@@ -228,75 +239,43 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
             
             //add drop off location when a package is picked up -> when pick up node is reached
             pUdOcurrent = intersectionsReached.back().second;
-            if (pUdOcurrent == "pickup"){
+            if (pUdOcurrent == "pickup"){                
                 
-                
-                //I'LL LEAVE THE COMMENTED OUT STUFF HERE, MY IDEA WAS THE MAKE A DELIVERIESPICKEDUP VECTOR AND UPDATE IT AND USE THAT TO KEEP TRACK OF THE TOTAL WEIGHT STUFF
-                //BUT I DIDNT GET IT WORKING AND IT LOOKS KINDA MESSY- THE OLDER VERSION IS UNDER IT
-                /*
-                //deliveries picked up must be added here 
                 deliveryIndice = 0;
-                deliveriesPickedUp.clear();
                 for (std::vector<DeliveryInfo>::const_iterator itDeliveries = deliveries.begin(); itDeliveries != deliveries.end(); itDeliveries++){
-                    if (intersectionFound == itDeliveries -> pickUp){
+                    //did we find a delivery
+                    if (itDeliveries->pickUp == intersectionFound){ 
                         
-                        //check if total weight exceeds the truck capacity.
-                        //if it does, do not pick up the item, do not add its weight to total weight, break and do not add the drop off location to pickupdropoff vector
+                        //add each delivery's weight to the total weight and check, how many can be picked up- ave the pick up indices
                         if(totalWeight + itDeliveries->itemWeight > truck_capacity){
+                            //save in revisit vector
+                            std::pair<int, std::string> pup (intersectionFound, "pickup");                            
+                            revisitLocations.push_back(pup);
                             break;
                         }
-                        deliveriesPickedUp.push_back(deliveryIndice);
+                        else{
+                            //add total weight
+                            totalWeight = totalWeight + itDeliveries->itemWeight;
+                            
+                            //add the drop off locations for the deliveries which are picked up
+                            std::pair<int, std::string> doff ((*itDeliveries).dropOff, "dropoff");
+                            duplicate = false;
+                                for (std::vector<std::pair<int, std::string>>::iterator it = pickUpDropOffLocations.begin(); it != pickUpDropOffLocations.end(); it++){
+                                    if (it->first == itDeliveries->dropOff){
+                                        duplicate = true;
+                                    }
+                                }
+                                if(!duplicate){
+                                    pickUpDropOffLocations.push_back(doff);
+                                    duplicate = false;
+                                }
+                                                        
+                            //save pickUpIndices
+                            prevPickUpIndices.push_back(deliveryIndice);                            
+                        }                        
                     }
                     deliveryIndice++;
-                }
-      
-                //iterate through picked up deliveries
-                for (std::vector<unsigned>::iterator itDeliveriesPickedUp = deliveriesPickedUp.begin(); itDeliveriesPickedUp != deliveriesPickedUp.end(); itDeliveriesPickedUp++){
-                    //access picked up delivery, check if the pick up location of that delivery is the found intersection
-                    if (deliveries[*itDeliveriesPickedUp].pickUp == intersectionFound){
-                        
-                        //add drop off location to vector which holds nodes to be visited
-                        int dropOffId = deliveries[*itDeliveriesPickedUp].dropOff;
-                        std::pair<int, std::string> doff (dropOffId, "dropoff");
-                        
-                        //lots of for loops- checking duplicates
-                        duplicate = false;
-                        for (std::vector<std::pair<int, std::string>>::iterator it = pickUpDropOffLocations.begin(); it != pickUpDropOffLocations.end(); it++){
-                            if (it->first == dropOffId){
-                                duplicate = true;
-                                break;
-                            }
-                        }
-                        if(!duplicate){
-                            pickUpDropOffLocations.push_back(doff);
-                            duplicate = false;
-                        }
-                    }
-                } */
-                
-                
-                for (std::vector<DeliveryInfo>::const_iterator itDeliveries = deliveries.begin(); itDeliveries != deliveries.end(); itDeliveries++){
-                    
-                    if (itDeliveries->pickUp == intersectionFound){ 
-                        //check if delivery has actually been pickedUp
-                        
-                        //add drop off location to vector which holds nodes to be visited
-                        std::pair<int, std::string> doff ((*itDeliveries).dropOff, "dropoff");
-                        
-                        //lots of for loops
-                        duplicate = false;
-                        for (std::vector<std::pair<int, std::string>>::iterator it = pickUpDropOffLocations.begin(); it != pickUpDropOffLocations.end(); it++){
-                            if (it->first == itDeliveries->dropOff){
-                                duplicate = true;
-                            }
-                        }
-                        if(!duplicate){
-                            pickUpDropOffLocations.push_back(doff);
-                            duplicate = false;
-                        }
-                    }
-                    deliveryIndice++;
-                }               
+                }             
             }
             
             //depending on whether it was a pick up or drop off, pickUpIndices has been updated and path is pushed            
@@ -308,12 +287,7 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
         prevIntersectID = intersectionFound;
         
         //keep track of previous string type (pick up or drop off)
-        pUdOprev = pUdOcurrent;
-        
-        
-        //=======THIS IS CAUSING PROBLEMS BY ERASING THINGS THAT SHOULDN'T BE ERASED YET BECAUSE WE HAVENT PICKED UP ALL THE PACKAGES FROM AN INTERSECTION
-        //MAYBE USE A
-        //  bool allPickedUp
+        pUdOprev = pUdOcurrent;                
         
         //remove the intersection reached from pickUpDropOffLocations
             for (std::vector<std::pair<int, std::string>>::iterator itLocations = pickUpDropOffLocations.begin(); itLocations != pickUpDropOffLocations.end(); itLocations++){
@@ -350,120 +324,3 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
     return fullPath;
     
 }
- /*
-
-std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& deliveries, const std::vector<int>& depots, const float turn_penalty, const float truck_capacity){
-    //hold a vector of nodes that need to be reaches
-    
-    std::vector <int> pickUpDropOffLocations;
-    for (std::vector<DeliveryInfo>::const_iterator itDeliveries = deliveries.begin(); itDeliveries != deliveries.end(); itDeliveries++){
-        pickUpDropOffLocations.push_back((*itDeliveries).pickUp);
-        pickUpDropOffLocations.push_back((*itDeliveries).dropOff);
-    }
-    
-   //keep track of status of path. Path is invalid if: 1) driving path does not exist or 2) an item weight exceeds truck capacity
-    bool invalidPath = false; 
-    //Full path from starting Depot to end Depot
-    std::vector<CourierSubpath> fullPath;
-    //Incremental path, from a specific intersection to another intersection
-    std::vector<int> drivingPath; 
-    //An invalid ID, indicating the previous Intersection was not a delivery pick up or drop off
-    int prevIntersectID = NO_DELIVERY_NODE; 
-    //stores indices from delivery vector of deliveries picked up at start_intersection in CourierSubpath
-    std::vector<unsigned> pickUpIndices; 
-    struct CourierSubpath deliverySubpath; 
-    
-    //store weight currently carried by truck
-    float totalWeight = 0;
-    
-    //Chosen Depots
-    //represents the IDs from the depots vector. Can assume that at least 1 depot exists, thus index 0 exists
-    int startDepot = depots[0], endDepot = depots[0]; 
-    int deliveryIndice = 0;
-    int previousWeight = 0;
-    
-    std::vector<DeliveryInfo>::const_iterator itDeliveries = deliveries.begin();
-    //for each delivery item
-    while(itDeliveries != deliveries.end()){ 
-        //check if weight of item exceeds the truck capacity
-        if (totalWeight > truck_capacity){ 
-            //path is deemed invalid (according to Piazza)
-            invalidPath = true; 
-            break;
-        }
-        //Get the directions TO the pick up for the delivery
-        //If we are dealing with the first pick up (the intersection before must be a depot)
-        if (prevIntersectID == NO_DELIVERY_NODE){ 
-            //Find directions from starting Depot to the first pickup
-            drivingPath = find_path_between_intersections(startDepot, itDeliveries -> pickUp, turn_penalty); 
-            //if path does not exist
-            if (drivingPath.empty()){ 
-                invalidPath = true;
-                break;
-             }
-            //This is the first subpath from starting intersection to first delivery. Pick up indices should have the starting indice.
-            //not pickung up anything at starting thereofre empty pickUpIndices
-            pickUpIndices.clear();
-            deliverySubpath = { startDepot, itDeliveries->pickUp, drivingPath, pickUpIndices}; 
-            fullPath.push_back(deliverySubpath);
-        }
-        //We are dealing with a pickup that is NOT the first (previous intersection visited was the drop-off of another delivery)
-        else{
-            //Find directions from previous drop off intersection to a new pick
-            totalWeight = totalWeight - itDeliveries->itemWeight;
-            drivingPath = find_path_between_intersections(prevIntersectID, itDeliveries->pickUp, turn_penalty); 
-            if (drivingPath.empty()){
-                invalidPath = true;
-                break;
-             }
-            //At this point, pickUpIndices is empty vector
-            pickUpIndices.clear();
-            deliverySubpath = {prevIntersectID, itDeliveries->pickUp, drivingPath, pickUpIndices}; 
-            fullPath.push_back(deliverySubpath);
-        }
-        
-        //Get directions FROM the pickup for the delivery TO its drop-off location
-        //Find directions directly from the pickup to drop-off of the same delivery
-        drivingPath = find_path_between_intersections(itDeliveries->pickUp, itDeliveries->dropOff, turn_penalty);
-        if (drivingPath.empty()){
-           invalidPath = true;
-           break;
-        }
-        //add weight to truck
-        totalWeight = totalWeight + itDeliveries->itemWeight;
-        //In this  sub path, a pick-up occurred at the starting intersection of sub path, so add this to the vector 
-        //add new path section to the full Path
-        pickUpIndices.push_back(deliveryIndice); 
-        //At this point, pickUpIndices is empty vector
-        deliverySubpath = {itDeliveries->pickUp, itDeliveries->dropOff, drivingPath, pickUpIndices}; 
-        fullPath.push_back(deliverySubpath);
-        //save the value of the most recent Intersection visited
-        prevIntersectID = itDeliveries->dropOff; 
-        pickUpIndices.clear();
-        itDeliveries++;  
-        deliveryIndice++;
-    }
-    
-    if (invalidPath)
-        //return empty vector
-        return std::vector<CourierSubpath>(); 
-    
-    //Add the last part of the directions: the path from the last drop-off location to the end Depot
-    //Find directions directly from the pickup to drop-off of the same delivery
-    drivingPath = find_path_between_intersections(prevIntersectID, endDepot, turn_penalty);
-    if (drivingPath.empty()){
-        //return empty vector
-       return std::vector<CourierSubpath>(); 
-    }
-     
-
-    //add new path section to the full Path
-    deliverySubpath = {prevIntersectID, endDepot, drivingPath, pickUpIndices}; 
-    //At this point, pickUpIndices is empty vector
-    //for safety
-    pickUpIndices.clear();
-    fullPath.push_back(deliverySubpath);
-    
-    return fullPath;
-    
-}*/
