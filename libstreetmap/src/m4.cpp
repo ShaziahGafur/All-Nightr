@@ -71,6 +71,7 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
     std::vector <std::pair<int, std::string>> pickUpDropOffLocations;
     
     for (std::vector<DeliveryInfo>::const_iterator itDeliveries = deliveries.begin(); itDeliveries != deliveries.end(); itDeliveries++){
+        
         std::pair<int, std::string> pup ((*itDeliveries).pickUp, "pickup");
        
         for (std::vector<std::pair<int, std::string>>::iterator it = pickUpDropOffLocations.begin(); it != pickUpDropOffLocations.end(); it++){
@@ -85,6 +86,13 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
         else{
             duplicate = false;
         }
+        
+        //check if weight of individual item is too heavy - if it is, path is invalid
+        //return empty vector
+        if (itDeliveries->itemWeight > truck_capacity){ 
+            return std::vector<CourierSubpath>();
+        }
+        
     }
             
    //keep track of status of path. Path is invalid if: 1) driving path does not exist or 2) an item weight exceeds truck capacity
@@ -213,15 +221,7 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
                     if (itDeliveries->pickUp == prevIntersectID){                        
                         
                         //if the previous intersectinoID was a pick up location of any of the deliveries, push back its indice
-                        
-                        //======This should probably be done something else maybe at the start of the code
-                        //check if weight of individual item is too heavy - if it is, path is invalid
-                        if (itDeliveries->itemWeight > truck_capacity){ 
-                            invalidPath = true; 
-                            break;
-                        }
-                        
-                        
+
                         //check if total weight exceeds the truck capacity.
                         //if it does, do not pick up the item, do not add its weight to total weight, break and do not add the drop off location to pickupdropoff vector
                         //===== WE HAVE ISSUES WITH WHAT TO DO AFTER THIS. THE REST OF THE PICK UP LOCATIONS ARE BEING VISITED 
