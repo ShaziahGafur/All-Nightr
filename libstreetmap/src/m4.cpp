@@ -120,8 +120,6 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
     std::vector<unsigned> deliveriesPickedUp; //?
     std::vector <std::pair<int, std::string>> revisitLocations;
     
-    bool packagesLeft = true;
-    
     while(pickUpDropOffLocations.empty() == false){ 
         //to be safe
         pickUpIndices.clear();
