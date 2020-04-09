@@ -578,7 +578,7 @@ bool extract_streets_from_text(const char* text, std::string& street1, std::stri
 }
 
 
-void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click){
+void act_on_mouse_click( ezgl:: application* app, GdkEventButton* /*unused*/, double x_click, double y_click){
     //x_click and y_click are the world coordinates where the mouse was clicked
     //will convert to latlon then use find_closest_intersection
     
@@ -629,7 +629,7 @@ void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double 
             
 }
 
-void initial_setup(ezgl::application *application, bool new_window)
+void initial_setup(ezgl::application *application, bool /*unused*/)
 {
 
     //prepare full window title string
@@ -689,7 +689,7 @@ void initial_setup(ezgl::application *application, bool new_window)
     hide_direction_entries(application);
 }
 
-void find_button(GtkWidget* widget, ezgl::application *application){
+void find_button(GtkWidget* /*unused*/, ezgl::application *application){
     //update global variable
     CurrentMode = find;
     
@@ -1481,7 +1481,7 @@ std::string get_operationHours(const OSMNode* poi_OSMentity){
     return "not available";
 }
 
-void load_map_button(GtkWidget* widget, ezgl::application *application)
+void load_map_button(GtkWidget* /*unused*/, ezgl::application *application)
 {   
     CurrentMode = load;
     // string variables needed to interpret input
@@ -1567,7 +1567,7 @@ void load_map_button(GtkWidget* widget, ezgl::application *application)
     return;
 }
 
-void directions_button(GtkWidget* widget, ezgl::application *application){
+void directions_button(GtkWidget* /*unused*/, ezgl::application *application){
     //update global variable
     CurrentMode = directions;
 
@@ -1583,7 +1583,7 @@ void directions_button(GtkWidget* widget, ezgl::application *application){
     
 }
 
-void help_button(GtkWidget* widget, ezgl::application *application){
+void help_button(GtkWidget* /*unused*/, ezgl::application *application){
     GObject *window; // the parent window over which to add the dialog
     GtkWidget *content_area; // the content area of the dialog
     GtkWidget *label; // the label we will create to display a message in the content area
@@ -1657,7 +1657,7 @@ std::vector< std::vector<int> >  get_intersection_and_suggestions(std::vector<in
 }
 
 //button returns to base mode, depending on which mode is active at the moment
-void done_button(GtkWidget* widget, ezgl::application *application){
+void done_button(GtkWidget* /*unused*/, ezgl::application *application){
     walkingDirectionsText = "";
     directionsText = ""; //reset text for directions to be empty
 
@@ -1714,7 +1714,7 @@ void done_button(GtkWidget* widget, ezgl::application *application){
     gtk_widget_hide(done_widgetPtr);
 }
 
-void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data)
+void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer /*unused*/)
 {   
     switch(response_id) {
 
@@ -1793,7 +1793,7 @@ void show_direction_entries(ezgl::application *application){
     gtk_widget_show(click_select_widgetPtr);
 }
 
-void go_button(GtkWidget* widget, ezgl::application *application){
+void go_button(GtkWidget* /*unused*/, ezgl::application *application){
 
     //holds start and destiantion intersections
     std::pair<int, int>intersectionIds{-1,-1};
@@ -1962,7 +1962,7 @@ int get_intersection_from_text(GtkEntry* text_entry){
     return -1;
 }
 
-void click_button(GtkWidget* widget, ezgl::application *application){
+void click_button(GtkWidget* /*unused*/, ezgl::application *application){
     // variables needed to check if entries are full
     GtkEntry* text_entry;
     std::string text_string;

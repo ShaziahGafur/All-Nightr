@@ -73,18 +73,18 @@ int get_intersection_from_text(GtkEntry* text_entry);
 
 //------------------------------------------------------------------------------
 // APPLICATION
-void act_on_mouse_click( ezgl:: application* app, GdkEventButton* event, double x_click, double y_click);
-void find_button(GtkWidget *widget, ezgl::application *application);
-void load_map_button(GtkWidget* widget, ezgl::application *application);
+void act_on_mouse_click( ezgl:: application* app, GdkEventButton* /*unused*/, double x_click, double y_click);
+void find_button(GtkWidget* /*unused*/, ezgl::application *application);
+void load_map_button(GtkWidget* /*unused*/, ezgl::application *application);
 void initial_setup(ezgl::application *application, bool /*new_window*/);
-void directions_button(GtkWidget* widget, ezgl::application *application);
-void done_button(GtkWidget* widget, ezgl::application *application);
-void help_button(GtkWidget* widget, ezgl::application *application);
-void go_button(GtkWidget* widget, ezgl::application *application);
-void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data);
+void directions_button(GtkWidget* /*unused*/, ezgl::application *application);
+void done_button(GtkWidget* /*unused*/, ezgl::application *application);
+void help_button(GtkWidget* /*unused*/, ezgl::application *application);
+void go_button(GtkWidget* /*unused*/, ezgl::application *application);
+void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer /*unused*/);
 void hide_direction_entries(ezgl::application *application);
 void show_direction_entries(ezgl::application *application);
-void click_button(GtkWidget* widget, ezgl::application *application);
+void click_button(GtkWidget* /*unused*/, ezgl::application *application);
 
 #endif /* DRAWMAP_H */
 

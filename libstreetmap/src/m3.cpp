@@ -1075,8 +1075,6 @@ std::vector<StreetSegmentIndex> djikstraBFSTraceBack(int destID){
     InfoStreetSegment segStruct; 
     int lastIntersectionID = destID;
     
-    std::cout << "Dest Id: " << lastIntersectionID;
-    
 //    //while we are dealing with a segment that is not the first segment
     while (prevSegID != NO_EDGE){
         path.push_back(prevSegID);
