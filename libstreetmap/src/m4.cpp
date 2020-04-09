@@ -95,7 +95,7 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
         
     }
             
-   //keep track of status of path. Path is invalid if: 1) driving path does not exist or 2) an item weight exceeds truck capacity
+   //keep track of status of path. Path is invalid if: 1) driving path does not exist
     bool invalidPath = false; 
     //Full path from starting Depot to end Depot
     std::vector<CourierSubpath> fullPath;
@@ -117,77 +117,56 @@ std::vector<CourierSubpath> traveling_courier( const std::vector<DeliveryInfo>& 
     int deliveryIndice;
     int intersectionFound;
     std::string pUdOprev, pUdOcurrent;
-    std::vector<unsigned> deliveriesPickedUp;
+    std::vector<unsigned> deliveriesPickedUp; //?
     std::vector <std::pair<int, std::string>> revisitLocations;
     
     bool packagesLeft = true;
     
-    while(packagesLeft){ 
+    while(pickUpDropOffLocations.empty() == false){ 
         //to be safe
         pickUpIndices.clear();
-        //check if nodes to be found is empty, if it is, break
-        if (pickUpDropOffLocations.empty()){
-            packagesLeft = false;
-            break;
-        }
-        //Get the directions TO the pick up for the delivery
+
+        //Get the directions to the pick up for the delivery
         //If we are dealing with the first pick up (the intersection before must be a depot)
         if (prevIntersectID == NO_DELIVERY_NODE){ 
             //Find directions from starting Depot to the nearest pickup
             drivingPath = find_path_djikstra(startDepot, pickUpDropOffLocations , turn_penalty);
             //if path does not exist
-            if (drivingPath.empty()){ 
+            if ( drivingPath.empty() && (find_path_djikstra_bool == false) ){ 
                 invalidPath = true;
                 break;
              }
             //This is the first subpath from starting intersection to first delivery. Pick up indices should have the starting indice.
-            //not picking up anything at starting therefore empty pickUpIndices
-            pickUpIndices.clear();
-            
             //get intersection id that was reached in djikstra find_path and use it to put the subpath into struct and full path vector
             //set the current string
             intersectionFound = intersectionsReached.back().first;
             pUdOcurrent = intersectionsReached.back().second;
             
-            deliverySubpath = { startDepot, intersectionFound, drivingPath, pickUpIndices}; 
+            //to be safe
+            pickUpIndices.clear();
+            deliverySubpath = { startDepot, intersectionFound, drivingPath, pickUpIndices }; 
             fullPath.push_back(deliverySubpath);
             
-            
-            
-            //=======================This part looks messy but really its just adding the drop off intersection to the vector of places to checkout, and the for loops
-            //=======================are to prevent duplicates. I tried with sets, but its messy to use those when the value is a pair, but if you have a better way, go for it
             
             deliveryIndice = 0;
             //the first intersection found must be a pick up intersection, so add its drop off location into vector of intersections to be reached
             for (std::vector<DeliveryInfo>::const_iterator itDeliveries = deliveries.begin(); itDeliveries != deliveries.end(); itDeliveries++){
                 if (itDeliveries->pickUp == intersectionFound){
-                    std::pair<int, std::string> doff ((*itDeliveries).dropOff, "dropoff");                   
-                    //lots of for loops
-                    duplicate = false;
-                    for (std::vector<std::pair<int, std::string>>::iterator it = pickUpDropOffLocations.begin(); it != pickUpDropOffLocations.end(); it++){
-                        if (it->first == itDeliveries->dropOff){
-                            duplicate = true;
-                            break;
-                        }
-                    }
-                    if(!duplicate){
-                        pickUpDropOffLocations.push_back(doff);
-                        duplicate = false;
-                    }
+                    std::pair<int, std::string> doff ((*itDeliveries).dropOff, "dropoff");
                     
                     //we find a pick up location so add its delivery indice to prevPickUpIndices
-                    prevPickUpIndices.push_back(deliveryIndice);
+                    prevPickUpIndices.push_back(deliveryIndice); ///
                 }  
                 deliveryIndice++;
             }            
         }
             
-        //We are dealing with a pickup or drop offthat is NOT the first
+        //We are dealing with a pickup or drop off that is NOT the first
         else{
             //Find directions from previous drop off intersection to a new closest intersection which is in pickUpDropOff vector
             drivingPath = find_path_djikstra(prevIntersectID, pickUpDropOffLocations, turn_penalty); 
                        
-            if (drivingPath.empty()){
+            if ( drivingPath.empty() && (find_path_djikstra_bool == false) ){
                 invalidPath = true;
                 break;
              }
